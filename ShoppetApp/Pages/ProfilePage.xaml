@@ -117,7 +117,10 @@
                                                 <RoundRectangle CornerRadius="16" />
                                             </Border.StrokeShape>
                                             <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
-                                                <VerticalStackLayout Grid.Column="0" Spacing="2" VerticalOptions="Center">
+                                                <VerticalStackLayout Grid.Column="0" Spacing="2" VerticalOptions="Center" BackgroundColor="Transparent" HorizontalOptions="Fill">
+                                                    <VerticalStackLayout.GestureRecognizers>
+                                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ProfileViewModel}}, Path=ViewContactCommand}" CommandParameter="{Binding .}" />
+                                                    </VerticalStackLayout.GestureRecognizers>
                                                     <Label Text="{Binding Name}"
                                                            FontFamily="NunitoBold"
                                                            FontSize="14"
@@ -223,8 +226,75 @@
 
         <controls:FloatingTabBar SelectedTab="profile"
                                  VerticalOptions="End" />
+
+        <!-- Contact Detail Modal Overlay -->
+        <Grid x:Name="ContactDetailModal" IsVisible="False" BackgroundColor="#99000000">
+            <Grid.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnDismissContactModal" />
+            </Grid.GestureRecognizers>
+            <Border x:Name="ContactModalCard"
+                    BackgroundColor="{StaticResource CardBg}"
+                    StrokeThickness="0"
+                    Margin="24,0"
+                    VerticalOptions="Center"
+                    HorizontalOptions="Fill">
+                <Border.StrokeShape><RoundRectangle CornerRadius="28" /></Border.StrokeShape>
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnModalBodyTapped" />
+                </Border.GestureRecognizers>
+                <VerticalStackLayout Spacing="0">
+                    <Grid HeightRequest="100" BackgroundColor="{StaticResource Primary}">
+                        <Grid.Clip><RoundRectangleGeometry Rect="0,0,500,100" CornerRadius="28,28,0,0" /></Grid.Clip>
+                        <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="6">
+                            <Border WidthRequest="56" HeightRequest="56" BackgroundColor="#33FFFFFF" StrokeThickness="0" HorizontalOptions="Center">
+                                <Border.StrokeShape><RoundRectangle CornerRadius="28" /></Border.StrokeShape>
+                                <Label x:Name="ModalContactInitial" Text="?" FontFamily="NunitoExtraBold" FontSize="24" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" />
+                            </Border>
+                        </VerticalStackLayout>
+                        <Border x:Name="ModalEmergencyBadge" BackgroundColor="#FFDE03" StrokeThickness="0" HorizontalOptions="End" VerticalOptions="Start" Margin="0,12,12,0" Padding="8,4">
+                            <Border.StrokeShape><RoundRectangle CornerRadius="10" /></Border.StrokeShape>
+                            <Label Text="&#x26A0; Emergency" FontFamily="NunitoBold" FontSize="11" TextColor="#1A1A1A" />
+                        </Border>
+                    </Grid>
+                    <VerticalStackLayout Padding="24,20,24,24" Spacing="16">
+                        <VerticalStackLayout Spacing="4" HorizontalOptions="Center">
+                            <Label x:Name="ModalContactName" FontFamily="OutfitBold" FontSize="22" TextColor="{StaticResource SecondaryFg}" HorizontalOptions="Center" HorizontalTextAlignment="Center" />
+                            <Label x:Name="ModalContactRole" FontFamily="Nunito" FontSize="14" TextColor="{StaticResource Secondary}" HorizontalOptions="Center" HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+                        <BoxView HeightRequest="1" Color="{StaticResource Secondary20}" />
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
+                            <Border Grid.Column="0" WidthRequest="44" HeightRequest="44" BackgroundColor="{StaticResource Primary10}" StrokeThickness="0">
+                                <Border.StrokeShape><RoundRectangle CornerRadius="22" /></Border.StrokeShape>
+                                <Label Text="&#x1F4DE;" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center" />
+                            </Border>
+                            <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                                <Label Text="Phone" FontFamily="NunitoBold" FontSize="12" TextColor="{StaticResource Secondary}" />
+                                <Label x:Name="ModalContactPhone" FontFamily="Nunito" FontSize="15" TextColor="{StaticResource BodyText}" />
+                            </VerticalStackLayout>
+                        </Grid>
+                        <Grid x:Name="ModalAddressRow" ColumnDefinitions="Auto,*" ColumnSpacing="14">
+                            <Border Grid.Column="0" WidthRequest="44" HeightRequest="44" BackgroundColor="{StaticResource Primary10}" StrokeThickness="0">
+                                <Border.StrokeShape><RoundRectangle CornerRadius="22" /></Border.StrokeShape>
+                                <Label Text="&#x1F4CD;" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center" />
+                            </Border>
+                            <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                                <Label Text="Address" FontFamily="NunitoBold" FontSize="12" TextColor="{StaticResource Secondary}" />
+                                <Label x:Name="ModalContactAddress" FontFamily="Nunito" FontSize="15" TextColor="{StaticResource BodyText}" />
+                            </VerticalStackLayout>
+                        </Grid>
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12" Margin="0,4,0,0">
+                            <Button x:Name="ModalCallBtn" Grid.Column="0" Text="&#x1F4DE; Call" BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="16" FontFamily="NunitoBold" FontSize="15" HeightRequest="48" Clicked="OnModalCallClicked" />
+                            <Button Grid.Column="1" Text="Close" BackgroundColor="{StaticResource CardBg}" TextColor="{StaticResource BodyText}" BorderColor="{StaticResource Secondary30}" BorderWidth="1" CornerRadius="16" FontFamily="NunitoBold" FontSize="15" HeightRequest="48" Clicked="OnDismissContactModal" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+
     </Grid>
 </ContentPage>
+
+
 
 
 

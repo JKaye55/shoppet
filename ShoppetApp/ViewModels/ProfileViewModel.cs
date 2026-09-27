@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using ShoppetApp.Helpers;
@@ -19,6 +19,9 @@ namespace ShoppetApp.ViewModels
         [ObservableProperty] private bool _isBusinessOwner;
         [ObservableProperty] private ImageSource? _profileImageSource;
         private readonly ShoppetApp.Services.ApiService _api;
+
+        // Raised when a contact row is tapped — page subscribes to show the modal
+        public event EventHandler<ShoppetApp.Models.Contact>? ShowContactRequested;
 
         public ProfileViewModel(DatabaseService db, ShoppetApp.Services.ApiService api)
         {
@@ -128,9 +131,17 @@ namespace ShoppetApp.ViewModels
             await Shell.Current.GoToAsync("PostSettingsPage");
 
         [RelayCommand]
+        private void ViewContact(ShoppetApp.Models.Contact contact)
+        {
+            ShowContactRequested?.Invoke(this, contact);
+        }
+
+        [RelayCommand]
         private void Logout() => NavigationHelper.GoToAuth();
     }
 }
+
+
 
 
 
