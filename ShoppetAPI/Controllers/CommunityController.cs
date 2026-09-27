@@ -208,9 +208,26 @@ namespace ShoppetAPI.Controllers
                 string conn = _configuration.GetConnectionString("DefaultConnection")!; using var connection = new MySqlConnection(conn);
                 await connection.OpenAsync();
                 
-                using var cmd = new MySqlCommand("DELETE FROM communityposts WHERE Id = @Id", connection);
-                cmd.Parameters.AddWithValue("@Id", postId);
-                var rows = await cmd.ExecuteNonQueryAsync();
+                using var transaction = await connection.BeginTransactionAsync();
+                
+                using var cmdLikes = new MySqlCommand("DELETE FROM communitylikes WHERE PostId = @Id", connection, transaction);
+                cmdLikes.Parameters.AddWithValue("@Id", postId);
+                await cmdLikes.ExecuteNonQueryAsync();
+                
+                using var cmdCommentLikes = new MySqlCommand("DELETE FROM communitycommentlikes WHERE CommentId IN (SELECT Id FROM communitycomments WHERE PostId = @Id)", connection, transaction);
+                cmdCommentLikes.Parameters.AddWithValue("@Id", postId);
+                await cmdCommentLikes.ExecuteNonQueryAsync();
+                
+                using var cmdComments = new MySqlCommand("DELETE FROM communitycomments WHERE PostId = @Id", connection, transaction);
+                cmdComments.Parameters.AddWithValue("@Id", postId);
+                await cmdComments.ExecuteNonQueryAsync();
+
+                using var cmdPost = new MySqlCommand("DELETE FROM communityposts WHERE Id = @Id", connection, transaction);
+                cmdPost.Parameters.AddWithValue("@Id", postId);
+                var rows = await cmdPost.ExecuteNonQueryAsync();
+                
+                await transaction.CommitAsync();
+
                 if (rows == 0) return NotFound();
                 return Ok(new { success = true });
             }
@@ -259,6 +276,7 @@ namespace ShoppetAPI.Controllers
     public class AddCommentRequest { public int UserId { get; set; } public int? ParentCommentId { get; set; } public string Content { get; set; } = string.Empty; }
     public class LikeRequest { public int UserId { get; set; } }
 }
+
 
 
 

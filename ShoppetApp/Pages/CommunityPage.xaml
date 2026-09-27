@@ -80,18 +80,17 @@
                                             <Label Text="{Binding Content}" TextColor="{StaticResource BodyText}" FontSize="15" />
 
                                             <!-- Attached Media -->
-                                            <CollectionView ItemsSource="{Binding ImageList}" IsVisible="{Binding HasImages}" HeightRequest="250" Margin="0,5">
-                                                  <CollectionView.ItemsLayout>
-                                                      <LinearItemsLayout Orientation="Horizontal" ItemSpacing="5" />
-                                                  </CollectionView.ItemsLayout>
-                                                  <CollectionView.ItemTemplate>
-                                                      <DataTemplate>
-                                                          <Grid WidthRequest="300" HeightRequest="250">
-                                                              <Image Source="{Binding .}" Aspect="AspectFill" HeightRequest="250" />
-                                                          </Grid>
-                                                      </DataTemplate>
-                                                  </CollectionView.ItemTemplate>
-                                              </CollectionView>
+                                            <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Always" IsVisible="{Binding HasImages}" HeightRequest="250" Margin="0,5">
+                                                <HorizontalStackLayout BindableLayout.ItemsSource="{Binding ImageList}" Spacing="5">
+                                                    <BindableLayout.ItemTemplate>
+                                                        <DataTemplate x:DataType="x:String">
+                                                            <Grid WidthRequest="300" HeightRequest="250">
+                                                                <Image Source="{Binding .}" Aspect="AspectFill" HeightRequest="250" />
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </BindableLayout.ItemTemplate>
+                                                </HorizontalStackLayout>
+                                            </ScrollView>
 
                                             <!-- Stats -->
                                             <HorizontalStackLayout Spacing="15" Margin="0,5,0,0">
@@ -127,6 +126,8 @@
         </Grid>
     </Grid>
 </ContentPage>
+
+
 
 
 

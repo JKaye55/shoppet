@@ -1,7 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui" x:Name="ThisPage"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:ShoppetApp.ViewModels"
+             xmlns:models="clr-namespace:ShoppetApp.Models"
              x:Class="ShoppetApp.Pages.PostSettingsPage"
              x:DataType="vm:PostSettingsViewModel"
              Shell.NavBarIsVisible="False"
@@ -23,9 +24,12 @@
                 <VerticalStackLayout Padding="0,0,0,20">
                     <Label Text="You haven't made any posts yet." HorizontalOptions="Center" VerticalOptions="Center" TextColor="#888" Margin="0,50,0,0" IsVisible="{Binding MyPosts.Count, Converter={StaticResource InvertedBoolConverter}}" />
                     
-                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding MyPosts}" Spacing="5">
-                        <BindableLayout.ItemTemplate>
-                            <DataTemplate>
+                    <CollectionView ItemsSource="{Binding MyPosts}">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Vertical" ItemSpacing="5" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:CommunityPost">
                                 <Grid>
                                     <Border BackgroundColor="{StaticResource CardBg}" Stroke="{StaticResource Secondary30}" StrokeThickness="1" StrokeShape="RoundRectangle 20" Margin="15,10" Padding="15">
                                         <VerticalStackLayout Spacing="12">
@@ -41,27 +45,25 @@
                                                     <Label Text="{Binding TimeAgo}" TextColor="#888888" FontSize="12" />
                                                 </VerticalStackLayout>
                                                 
-                                                <Label Grid.Column="2" Text="..." FontSize="24" TextColor="#888888" VerticalOptions="Start" FontFamily="NunitoBold">
-                                                    <Label.GestureRecognizers>
-                                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PostSettingsViewModel}}, Path=TogglePostOptionsCommand}" CommandParameter="{Binding .}" />
-                                                    </Label.GestureRecognizers>
-                                                </Label>
+                                                <HorizontalStackLayout Grid.Column="2" Spacing="10" VerticalOptions="Start">
+                                                    <Button Text="&#x270E;" TextColor="{StaticResource Primary}" BackgroundColor="Transparent" FontFamily="NunitoBold" Padding="0" HeightRequest="30" Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PostSettingsViewModel}}, Path=EditPostActionCommand}" CommandParameter="{Binding .}" />
+                                                    <Button Text="&#x1F5D1;" TextColor="{StaticResource StatusOverdue}" BackgroundColor="Transparent" FontFamily="NunitoBold" Padding="0" HeightRequest="30" Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PostSettingsViewModel}}, Path=DeletePostActionCommand}" CommandParameter="{Binding .}" />
+                                                </HorizontalStackLayout>
                                             </Grid>
 
                                             <Label Text="{Binding Content}" TextColor="{StaticResource BodyText}" FontSize="15" />
 
-                                            <CollectionView ItemsSource="{Binding ImageList}" IsVisible="{Binding HasImages}" HeightRequest="250" Margin="0,5">
-                                                <CollectionView.ItemsLayout>
-                                                    <LinearItemsLayout Orientation="Horizontal" ItemSpacing="5" />
-                                                </CollectionView.ItemsLayout>
-                                                <CollectionView.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Grid WidthRequest="300" HeightRequest="250">
-                                                            <Image Source="{Binding .}" Aspect="AspectFill" HeightRequest="250" />
-                                                        </Grid>
-                                                    </DataTemplate>
-                                                </CollectionView.ItemTemplate>
-                                            </CollectionView>
+                                            <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Always" IsVisible="{Binding HasImages}" HeightRequest="250" Margin="0,5">
+                                                <HorizontalStackLayout BindableLayout.ItemsSource="{Binding ImageList}" Spacing="5">
+                                                    <BindableLayout.ItemTemplate>
+                                                        <DataTemplate x:DataType="x:String">
+                                                            <Grid WidthRequest="300" HeightRequest="250">
+                                                                <Image Source="{Binding .}" Aspect="AspectFill" HeightRequest="250" />
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </BindableLayout.ItemTemplate>
+                                                </HorizontalStackLayout>
+                                            </ScrollView>
 
                                             <HorizontalStackLayout Spacing="15" Margin="0,5,0,0">
                                                 <Label Text="{Binding LikesCount, StringFormat='{0} Likes'}" TextColor="#666666" FontSize="13" />
@@ -83,32 +85,19 @@
                                         </VerticalStackLayout>
                                     </Border>
 
-                                    <Border BackgroundColor="{StaticResource CardBg}" 
-                                            Stroke="{StaticResource Secondary30}" 
-                                            StrokeThickness="1" 
-                                            StrokeShape="RoundRectangle 10" 
-                                            WidthRequest="120"
-                                            HorizontalOptions="End" 
-                                            VerticalOptions="Start" 
-                                            Margin="0,40,30,0"
-                                            IsVisible="{Binding IsOptionsVisible}">
-                                        <VerticalStackLayout>
-                                            <Button Text="Edit" TextColor="{StaticResource BodyText}" BackgroundColor="Transparent"
-                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PostSettingsViewModel}}, Path=EditPostActionCommand}"
-                                                    CommandParameter="{Binding .}" />
-                                            <BoxView HeightRequest="1" Color="{StaticResource Secondary30}" />
-                                            <Button Text="Delete" TextColor="{StaticResource StatusOverdue}" BackgroundColor="Transparent"
-                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PostSettingsViewModel}}, Path=DeletePostActionCommand}"
-                                                    CommandParameter="{Binding .}" />
-                                        </VerticalStackLayout>
-                                    </Border>
+
                                 </Grid>
                             </DataTemplate>
-                        </BindableLayout.ItemTemplate>
-                    </VerticalStackLayout>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
                 </VerticalStackLayout>
             </ScrollView>
         </RefreshView>
     </Grid>
 </ContentPage>
+
+
+
+
+
 
