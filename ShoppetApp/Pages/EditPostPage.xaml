@@ -31,7 +31,7 @@
                         <Label Text="{Binding PostToEdit.AuthorName}" TextColor="{StaticResource BodyText}" FontFamily="NunitoBold" FontSize="16" />
                         
                         <HorizontalStackLayout Spacing="5">
-                            <Label Text="is with" TextColor="#666666" FontSize="12" IsVisible="{Binding SelectedPets.Count, Converter={StaticResource IntToBoolConverter}}" />
+                            
                             <HorizontalStackLayout Spacing="5">
                                 <BindableLayout.ItemsSource>
                                 <Binding Path="SelectedPets" />
@@ -148,3 +148,4 @@
 
     </Grid>
 </ContentPage>
+

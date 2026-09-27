@@ -242,9 +242,12 @@ namespace ShoppetAPI.Controllers
                 string conn = _configuration.GetConnectionString("DefaultConnection")!; using var connection = new MySqlConnection(conn);
                 await connection.OpenAsync();
                 
-                using var cmd = new MySqlCommand("UPDATE communityposts SET Content = @Content, IsEdited = 1 WHERE Id = @Id", connection);
+                using var cmd = new MySqlCommand("UPDATE communityposts SET Content = @Content, ImageUrl = @ImageUrls, PetId = @PetId, PetName = @PetName, IsEdited = 1 WHERE Id = @Id", connection);
                 cmd.Parameters.AddWithValue("@Id", postId);
                 cmd.Parameters.AddWithValue("@Content", request.Content);
+                cmd.Parameters.AddWithValue("@ImageUrls", request.ImageUrls ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@PetId", request.PetId.HasValue ? request.PetId.Value : DBNull.Value);
+                cmd.Parameters.AddWithValue("@PetName", string.IsNullOrEmpty(request.PetName) ? DBNull.Value : request.PetName);
                 var rows = await cmd.ExecuteNonQueryAsync();
                 if (rows == 0) return NotFound();
                 return Ok(new { success = true });
@@ -271,11 +274,13 @@ namespace ShoppetAPI.Controllers
         }
     }
 
-    public class EditPostRequest { public string Content { get; set; } = string.Empty; }
+    public class EditPostRequest { public string Content { get; set; } = string.Empty; public string? ImageUrls { get; set; } public int? PetId { get; set; } public string PetName { get; set; } = string.Empty; }
     public class CreatePostRequest { public int UserId { get; set; } public int? PetId { get; set; } public string AuthorName { get; set; } = string.Empty; public string PetName { get; set; } = string.Empty; public string Content { get; set; } = string.Empty; public string? ImageUrls { get; set; } }
     public class AddCommentRequest { public int UserId { get; set; } public int? ParentCommentId { get; set; } public string Content { get; set; } = string.Empty; }
     public class LikeRequest { public int UserId { get; set; } }
 }
+
+
 
 
 

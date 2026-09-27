@@ -466,9 +466,9 @@ public class ApiService
             catch { return false; }
         }
 
-        public async Task<bool> EditPostAsync(int postId, string newContent)
+        public async Task<bool> EditPostAsync(int postId, string newContent, string imageUrls, int? petId, string petName)
         {
-            try { return (await _http.PutAsJsonAsync($"community/{postId}", new { Content = newContent })).IsSuccessStatusCode; }
+            try { return (await _http.PutAsJsonAsync($"community/{postId}", new { Content = newContent, ImageUrls = imageUrls, PetId = petId, PetName = petName })).IsSuccessStatusCode; }
             catch { return false; }
         }
 
@@ -537,6 +537,7 @@ public class ApiResult<T>
     public static ApiResult<T> Ok(T data) => new() { Success = true, Data = data };
     public static ApiResult<T> Fail(string error) => new() { Success = false, Error = error };
 }
+
 
 
 

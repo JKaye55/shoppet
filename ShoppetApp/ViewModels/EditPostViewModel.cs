@@ -13,7 +13,7 @@ namespace ShoppetApp.ViewModels
         private readonly DatabaseService _db;
 
         [ObservableProperty]
-        private CommunityPost _postToEdit;
+        private CommunityPost _postToEdit = new CommunityPost();
 
         [ObservableProperty]
         private string _content = string.Empty;
@@ -90,17 +90,27 @@ namespace ShoppetApp.ViewModels
             IsBusy = true;
             try
             {
-                // In a real app we'd also upload media changes, but the user requested:
-                // "remove photo but cannot add photo"
-                // And updating pet and captions.
+                // Serialize attached media
+                string imageUrls = string.Join(",", AttachedMedia.Select(m => m.FilePath));
                 
-                // For now, let's just do edit post content API which we already have.
-                // The API only supports updating Content right now:
-                bool success = await _api.EditPostAsync(PostToEdit.Id, Content);
+                // Determine PetId and PetName
+                int? petId = null;
+                string petName = string.Empty;
+                var selectedPet = SelectedPets.FirstOrDefault() as Pet;
+                if (selectedPet != null)
+                {
+                    petId = selectedPet.Id;
+                    petName = selectedPet.Name;
+                }
+                
+                bool success = await _api.EditPostAsync(PostToEdit.Id, Content, imageUrls, petId, petName);
                 if (success)
                 {
                     PostToEdit.Content = Content;
-                    // Trigger refresh message if needed, or simply let the pull-to-refresh handle it
+                    PostToEdit.PetId = petId;
+                    PostToEdit.PetName = petName;
+                    PostToEdit.ImageUrls = imageUrls;
+                    
                     await Shell.Current.DisplayAlert("Success", "Post updated successfully.", "OK");
                     await Shell.Current.GoToAsync("..");
                 }
@@ -122,4 +132,7 @@ namespace ShoppetApp.ViewModels
         }
     }
 }
+
+
+
 
