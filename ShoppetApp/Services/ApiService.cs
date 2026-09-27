@@ -25,6 +25,32 @@ public class ApiService
 
     private readonly HttpClient _http;
     private string? _token;
+        public class UserProfileDto
+        {
+            public string FullName { get; set; } = string.Empty;
+            public string ProfilePicture { get; set; } = string.Empty;
+        }
+
+        public async Task<UserProfileDto?> GetProfileAsync(int userId)
+        {
+            try
+            {
+                return await _http.GetFromJsonAsync<UserProfileDto>($"Profile/{userId}");
+            }
+            catch { return null; }
+        }
+
+        public async Task<bool> UpdateProfileAsync(int userId, string fullName, string profilePicBase64)
+        {
+            try
+            {
+                var req = new { UserId = userId, FullName = fullName, ProfilePictureBase64 = profilePicBase64 };
+                var res = await _http.PutAsJsonAsync("Profile/update", req);
+                return res.IsSuccessStatusCode;
+            }
+            catch { return false; }
+        }
+
 
     public ApiService()
     {
@@ -594,6 +620,8 @@ public class ApiResult<T>
     public static ApiResult<T> Ok(T data) => new() { Success = true, Data = data };
     public static ApiResult<T> Fail(string error) => new() { Success = false, Error = error };
 }
+
+
 
 
 

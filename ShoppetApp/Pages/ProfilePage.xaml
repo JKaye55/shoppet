@@ -15,7 +15,7 @@
             <ScrollView Grid.Row="1">
                 <VerticalStackLayout Spacing="16" Padding="20,8,20,108">
 
-                    <!-- User Avatar & Name -->
+                                        <!-- User Avatar & Name -->
                     <VerticalStackLayout Spacing="8" HorizontalOptions="Center" Margin="0,8,0,16">
                         <Border WidthRequest="80"
                                 HeightRequest="80"
@@ -25,13 +25,21 @@
                             <Border.StrokeShape>
                                 <RoundRectangle CornerRadius="40" />
                             </Border.StrokeShape>
-                            <Label Text="👤" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center" />
+                            <Grid>
+                                <Label Text="&#x1F464;" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center" />
+                                <Image Source="{Binding ProfileImageSource}" Aspect="AspectFill" />
+                            </Grid>
                         </Border>
-                        <Label Text="{Binding FullName}"
-                               FontFamily="NunitoExtraBold"
-                               FontSize="20"
-                               TextColor="{StaticResource SecondaryFg}"
-                               HorizontalOptions="Center" />
+                        
+                        <HorizontalStackLayout HorizontalOptions="Center" Spacing="10">
+                            <Label Text="{Binding FullName}"
+                                   FontFamily="NunitoExtraBold"
+                                   FontSize="20"
+                                   TextColor="{StaticResource SecondaryFg}"
+                                   VerticalOptions="Center" />
+                            
+                        </HorizontalStackLayout>
+                        <Button Text="Edit Profile" Command="{Binding EditProfileCommand}" BackgroundColor="Transparent" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" Padding="0" HeightRequest="30" HorizontalOptions="Center"/>
                     </VerticalStackLayout>
 
                     <!-- ==========================================
@@ -45,7 +53,7 @@
                             <RoundRectangle CornerRadius="20" />
                         </Border.StrokeShape>
                         <VerticalStackLayout Spacing="8">
-                            <Label Text="🛡️ Admin Control Panel" FontFamily="NunitoBold" FontSize="14" TextColor="#1E2824"/>
+                            <Label Text="&#x2699; Admin Control Panel" FontFamily="NunitoBold" FontSize="14" TextColor="#1E2824"/>
                             <Button Text="Manage Platform Users &amp; Clinics" 
                                     BackgroundColor="#F7DD7D" TextColor="#16241F" FontAttributes="Bold" CornerRadius="12"
                                     Command="{Binding OpenAdminPanelCommand}" />
@@ -60,7 +68,7 @@
                             <RoundRectangle CornerRadius="20" />
                         </Border.StrokeShape>
                         <VerticalStackLayout Spacing="8">
-                            <Label Text="🏥 Clinic / Vet Shop Management" FontFamily="NunitoBold" FontSize="14" TextColor="#1E2824"/>
+                            <Label Text="&#x1F3E5; Clinic / Vet Shop Management" FontFamily="NunitoBold" FontSize="14" TextColor="#1E2824"/>
                             <Button Text="Manage Counter Orders &amp; Inventory" 
                                     BackgroundColor="#5C766D" TextColor="White" FontAttributes="Bold" CornerRadius="12"
                                     Command="{Binding OpenBusinessPanelCommand}" />
@@ -126,7 +134,7 @@
                                                     <Border.GestureRecognizers>
                                                         <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ProfileViewModel}}, Path=EditContactCommand}" CommandParameter="{Binding .}" />
                                                     </Border.GestureRecognizers>
-                                                    <Label Text="✏️" FontSize="14" HorizontalOptions="Center" VerticalOptions="Center" />
+                                                    <Label Text="&#x270F;" FontSize="14" HorizontalOptions="Center" VerticalOptions="Center" />
                                                 </Border>
                                                 <Border Grid.Column="2" WidthRequest="40" HeightRequest="40" BackgroundColor="#1AFF3B30" StrokeThickness="0">
                                                     <Border.StrokeShape>
@@ -135,7 +143,7 @@
                                                     <Border.GestureRecognizers>
                                                         <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ProfileViewModel}}, Path=DeleteContactCommand}" CommandParameter="{Binding .}" />
                                                     </Border.GestureRecognizers>
-                                                    <Label Text="🗑️" FontSize="14" HorizontalOptions="Center" VerticalOptions="Center" />
+                                                    <Label Text="&#x1F5D1;" FontSize="14" HorizontalOptions="Center" VerticalOptions="Center" />
                                                 </Border>
                                                 <Border Grid.Column="3" WidthRequest="40" HeightRequest="40" BackgroundColor="{Binding IsEmergency, Converter={StaticResource EmergencyPhoneBgConverter}}" StrokeThickness="0">
                                                     <Border.StrokeShape>
@@ -144,7 +152,7 @@
                                                     <Border.GestureRecognizers>
                                                         <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ProfileViewModel}}, Path=CallContactCommand}" CommandParameter="{Binding .}" />
                                                     </Border.GestureRecognizers>
-                                                    <Label Text="📞" FontSize="14" HorizontalOptions="Center" VerticalOptions="Center" />
+                                                    <Label Text="&#x1F4DE;" FontSize="14" HorizontalOptions="Center" VerticalOptions="Center" />
                                                 </Border>
                                             </Grid>
                                         </Border>
@@ -173,8 +181,8 @@
 
                             <!-- Local Pet Shops Around Lipa Button Link -->
                             <Grid ColumnDefinitions="*,Auto" Padding="0,12">
-                                <Label Text="📍 Local Lipa Pet Shops &amp; Clinics" FontFamily="Nunito" VerticalOptions="Center" />
-                                <Label Text="➡️" FontSize="14" Grid.Column="1" VerticalOptions="Center" />
+                                <Label Text="&#x1F4CD; Local Lipa Pet Shops &amp; Clinics" FontFamily="Nunito" VerticalOptions="Center" />
+                                <Label Text="&#x276F;" FontSize="14" Grid.Column="1" VerticalOptions="Center" />
                                 <Grid.GestureRecognizers>
                                     <TapGestureRecognizer Command="{Binding OpenLocalShopsCommand}" />
                                 </Grid.GestureRecognizers>
@@ -192,12 +200,12 @@
                             
                             <Grid ColumnDefinitions="*,Auto" Padding="0,12">
                                 <Label Text="Account Settings" FontFamily="Nunito" VerticalOptions="Center" />
-                                <Label Text="➡️" FontSize="14" Grid.Column="1" VerticalOptions="Center" />
+                                <Label Text="&#x276F;" FontSize="14" Grid.Column="1" VerticalOptions="Center" />
                             </Grid>
                             <BoxView HeightRequest="1" Color="{StaticResource Secondary20}" />
 
                             <HorizontalStackLayout Spacing="8" Padding="0,12">
-                                <Label Text="🚪" FontSize="16" VerticalOptions="Center" />
+                                <Label Text="&#x1F6AA;" FontSize="16" VerticalOptions="Center" />
                                 <Label Text="Log Out"
                                        FontFamily="Nunito"
                                        TextColor="{StaticResource StatusOverdue}"
@@ -217,3 +225,8 @@
                                  VerticalOptions="End" />
     </Grid>
 </ContentPage>
+
+
+
+
+

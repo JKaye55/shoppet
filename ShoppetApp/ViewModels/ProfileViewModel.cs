@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using ShoppetApp.Helpers;
@@ -14,16 +14,23 @@ namespace ShoppetApp.ViewModels
 
         [ObservableProperty] private System.Collections.ObjectModel.ObservableCollection<ContactModel> _contacts = [];
         [ObservableProperty] private bool _isBusy;
-        [ObservableProperty] private string _fullName = string.Empty;
-
-        // Ensure these attributes are present so the compiler generates IsAdmin and IsBusinessOwner
+                        [ObservableProperty] private string _fullName = string.Empty;
         [ObservableProperty] private bool _isAdmin;
         [ObservableProperty] private bool _isBusinessOwner;
+        [ObservableProperty] private ImageSource? _profileImageSource;
+        private readonly ShoppetApp.Services.ApiService _api;
 
-        public ProfileViewModel(DatabaseService db)
+        public ProfileViewModel(DatabaseService db, ShoppetApp.Services.ApiService api)
         {
             _db = db;
-            WeakReferenceMessenger.Default.Register(this);
+            _api = api;
+            WeakReferenceMessenger.Default.Register<DataChangedMessage>(this, (r, m) => Receive(m));
+        }
+
+        [RelayCommand]
+        private async Task EditProfileAsync()
+        {
+            await Shell.Current.GoToAsync("EditProfilePage");
         }
 
         public void Receive(DataChangedMessage message) =>
@@ -37,13 +44,24 @@ namespace ShoppetApp.ViewModels
             IsBusy = true;
             try
             {
-                if (_db.CurrentUser != null)
+                                if (_db.CurrentUser != null)
                 {
                     FullName = _db.CurrentUser.FullName;
 
                     // RBAC Role check
                     IsAdmin = _db.CurrentUser.Role == "Admin";
                     IsBusinessOwner = _db.CurrentUser.Role == "BusinessOwner";
+                    
+                    var profile = await _api.GetProfileAsync(Preferences.Get("LoggedInUserId", 0));
+                    if (profile != null)
+                    {
+                        FullName = profile.FullName;
+                        if (!string.IsNullOrEmpty(profile.ProfilePicture))
+                        {
+                            var bytes = Convert.FromBase64String(profile.ProfilePicture);
+                            ProfileImageSource = ImageSource.FromStream(() => new MemoryStream(bytes));
+                        }
+                    }
                 }
                 var contacts = await _db.GetContactsAsync();
                 Contacts = new System.Collections.ObjectModel.ObservableCollection<ContactModel>(contacts);
@@ -113,4 +131,7 @@ namespace ShoppetApp.ViewModels
         private void Logout() => NavigationHelper.GoToAuth();
     }
 }
+
+
+
 

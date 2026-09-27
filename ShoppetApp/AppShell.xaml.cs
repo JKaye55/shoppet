@@ -1,4 +1,4 @@
-﻿using ShoppetApp.Pages;
+using ShoppetApp.Pages;
 
 namespace ShoppetApp;
 
@@ -19,9 +19,11 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("CreatePostPage", typeof(CreatePostPage));
         Routing.RegisterRoute("PostDetailsPage", typeof(PostDetailsPage));
             Routing.RegisterRoute("PostSettingsPage", typeof(PostSettingsPage));
-        Routing.RegisterRoute("EditPostPage", typeof(EditPostPage)); // Replace with your actual Community page namespace and class name
+        Routing.RegisterRoute("EditPostPage", typeof(EditPostPage));
+        Routing.RegisterRoute("EditProfilePage", typeof(EditProfilePage)); // Replace with your actual Community page namespace and class name
     }
 }
+
 
 
 

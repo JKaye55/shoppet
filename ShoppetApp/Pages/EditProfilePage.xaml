@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:ShoppetApp.ViewModels"
+             x:Class="ShoppetApp.Pages.EditProfilePage"
+             x:DataType="vm:EditProfileViewModel"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="{StaticResource AppBackground}">
+    
+    <Grid RowDefinitions="Auto, *, Auto">
+        <!-- Header -->
+        <Border Grid.Row="0" BackgroundColor="{StaticResource CardBg}" StrokeThickness="0" Padding="15,10">
+            <HorizontalStackLayout Spacing="10">
+                <Label Text="&#x25C0; Back" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" FontSize="16" VerticalOptions="Center">
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding SaveCommand}" />
+                    </Label.GestureRecognizers>
+                </Label>
+                <Label Text="Edit Profile" FontFamily="OutfitBold" FontSize="20" TextColor="{StaticResource TextColor}" VerticalOptions="Center" Margin="10,0,0,0"/>
+            </HorizontalStackLayout>
+        </Border>
+        
+        <!-- Content -->
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="20" Spacing="25">
+                
+                <!-- Profile Picture Picker -->
+                <VerticalStackLayout Spacing="10" HorizontalOptions="Center">
+                    <Border WidthRequest="120" HeightRequest="120" StrokeShape="RoundRectangle 60" StrokeThickness="0" BackgroundColor="{StaticResource Primary10}">
+                        <Grid>
+                            <Label Text="Pick" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" HorizontalOptions="Center" VerticalOptions="Center" />
+                            <Image Source="{Binding ProfileImageSource}" Aspect="AspectFill" />
+                        </Grid>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding PickPhotoCommand}" />
+                        </Border.GestureRecognizers>
+                    </Border>
+                    <Label Text="Change Picture" TextColor="{StaticResource NavMuted}" FontSize="14" FontFamily="Nunito" HorizontalOptions="Center" />
+                </VerticalStackLayout>
+                
+                <!-- Full Name Field -->
+                <VerticalStackLayout Spacing="5">
+                    <Label Text="Full Name" TextColor="{StaticResource TextColor}" FontFamily="NunitoBold" FontSize="14" />
+                    <Border BackgroundColor="{StaticResource CardBg}" StrokeThickness="0" StrokeShape="RoundRectangle 10" Padding="15,0">
+                        <Entry Text="{Binding FullName}" TextColor="{StaticResource BodyText}" BackgroundColor="Transparent" FontFamily="Nunito" />
+                    </Border>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+        
+        <!-- Save Button -->
+        <Button Grid.Row="2" Text="Save Changes" Command="{Binding SaveCommand}" BackgroundColor="{StaticResource Primary}" TextColor="White" FontFamily="OutfitBold" CornerRadius="25" Margin="20" Padding="0,15" />
+        
+        <!-- Loading -->
+        <ActivityIndicator Grid.RowSpan="3" IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{StaticResource Primary}" HorizontalOptions="Center" VerticalOptions="Center" />
+    </Grid>
+</ContentPage>
+
+

@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Maui;
+using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
 using ShoppetApp.Pages;
 using ShoppetApp.Services;
@@ -70,13 +70,16 @@ public static class MauiProgram
         builder.Services.AddTransient<PostSettingsViewModel>();
         builder.Services.AddTransient<EditPostViewModel>();
         builder.Services.AddTransient<CreatePostPage>();
+        builder.Services.AddTransient<EditProfilePage>();
         builder.Services.AddTransient<CreatePostViewModel>();
+        builder.Services.AddTransient<EditProfileViewModel>();
         builder.Services.AddTransient<PostDetailsPage>();
         builder.Services.AddTransient<PostDetailsViewModel>();
 
         return builder.Build();
     }
 }
+
 
 
 
