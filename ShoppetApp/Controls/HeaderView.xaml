@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="ShoppetApp.Controls.HeaderView">
@@ -38,7 +38,7 @@
                     <RoundRectangle CornerRadius="20" />
                 </Border.StrokeShape>
                 <Border.GestureRecognizers>
-                    <TapGestureRecognizer Tapped="OnCartClicked" />
+                    <TapGestureRecognizer Tapped="OnMessagesClicked" />
                 </Border.GestureRecognizers>
                 <Path Aspect="Uniform"
                       HeightRequest="20"
@@ -46,7 +46,7 @@
                       HorizontalOptions="Center"
                       VerticalOptions="Center"
                       Fill="{StaticResource SecondaryFg}"
-                      Data="M7 18C5.9 18 5.01 18.9 5.01 20C5.01 21.1 5.9 22 7 22C8.1 22 9 21.1 9 20C9 18.9 8.1 18 7 18ZM1 2V4H3L6.6 11.59L5.24 14.04C5.09 14.32 5 14.65 5 15C5 16.1 5.9 17 7 17H19V15H7.42C7.29 15 7.17 14.89 7.17 14.75L7.2 14.63L8.1 13H15.55C16.3 13 16.96 12.59 17.3 11.97L20.88 5.48C20.96 5.34 21 5.17 21 5C21 4.45 20.55 4 20 4H5.21L4.27 2H1ZM17 18C15.9 18 15.01 18.9 15.01 20C15.01 21.1 15.9 22 17 22C18.1 22 19 21.1 19 20C19 18.9 18.1 18 17 18Z" />
+                      Data="M20,2H4C2.9,2 2,2.9 2,4V22L6,18H20C21.1,18 22,17.1 22,16V4C22,2.9 21.1,2 20,2Z" />
             </Border>
             
             <Border WidthRequest="18"
@@ -56,11 +56,11 @@
                     Margin="0,-4,-4,0"
                     StrokeThickness="0"
                     BackgroundColor="{StaticResource Primary}"
-                    IsVisible="{Binding CartService.CartCount, Converter={StaticResource CountToBoolConverter}}">
+                    IsVisible="False">
                 <Border.StrokeShape>
                     <RoundRectangle CornerRadius="9" />
                 </Border.StrokeShape>
-                <Label Text="{Binding CartService.CartCount}"
+                <Label Text="{Binding UnreadMessagesCount}"
                        FontFamily="NunitoBold"
                        FontSize="10"
                        TextColor="White"
@@ -70,3 +70,5 @@
         </Grid>
     </Grid>
 </ContentView>
+
+

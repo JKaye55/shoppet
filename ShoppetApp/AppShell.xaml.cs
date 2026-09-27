@@ -12,7 +12,8 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("petform", typeof(PetFormPage));
         Routing.RegisterRoute("healthlogform", typeof(HealthLogFormPage));
         Routing.RegisterRoute("contactform", typeof(ContactFormPage));
-        Routing.RegisterRoute("cart", typeof(CartPage));
+        Routing.RegisterRoute("messages", typeof(MessagesPage));
+        Routing.RegisterRoute("chat", typeof(ChatPage));
         Routing.RegisterRoute("foodlogform", typeof(FoodLogFormPage));
         Routing.RegisterRoute("community", typeof(CommunityPage));
         Routing.RegisterRoute("CreatePostPage", typeof(CreatePostPage));
@@ -21,6 +22,8 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("EditPostPage", typeof(EditPostPage)); // Replace with your actual Community page namespace and class name
     }
 }
+
+
 
 
 

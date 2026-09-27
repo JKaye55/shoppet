@@ -7,6 +7,7 @@ namespace ShoppetApp.Pages;
 public partial class ShopPage : ContentPage
 {
     private readonly ApiService _api;
+    private MarketplaceListing _currentListing;
     private readonly DatabaseService _db;
     private ObservableCollection<MarketplaceListing> MyListings { get; } = new();
     private List<MarketplaceListing> _allExploreListings = new();
@@ -128,6 +129,7 @@ public partial class ShopPage : ContentPage
 
     private void ShowDetailModal(MarketplaceListing listing)
     {
+        _currentListing = listing;
         DetailTitle.Text = listing.Title;
         DetailPrice.Text = listing.PriceDisplay;
         DetailCategory.Text = listing.Category;
@@ -154,6 +156,19 @@ public partial class ShopPage : ContentPage
     }
 
     private void OnDismissModal(object sender, EventArgs e) => DetailModal.IsVisible = false;
+
+    private async void OnMessageSellerClicked(object sender, EventArgs e)
+    {
+        if (_currentListing != null)
+        {
+            DetailModal.IsVisible = false;
+            await Shell.Current.GoToAsync("chat", new Dictionary<string, object>
+            {
+                { "ContactId", _currentListing.UserId.ToString() },
+                { "ContactName", _currentListing.SellerName }
+            });
+        }
+    }
     private void OnModalBodyTapped(object sender, TappedEventArgs e) { }
 
     // --- Sell Tab: Photo Picker ---
@@ -354,4 +369,8 @@ public partial class ShopPage : ContentPage
         PickedPhotosView.IsVisible = false;
     }
 }
+
+
+
+
 

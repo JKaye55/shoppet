@@ -1,0 +1,107 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:ShoppetApp.ViewModels"
+             xmlns:converters="clr-namespace:ShoppetApp.Converters"
+             xmlns:services="clr-namespace:ShoppetApp.Services"
+             x:Class="ShoppetApp.Pages.MessagesPage"
+             x:DataType="vm:MessagesViewModel"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="{StaticResource AppBackground}">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <converters:InvertedBoolConverter x:Key="InvertedBoolConverter" />
+            <converters:InitialsConverter x:Key="InitialsConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto, Auto, *">
+        <!-- Header -->
+        <Border Grid.Row="0" BackgroundColor="{StaticResource CardBg}" StrokeThickness="0" Padding="15,10">
+            <HorizontalStackLayout Spacing="10">
+                <Label Text="&#x25C0; Back" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" FontSize="16" VerticalOptions="Center">
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding GoBackCommand}" />
+                    </Label.GestureRecognizers>
+                </Label>
+                <Label Text="Messages" TextColor="{StaticResource SecondaryFg}" FontFamily="NunitoExtraBold" FontSize="18" VerticalOptions="Center" Margin="10,0,0,0"/>
+            </HorizontalStackLayout>
+        </Border>
+        
+        <!-- Search Bar -->
+        <Border Grid.Row="1" BackgroundColor="{StaticResource CardBg}" StrokeThickness="0" Padding="15,5,15,15">
+            <Border BackgroundColor="{StaticResource AppBackground}" StrokeThickness="0" StrokeShape="RoundRectangle 10" Padding="10,0">
+                <SearchBar Text="{Binding SearchQuery}" Placeholder="Search users..." TextColor="{StaticResource BodyText}" PlaceholderColor="#888" BackgroundColor="Transparent" />
+            </Border>
+        </Border>
+
+        <!-- Search Results (Visible when searching) -->
+        <CollectionView Grid.Row="2" ItemsSource="{Binding SearchResults}" SelectionMode="None" IsVisible="{Binding IsSearching}">
+            <CollectionView.EmptyView>
+                <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="10">
+                    <Label Text="No users found" FontFamily="NunitoBold" FontSize="16" TextColor="{StaticResource NavMuted}" HorizontalOptions="Center" />
+                </VerticalStackLayout>
+            </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="services:UserSearchResult">
+                    <Border BackgroundColor="{StaticResource CardBg}" StrokeThickness="0" Margin="0,1">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MessagesViewModel}}, Path=StartChatWithUserCommand}" CommandParameter="{Binding .}" />
+                        </Border.GestureRecognizers>
+                        <Grid ColumnDefinitions="Auto, *" Padding="15">
+                            
+                            <!-- Avatar -->
+                            <Border Grid.Column="0" WidthRequest="50" HeightRequest="50" StrokeShape="RoundRectangle 25" StrokeThickness="0" BackgroundColor="{StaticResource Secondary}" VerticalOptions="Center">
+                                <Label Text="{Binding FullName, Converter={StaticResource InitialsConverter}}" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" FontFamily="NunitoBold" FontSize="18" />
+                            </Border>
+
+                            <!-- Text -->
+                            <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Margin="15,0,0,0" Spacing="2">
+                                <Label Text="{Binding FullName}" FontFamily="NunitoBold" FontSize="16" TextColor="{StaticResource BodyText}" />
+                                <Label Text="{Binding Email}" FontFamily="Nunito" FontSize="14" TextColor="#888888" MaxLines="1" LineBreakMode="TailTruncation" />
+                            </VerticalStackLayout>
+
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <!-- Messages List (Visible when NOT searching) -->
+        <CollectionView Grid.Row="2" ItemsSource="{Binding Conversations}" SelectionMode="None" IsVisible="{Binding IsSearching, Converter={StaticResource InvertedBoolConverter}}">
+            <CollectionView.EmptyView>
+                <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="10">
+                    <Label Text="No messages yet" FontFamily="NunitoBold" FontSize="16" TextColor="{StaticResource NavMuted}" HorizontalOptions="Center" />
+                </VerticalStackLayout>
+            </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:Conversation">
+                    <Border BackgroundColor="{StaticResource CardBg}" StrokeThickness="0" Margin="0,1">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MessagesViewModel}}, Path=OpenChatCommand}" CommandParameter="{Binding .}" />
+                        </Border.GestureRecognizers>
+                        <Grid ColumnDefinitions="Auto, *, Auto" Padding="15">
+                            
+                            <!-- Avatar -->
+                            <Border Grid.Column="0" WidthRequest="50" HeightRequest="50" StrokeShape="RoundRectangle 25" StrokeThickness="0" BackgroundColor="{StaticResource Secondary}" VerticalOptions="Center">
+                                <Label Text="{Binding Initials}" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" FontFamily="NunitoBold" FontSize="18" />
+                            </Border>
+
+                            <!-- Text -->
+                            <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Margin="15,0,10,0" Spacing="2">
+                                <Label Text="{Binding ContactName}" FontFamily="NunitoBold" FontSize="16" TextColor="{StaticResource BodyText}" />
+                                <Label Text="{Binding LastMessage}" FontFamily="Nunito" FontSize="14" TextColor="#888888" MaxLines="1" LineBreakMode="TailTruncation" />
+                            </VerticalStackLayout>
+
+                            <!-- Time -->
+                            <Label Grid.Column="2" Text="{Binding FormattedTime}" FontFamily="Nunito" FontSize="12" TextColor="{StaticResource NavMuted}" VerticalOptions="Start" />
+
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+</ContentPage>
+

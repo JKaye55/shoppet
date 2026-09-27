@@ -10,10 +10,11 @@
     <Grid RowDefinitions="*">
 
         <!-- Main Content -->
-        <Grid RowDefinitions="Auto,Auto,*">
+        <Grid RowDefinitions="Auto,Auto,Auto,*">
+            <controls:HeaderView Grid.Row="0" />
 
             <!-- Header -->
-            <Border Grid.Row="0" BackgroundColor="{StaticResource CardBg}" StrokeThickness="0" Padding="16,12,16,0">
+            <Border Grid.Row="1" BackgroundColor="{StaticResource CardBg}" StrokeThickness="0" Padding="16,12,16,0">
                 <VerticalStackLayout Spacing="12">
                     <HorizontalStackLayout>
                         <Label Text="Marketplace" FontFamily="NunitoExtraBold" FontSize="26" TextColor="{StaticResource BodyText}" VerticalOptions="Center" HorizontalOptions="FillAndExpand"/>
@@ -33,14 +34,14 @@
             </Border>
 
             <!-- Search bar (hidden by default) -->
-            <Border x:Name="SearchPanel" Grid.Row="1" BackgroundColor="{StaticResource CardBg}" StrokeThickness="0" Padding="16,8" IsVisible="False">
+            <Border x:Name="SearchPanel" Grid.Row="2" BackgroundColor="{StaticResource CardBg}" StrokeThickness="0" Padding="16,8" IsVisible="False">
                 <Border BackgroundColor="{StaticResource AppBackground}" StrokeThickness="1" Stroke="{StaticResource Secondary30}" StrokeShape="RoundRectangle 12" Padding="12,8">
                     <Entry x:Name="SearchEntry" Placeholder="Search listings..." TextColor="{StaticResource BodyText}" PlaceholderColor="#888" BackgroundColor="Transparent" TextChanged="OnSearchTextChanged"/>
                 </Border>
             </Border>
 
             <!-- Content Panel -->
-            <Grid Grid.Row="2">
+            <Grid Grid.Row="3">
 
                 <!-- EXPLORE TAB -->
                 <Grid x:Name="ExplorePanel" RowDefinitions="Auto,*">
@@ -183,7 +184,10 @@
                                 </VerticalStackLayout>
                             </HorizontalStackLayout>
                             <Label x:Name="DetailTime" TextColor="#aaa" FontSize="11"/>
-                            <Button Text="Close" BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="10" FontFamily="NunitoBold" Margin="0,8,0,0" Clicked="OnDismissModal"/>
+                            <Grid ColumnDefinitions="*, *" ColumnSpacing="10" Margin="0,8,0,0">
+                                <Button Grid.Column="0" Text="Message Seller" BackgroundColor="{StaticResource Secondary}" TextColor="White" CornerRadius="10" FontFamily="NunitoBold" Clicked="OnMessageSellerClicked"/>
+                                <Button Grid.Column="1" Text="Close" BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="10" FontFamily="NunitoBold" Clicked="OnDismissModal"/>
+                            </Grid>
                         </VerticalStackLayout>
                     </VerticalStackLayout>
                 </ScrollView>
@@ -276,5 +280,7 @@
 
     </Grid>
 </ContentPage>
+
+
 
 

@@ -1,11 +1,19 @@
-﻿using ShoppetApp.Models;
+using ShoppetApp.Models;
+using ShoppetApp.ViewModels;
 using System.Net.Http.Json;
 
 namespace ShoppetApp.Services;
 
+public class UserSearchResult 
+{ 
+    public int UserId { get; set; } 
+    public string FullName { get; set; } = string.Empty; 
+    public string Email { get; set; } = string.Empty; 
+}
+
 public class ApiService
 {
-    // ── Change this URL to match wherever the API is running ──────────────────
+    // -- Change this URL to match wherever the API is running ------------------
     // For Android emulator use:   http://10.0.2.2:5020
     // For iOS simulator use:      http://localhost:5020
     // For Windows dev machine:    http://localhost:5020
@@ -23,7 +31,7 @@ public class ApiService
         _http = new HttpClient { BaseAddress = new Uri(BaseUrl + "/") };
     }
 
-    // ── Token management ──────────────────────────────────────────────────────
+    // -- Token management ------------------------------------------------------
 
     public void SetToken(string token)
     {
@@ -40,7 +48,7 @@ public class ApiService
 
     public bool IsAuthenticated => !string.IsNullOrEmpty(_token);
 
-    // ── Auth ──────────────────────────────────────────────────────────────────
+    // -- Auth ------------------------------------------------------------------
 
     public async Task<ApiResult<AuthResponse>> RegisterAsync(string fullName, string email, string password)
     {
@@ -74,7 +82,7 @@ public class ApiService
         }
     }
 
-    // ── Pets ──────────────────────────────────────────────────────────────────
+    // -- Pets ------------------------------------------------------------------
 
     public async Task<List<Pet>> GetPetsAsync()
     {
@@ -119,7 +127,7 @@ public class ApiService
         catch { return false; }
     }
 
-    // ── Health Logs ───────────────────────────────────────────────────────────
+    // -- Health Logs -----------------------------------------------------------
 
     public async Task<List<HealthLog>> GetHealthLogsAsync(int petId)
     {
@@ -183,7 +191,7 @@ public class ApiService
         catch { return false; }
     }
 
-    // ── Food Logs ─────────────────────────────────────────────────────────────
+    // -- Food Logs -------------------------------------------------------------
 
     public async Task<List<FoodLog>> GetFoodLogsAsync(int petId)
     {
@@ -238,7 +246,7 @@ public class ApiService
         catch { return false; }
     }
 
-    // ── Contacts ──────────────────────────────────────────────────────────────
+    // -- Contacts --------------------------------------------------------------
 
     public async Task<List<Models.Contact>> GetContactsAsync()
     {
@@ -273,7 +281,7 @@ public class ApiService
         catch { return false; }
     }
 
-    // ── Shop ──────────────────────────────────────────────────────────────────
+    // -- Shop ------------------------------------------------------------------
 
     public async Task<List<Product>> GetProductsAsync(string? species = null, string? category = null, string? search = null)
     {
@@ -295,7 +303,7 @@ public class ApiService
         catch { return []; }
     }
 
-    // ── Cart & Orders ─────────────────────────────────────────────────────────
+    // -- Cart & Orders ---------------------------------------------------------
 
     public async Task<CartDto?> GetCartAsync()
     {
@@ -515,6 +523,55 @@ public class ApiService
             try { return (await _http.DeleteAsync($"community/comments/{commentId}")).IsSuccessStatusCode; }
             catch { return false; }
         }
+
+        
+
+
+        public async Task<List<UserSearchResult>> SearchUsersAsync(string query)
+        {
+            try
+            {
+                var userId = Preferences.Get("LoggedInUserId", 0);
+                return await _http.GetFromJsonAsync<List<UserSearchResult>>($"messages/search?query={query}&currentUserId={userId}") ?? new List<UserSearchResult>();
+            }
+            catch { return new List<UserSearchResult>(); }
+        }
+
+        public async Task<IEnumerable<Conversation>> GetConversationsAsync()
+        {
+            try
+            {
+                var userId = Preferences.Get("LoggedInUserId", 0);
+                return await _http.GetFromJsonAsync<IEnumerable<Conversation>>($"messages/{userId}");
+            }
+            catch { return new List<Conversation>(); }
+        }
+
+        public async Task<IEnumerable<ChatMessage>> GetMessagesAsync(int contactId)
+        {
+            try
+            {
+                var userId = Preferences.Get("LoggedInUserId", 0);
+                var result = await _http.GetFromJsonAsync<IEnumerable<ChatMessage>>($"messages/chat/{userId}/{contactId}");
+                foreach(var msg in result)
+                {
+                    msg.IsMine = msg.SenderId == userId;
+                }
+                return result;
+            }
+            catch { return new List<ChatMessage>(); }
+        }
+
+        public async Task<bool> SendMessageAsync(int receiverId, int? listingId, string text)
+        {
+            try
+            {
+                var userId = Preferences.Get("LoggedInUserId", 0);
+                var response = await _http.PostAsJsonAsync("messages", new { SenderId = userId, ReceiverId = receiverId, ListingId = listingId, Text = text });
+                return response.IsSuccessStatusCode;
+            }
+            catch { return false; }
+        }
     }
 
 // DTOs
@@ -537,6 +594,20 @@ public class ApiResult<T>
     public static ApiResult<T> Ok(T data) => new() { Success = true, Data = data };
     public static ApiResult<T> Fail(string error) => new() { Success = false, Error = error };
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

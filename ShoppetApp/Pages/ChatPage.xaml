@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:ShoppetApp.ViewModels"
+             xmlns:converters="clr-namespace:ShoppetApp.Converters"
+             x:Class="ShoppetApp.Pages.ChatPage"
+             x:DataType="vm:ChatViewModel"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="{StaticResource AppBackground}">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <converters:BoolToLayoutOptionsConverter x:Key="BoolToLayoutOptionsConverter" />
+            <converters:IsMineColorConverter x:Key="IsMineColorConverter" />
+            <converters:IsMineTextColorConverter x:Key="IsMineTextColorConverter" />
+            <converters:IsMineTimeColorConverter x:Key="IsMineTimeColorConverter" />
+            <converters:InvertedBoolConverter x:Key="InvertedBoolConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+    <Grid RowDefinitions="Auto, *, Auto">
+        <!-- Header -->
+        <Border Grid.Row="0" BackgroundColor="{StaticResource CardBg}" StrokeThickness="0" Padding="15,10">
+            <HorizontalStackLayout Spacing="10">
+                <Label Text="&#x25C0; Back" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" FontSize="16" VerticalOptions="Center">
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding GoBackCommand}" />
+                    </Label.GestureRecognizers>
+                </Label>
+                <Label Text="{Binding ContactName}" TextColor="{StaticResource SecondaryFg}" FontFamily="NunitoExtraBold" FontSize="18" VerticalOptions="Center" Margin="10,0,0,0"/>
+            </HorizontalStackLayout>
+        </Border>
+
+        <!-- Messages List -->
+        <CollectionView x:Name="MessagesList" Grid.Row="1" ItemsSource="{Binding Messages}" SelectionMode="None" Margin="10" VerticalScrollBarVisibility="Never">
+            <CollectionView.EmptyView>
+                <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="10">
+                    <Label Text="Start a conversation" FontFamily="NunitoBold" FontSize="16" TextColor="{StaticResource NavMuted}" HorizontalOptions="Center" />
+                </VerticalStackLayout>
+            </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ChatMessage">
+                    <VerticalStackLayout>
+                        <Label Text="{Binding DividerText}" IsVisible="{Binding IsDivider}" HorizontalOptions="Center" TextColor="{StaticResource NavMuted}" FontFamily="NunitoBold" FontSize="12" Margin="0,5,0,5" />
+                        <Grid Margin="0,10" ColumnDefinitions="Auto, *, Auto" IsVisible="{Binding IsDivider, Converter={StaticResource InvertedBoolConverter}}">
+                        
+                        <!-- Not Mine Profile -->
+                        <Border Grid.Column="0" IsVisible="{Binding IsMine, Converter={StaticResource InvertedBoolConverter}}"
+                                WidthRequest="36" HeightRequest="36" BackgroundColor="{StaticResource Primary10}"
+                                StrokeThickness="0" VerticalOptions="End" Margin="0,0,8,0">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="18" />
+                            </Border.StrokeShape>
+                            <Label Text="{Binding Initials}" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" FontSize="14" HorizontalOptions="Center" VerticalOptions="Center"/>
+                        </Border>
+
+                        <VerticalStackLayout Grid.Column="1" HorizontalOptions="{Binding IsMine, Converter={StaticResource BoolToLayoutOptionsConverter}}" Spacing="2">
+                            <!-- Name Label -->
+                            <Label Text="{Binding SenderName}" IsVisible="{Binding IsMine, Converter={StaticResource InvertedBoolConverter}}" TextColor="{StaticResource NavMuted}" FontFamily="Nunito" FontSize="11" Margin="2,0,0,0" />
+                            
+                            <!-- Chat Bubble -->
+                            <Border BackgroundColor="{Binding IsMine, Converter={StaticResource IsMineColorConverter}}"
+                                    StrokeThickness="0"
+                                    Padding="14,10"
+                                    StrokeShape="RoundRectangle 18">
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="{Binding Text}" TextColor="{Binding IsMine, Converter={StaticResource IsMineTextColorConverter}}" FontFamily="Nunito" FontSize="15" />
+                                    <Label Text="{Binding FormattedTime}" TextColor="{Binding IsMine, Converter={StaticResource IsMineTimeColorConverter}}" FontFamily="Nunito" FontSize="10" HorizontalOptions="End" />
+                                </VerticalStackLayout>
+                            </Border>
+                        </VerticalStackLayout>
+
+                    </Grid>
+                </VerticalStackLayout>
+            </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <!-- Input Area -->
+        <Border Grid.Row="2" BackgroundColor="{StaticResource CardBg}" StrokeThickness="0" Padding="10">
+            <Grid ColumnDefinitions="*, Auto">
+                <Border Grid.Column="0" BackgroundColor="{StaticResource AppBackground}" StrokeThickness="0" StrokeShape="RoundRectangle 20" Padding="15,0">
+                    <Entry Text="{Binding NewMessageText}" Placeholder="Type a message..." TextColor="{StaticResource BodyText}" PlaceholderColor="#888" BackgroundColor="Transparent" ReturnCommand="{Binding SendMessageCommand}" />
+                </Border>
+                <Button Grid.Column="1" Text="Send" BackgroundColor="{StaticResource Primary}" TextColor="White" FontFamily="NunitoBold" CornerRadius="20" Margin="10,0,0,0" Padding="15,0" Command="{Binding SendMessageCommand}" />
+            </Grid>
+        </Border>
+    </Grid>
+</ContentPage>
+
+
+
+

@@ -58,8 +58,10 @@ public static class MauiProgram
         builder.Services.AddTransient<FoodLogFormViewModel>();
         builder.Services.AddTransient<ContactFormPage>();
         builder.Services.AddTransient<ContactFormViewModel>();
-        builder.Services.AddTransient<CartPage>();
-        builder.Services.AddTransient<CartViewModel>();
+        builder.Services.AddTransient<MessagesPage>();
+        builder.Services.AddTransient<ChatPage>();
+        builder.Services.AddTransient<MessagesViewModel>();
+        builder.Services.AddTransient<ChatViewModel>();
         builder.Services.AddTransient<AppShell>();
         builder.Services.AddTransient<CommunityPage>();
         builder.Services.AddTransient<PostSettingsPage>();
@@ -75,6 +77,8 @@ public static class MauiProgram
         return builder.Build();
     }
 }
+
+
 
 
 
