@@ -1,4 +1,4 @@
-using System.Globalization;
+ï»¿using System.Globalization;
 
 namespace ShoppetApp.Converters;
 
@@ -253,7 +253,7 @@ public class FeedingIntervalLabelConverter : IValueConverter
         }
 
         if (hours == 0 && minutes == 0)
-            return "—";
+            return "ï¿½";
 
         if (hours == 0)
             return $"Every {minutes} min";
@@ -378,8 +378,8 @@ public class BoolToLikeTextConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        if (value is bool isLiked) return isLiked ? "? Liked" : "? Like";
-        return "? Like";
+        if (value is bool isLiked) return isLiked ? "\u2764 Liked" : "\u2661 Like";
+        return "\u2661 Like";
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
@@ -424,7 +424,7 @@ public class InitialsConverter : IValueConverter
 public class HeartIconConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is true ? "??" : "??";
+        => value is true ? "\u2764" : "\u2661";
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => throw new NotSupportedException();
@@ -434,8 +434,8 @@ public class BoolToHeartIconConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        if (value is bool isLiked) return isLiked ? "?" : "?";
-        return "?";
+        if (value is bool isLiked) return isLiked ? "\u2764" : "\u2661";
+        return "\u2661";
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
@@ -501,4 +501,6 @@ public class InvertedBoolConverter : IValueConverter
     }
     public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
 }
+
+
 

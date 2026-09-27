@@ -184,9 +184,24 @@
                                 </VerticalStackLayout>
                             </HorizontalStackLayout>
                             <Label x:Name="DetailTime" TextColor="#aaa" FontSize="11"/>
-                            <Grid ColumnDefinitions="*, *" ColumnSpacing="10" Margin="0,8,0,0">
-                                <Button Grid.Column="0" Text="Message Seller" BackgroundColor="{StaticResource Secondary}" TextColor="White" CornerRadius="10" FontFamily="NunitoBold" Clicked="OnMessageSellerClicked"/>
-                                <Button Grid.Column="1" Text="Close" BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="10" FontFamily="NunitoBold" Clicked="OnDismissModal"/>
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Margin="0,8,0,0">
+                                <Button x:Name="BtnMessageSeller"
+                                        Grid.Column="0"
+                                        Text="&#x1F4AC; Message"
+                                        BackgroundColor="{StaticResource Primary}"
+                                        TextColor="White"
+                                        CornerRadius="10"
+                                        FontFamily="NunitoBold"
+                                        Clicked="OnMessageSellerClicked"/>
+                                <Button Grid.Column="1"
+                                        Text="Close"
+                                        BackgroundColor="{StaticResource CardBg}"
+                                        TextColor="{StaticResource BodyText}"
+                                        BorderColor="{StaticResource Secondary30}"
+                                        BorderWidth="1"
+                                        CornerRadius="10"
+                                        FontFamily="NunitoBold"
+                                        Clicked="OnDismissModal"/>
                             </Grid>
                         </VerticalStackLayout>
                     </VerticalStackLayout>
@@ -280,6 +295,9 @@
 
     </Grid>
 </ContentPage>
+
+
+
 
 
 

@@ -1,4 +1,4 @@
-﻿using ShoppetApp.Models;
+using ShoppetApp.Models;
 using ShoppetApp.Services;
 using System.Collections.ObjectModel;
 
@@ -151,6 +151,10 @@ public partial class ShopPage : ContentPage
             DetailImage.IsVisible = false;
             
         }
+
+        // Hide "Message" button if the listing belongs to the current logged-in user
+        var currentUserId = Preferences.Get("LoggedInUserId", 0);
+        BtnMessageSeller.IsVisible = listing.UserId != currentUserId;
 
         DetailModal.IsVisible = true;
     }
@@ -369,6 +373,7 @@ public partial class ShopPage : ContentPage
         PickedPhotosView.IsVisible = false;
     }
 }
+
 
 
 
