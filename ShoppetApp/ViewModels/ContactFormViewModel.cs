@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using ShoppetApp.Messages;
@@ -20,20 +20,23 @@ public partial class ContactFormViewModel : ObservableObject, IQueryAttributable
 
     public IList<string> RoleOptions { get; } = ["Veterinarian", "Clinic", "Family", "Pet Sitter", "Groomer", "Other"];
 
-    public string Title => ContactId > 0 ? "Edit Contact" : "Add Contact";
-    public bool CanDelete => ContactId > 0;
+    public string Title => ContactId != 0 ? "Edit Contact" : "Add Contact";
+    public bool CanDelete => ContactId != 0;
 
     public ContactFormViewModel(DatabaseService db) => _db = db;
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
         if (query.TryGetValue("contactId", out var val))
+        {
             ContactId = Convert.ToInt32(val);
+            _ = LoadAsync();
+        }
     }
 
     public async Task LoadAsync()
     {
-        if (ContactId <= 0) return;
+        if (ContactId == 0) return;
         var contact = await _db.GetContactAsync(ContactId);
         if (contact is null) return;
 
@@ -91,7 +94,7 @@ public partial class ContactFormViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     private async Task DeleteAsync()
     {
-        if (ContactId <= 0) return;
+        if (ContactId == 0) return;
         var contact = await _db.GetContactAsync(ContactId);
         if (contact is null) return;
 

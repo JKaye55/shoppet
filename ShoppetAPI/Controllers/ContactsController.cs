@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using MySql.Data.MySqlClient;
 using System.Data;
 
@@ -100,6 +100,40 @@ namespace ShoppetAPI.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, $"Error saving contact: {ex.Message}");
+            }
+        }
+
+            [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateContact(int id, [FromBody] ContactRequest request)
+        {
+            try
+            {
+                string connString = _configuration.GetConnectionString("DefaultConnection")!;
+                using (var connection = new MySqlConnection(connString))
+                {
+                    await connection.OpenAsync();
+                    var query = @"UPDATE emergencycontacts SET Name = @name, Role = @role, Address = @address, Phone = @phone, IsEmergency = @isEmergency WHERE Id = @id AND UserId = @userId";
+
+                    using (var cmd = new MySqlCommand(query, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@id", id);
+                        cmd.Parameters.AddWithValue("@userId", request.UserId);
+                        cmd.Parameters.AddWithValue("@name", request.Name);
+                        cmd.Parameters.AddWithValue("@role", request.Role);
+                        cmd.Parameters.AddWithValue("@address", request.Address);
+                        cmd.Parameters.AddWithValue("@phone", request.Phone);
+                        cmd.Parameters.AddWithValue("@isEmergency", request.IsEmergency);
+
+                        int rows = await cmd.ExecuteNonQueryAsync();
+                        if (rows == 0) return NotFound("Contact not found.");
+
+                        return Ok(new { Id = id, request.UserId, request.Name, request.Role, request.Address, request.Phone, request.IsEmergency });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error updating contact: {ex.Message}");
             }
         }
     }

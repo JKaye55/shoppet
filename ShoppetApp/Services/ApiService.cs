@@ -1,4 +1,4 @@
-using ShoppetApp.Models;
+﻿using ShoppetApp.Models;
 using ShoppetApp.ViewModels;
 using System.Net.Http.Json;
 
@@ -286,7 +286,7 @@ public class ApiService
         {
             var body = new { UserId = Microsoft.Maui.Storage.Preferences.Get("LoggedInUserId", 0), contact.Name, contact.Role, contact.Address, contact.Phone, contact.IsEmergency };
             HttpResponseMessage res;
-            if (contact.Id == 0)
+            if (contact.Id <= 0)
                 res = await _http.PostAsJsonAsync("contacts", body);
             else
                 res = await _http.PutAsJsonAsync($"contacts/{contact.Id}", body);
