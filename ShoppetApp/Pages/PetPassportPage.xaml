@@ -235,9 +235,15 @@
                                                 <Label Text="{Binding FoodName}"
                                                        FontFamily="NunitoBold" FontSize="15"
                                                        TextColor="{StaticResource SecondaryFg}" />
-                                                <Label Text="{Binding AmountGrams, StringFormat='{0:G} g per serving'}"
+                                                                                                <Label Text="{Binding AmountGrams, StringFormat='{0:G} g per serving'}"
                                                        FontFamily="Nunito" FontSize="12"
                                                        TextColor="{StaticResource NavMuted}" />
+                                                <Label Text="{Binding Notes, StringFormat='&quot;{0}&quot;'}" 
+                                                       IsVisible="{Binding HasNotes}"
+                                                       FontFamily="Nunito" FontAttributes="Italic" FontSize="12" 
+                                                       TextColor="{StaticResource NavMuted}" 
+                                                       LineBreakMode="WordWrap"
+                                                       Margin="0,2,0,0"/>
                                             </VerticalStackLayout>
                                             <!-- Interval pill -->
                                             <Border Grid.Column="1"

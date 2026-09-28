@@ -150,9 +150,9 @@ public class HealthTypeLabelConverter : IValueConverter
     {
         return value?.ToString()?.ToLowerInvariant() switch
         {
-            "vaccine" => "?? Vaccine",
-            "medication" => "?? Meds",
-            "vital" => "?? Vital",
+            "vaccine" => "\uD83D\uDC89 Vaccine",
+            "medication" => "\uD83D\uDC8A Meds",
+            "vital" => "\u2764\uFE0F Vital",
             _ => value?.ToString() ?? string.Empty
         };
     }

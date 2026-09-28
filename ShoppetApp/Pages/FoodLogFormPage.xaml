@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:ShoppetApp.ViewModels"
@@ -139,7 +139,7 @@
                 <Label Text="Notes (optional)" FontFamily="NunitoSemiBold" FontSize="13" />
                 <Border Stroke="{StaticResource Secondary30}" StrokeThickness="1" Padding="12,8">
                     <Border.StrokeShape><RoundRectangle CornerRadius="20" /></Border.StrokeShape>
-                    <Editor Text="{Binding Notes}"
+                    <Editor Text="{Binding Notes}" TextColor="{StaticResource BodyText}"
                             Placeholder="Any additional notes..."
                             AutoSize="TextChanges"
                             MinimumHeightRequest="80" />

@@ -1,4 +1,4 @@
-using SQLite;
+﻿using SQLite;
 
 namespace ShoppetApp.Models;
 
@@ -25,6 +25,9 @@ public class FoodLog
 
     [Ignore]
     public bool HasLastFed => !string.IsNullOrEmpty(LastFedTimestamp);
+
+    [Ignore]
+    public bool HasNotes => !string.IsNullOrWhiteSpace(Notes);
 
     [Ignore]
     public bool HasNextFeeding => NextFeedingAt is not null;
