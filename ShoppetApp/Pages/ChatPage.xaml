@@ -31,15 +31,15 @@
         </Border>
 
         <!-- Messages List -->
-        <CollectionView x:Name="MessagesList" Grid.Row="1" ItemsSource="{Binding Messages}" SelectionMode="None" Margin="10" VerticalScrollBarVisibility="Never">
+        <CollectionView x:Name="MessagesList" Grid.Row="1" ItemsSource="{Binding Messages}" SelectionMode="None" Margin="10" VerticalScrollBarVisibility="Never" Rotation="180">
             <CollectionView.EmptyView>
-                <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="10">
+                <VerticalStackLayout Rotation="180" VerticalOptions="Center" HorizontalOptions="Center" Spacing="10">
                     <Label Text="Start a conversation" FontFamily="NunitoBold" FontSize="16" TextColor="{StaticResource NavMuted}" HorizontalOptions="Center" />
                 </VerticalStackLayout>
             </CollectionView.EmptyView>
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="vm:ChatMessage">
-                    <VerticalStackLayout>
+                    <VerticalStackLayout Rotation="180">
                         <Label Text="{Binding DividerText}" IsVisible="{Binding IsDivider}" HorizontalOptions="Center" TextColor="{StaticResource NavMuted}" FontFamily="NunitoBold" FontSize="12" Margin="0,5,0,5" />
                         <Grid Margin="0,10" ColumnDefinitions="Auto, *, Auto" IsVisible="{Binding IsDivider, Converter={StaticResource InvertedBoolConverter}}">
                         

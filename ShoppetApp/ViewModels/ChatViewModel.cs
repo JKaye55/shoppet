@@ -27,9 +27,6 @@ public class ChatMessage
 
 public partial class ChatViewModel : ObservableObject, IDisposable, Microsoft.Maui.Controls.IQueryAttributable
 {
-    // Fired after messages are loaded/updated so the view can scroll to bottom
-    public event Action? OnMessagesLoaded;
-
     private readonly ApiService _api;
     private IDispatcherTimer? _timer;
     private bool _isLoadingMessages;
@@ -61,7 +58,6 @@ public partial class ChatViewModel : ObservableObject, IDisposable, Microsoft.Ma
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
-        // Stop any existing polling before resetting
         StopPolling();
         Messages.Clear();
         _isLoadingMessages = false;
@@ -101,8 +97,6 @@ public partial class ChatViewModel : ObservableObject, IDisposable, Microsoft.Ma
         {
             var myId = Preferences.Get("LoggedInUserId", 0);
 
-            // Tell the API to mark messages as read BEFORE fetching — 
-            // so the DB is updated and the next fetch returns IsRead=true
             if (myId > 0 && ContactId > 0)
             {
                 await _api.ResetUnreadCountAsync(myId, ContactId);
@@ -117,15 +111,17 @@ public partial class ChatViewModel : ObservableObject, IDisposable, Microsoft.Ma
                 var ordered = result.OrderBy(m => m.Timestamp).ToList();
                 var currentRealMessages = Messages.Where(m => !m.IsDivider).ToList();
 
-                // Skip re-rendering if nothing changed
                 if (ordered.Count > 0 && ordered.Count == currentRealMessages.Count)
                 {
                     bool isSame = true;
+                    // Because Messages is now reversed, we compare it backwards
+                    // currentRealMessages is Newest-to-Oldest, ordered is Oldest-to-Newest
                     for (int i = 0; i < ordered.Count; i++)
                     {
-                        if (ordered[i].Timestamp != currentRealMessages[i].Timestamp ||
-                            ordered[i].Text != currentRealMessages[i].Text ||
-                            ordered[i].IsRead != currentRealMessages[i].IsRead)
+                        var currentMsg = currentRealMessages[currentRealMessages.Count - 1 - i];
+                        if (ordered[i].Timestamp != currentMsg.Timestamp ||
+                            ordered[i].Text != currentMsg.Text ||
+                            ordered[i].IsRead != currentMsg.IsRead)
                         {
                             isSame = false;
                             break;
@@ -154,11 +150,8 @@ public partial class ChatViewModel : ObservableObject, IDisposable, Microsoft.Ma
                     newMessages.Add(m);
                 }
 
-                // Update the entire collection at once to prevent layout thrashing on Android
-                Messages = newMessages;
-
-                // Fire scroll event AFTER the collection is replaced
-                OnMessagesLoaded?.Invoke();
+                // Reverse the collection because the CollectionView is inverted (ScaleY="-1")
+                Messages = new ObservableCollection<ChatMessage>(newMessages.Reverse());
             });
         }
         catch { }
@@ -179,8 +172,9 @@ public partial class ChatViewModel : ObservableObject, IDisposable, Microsoft.Ma
             IsMine = true,
             SenderName = Preferences.Get("LoggedInUserName", "Me")
         };
-        Messages.Add(tempMsg);
-        OnMessagesLoaded?.Invoke(); // scroll to new message immediately
+        
+        // Insert at index 0 because the list is visually inverted
+        Messages.Insert(0, tempMsg); 
 
         var textToSend = NewMessageText;
         NewMessageText = string.Empty;
