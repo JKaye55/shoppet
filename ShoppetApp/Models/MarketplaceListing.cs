@@ -7,6 +7,7 @@ namespace ShoppetApp.Models
         public int Id { get; set; }
         public int UserId { get; set; }
         public string SellerName { get; set; } = string.Empty;
+        public string SellerProfilePic { get; set; } = string.Empty;
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public decimal Price { get; set; }

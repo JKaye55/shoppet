@@ -9,6 +9,7 @@ namespace ShoppetApp.Models
         public int UserId { get; set; }
         public int? ParentCommentId { get; set; }
         public string AuthorName { get; set; } = string.Empty;
+        public string ProfilePicture { get; set; } = string.Empty;
         public string AuthorRole { get; set; } = string.Empty;
         public string? ParentAuthorName { get; set; }
         public string Content { get; set; } = string.Empty;

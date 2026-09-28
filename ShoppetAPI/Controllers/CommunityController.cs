@@ -22,7 +22,7 @@ namespace ShoppetAPI.Controllers
                 
                 var query = @"
                     SELECT p.Id, p.UserId, p.PetId, p.AuthorName AS OriginalAuthorName, p.PetName, p.Content, p.ImageUrl, p.Timestamp, p.IsEdited,
-                           u.FullName AS UserFullName,
+                           u.FullName AS UserFullName, u.ProfilePicture,
                            (SELECT COUNT(*) FROM communitylikes cl WHERE cl.PostId = p.Id) AS LikesCount,
                            (SELECT COUNT(*) FROM communitycomments cc WHERE cc.PostId = p.Id) AS CommentsCount,
                            EXISTS(SELECT 1 FROM communitylikes cl WHERE cl.PostId = p.Id AND cl.UserId = @UserId) AS IsLikedByMe
@@ -40,6 +40,7 @@ namespace ShoppetAPI.Controllers
                         UserId = Convert.ToInt32(reader["UserId"]),
                         PetId = reader["PetId"] == DBNull.Value ? (int?)null : Convert.ToInt32(reader["PetId"]),
                         AuthorName = reader["UserFullName"] == DBNull.Value ? reader["OriginalAuthorName"].ToString() : reader["UserFullName"].ToString(),
+                        ProfilePicture = reader["ProfilePicture"] == DBNull.Value ? string.Empty : reader["ProfilePicture"].ToString(),
                         PetName = reader["PetName"] == DBNull.Value ? "" : reader["PetName"].ToString(),
                         Content = reader["Content"].ToString(),
                         ImageUrls = reader["ImageUrl"] == DBNull.Value ? "" : reader["ImageUrl"].ToString(),
@@ -116,7 +117,7 @@ namespace ShoppetAPI.Controllers
                 using var connection = new MySqlConnection(conn);
                 await connection.OpenAsync();
                 var query = @"SELECT c.Id, c.PostId, c.UserId, c.ParentCommentId, c.Content, c.CreatedAt,
-                        u.FullName AS AuthorName,
+                        u.FullName AS AuthorName, u.ProfilePicture AS AuthorProfilePic,
                         parent_u.FullName AS ParentAuthorName,
                         (SELECT COUNT(*) FROM communitycommentlikes cl WHERE cl.CommentId = c.Id) AS LikeCount,
                         EXISTS(SELECT 1 FROM communitycommentlikes cl WHERE cl.CommentId = c.Id AND cl.UserId = @UserId) AS IsLikedByMe
@@ -137,6 +138,7 @@ namespace ShoppetAPI.Controllers
                         UserId = Convert.ToInt32(reader["UserId"]),
                         ParentCommentId = reader["ParentCommentId"] == DBNull.Value ? (int?)null : Convert.ToInt32(reader["ParentCommentId"]),
                         AuthorName = reader["AuthorName"] == DBNull.Value ? "Unknown" : reader["AuthorName"].ToString(),
+                        ProfilePicture = reader["AuthorProfilePic"] == DBNull.Value ? string.Empty : reader["AuthorProfilePic"].ToString(),
                         ParentAuthorName = reader["ParentAuthorName"] == DBNull.Value ? null : reader["ParentAuthorName"].ToString(),
                         Content = reader["Content"].ToString(),
                         CreatedAt = Convert.ToDateTime(reader["CreatedAt"]),

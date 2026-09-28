@@ -1,4 +1,4 @@
-using ShoppetApp.Models;
+﻿using ShoppetApp.Models;
 using ShoppetApp.Services;
 using System.Collections.ObjectModel;
 
@@ -139,6 +139,7 @@ public partial class ShopPage : ContentPage
         DetailLocation.Text = string.IsNullOrEmpty(listing.Location) ? "Location not specified" : listing.Location;
         DetailTime.Text = listing.TimeAgo;
         DetailSellerInitial.Text = listing.Initials;
+        DetailSellerImage.Source = (ImageSource?)new ShoppetApp.Converters.Base64ToImageSourceConverter().Convert(listing.SellerProfilePic, typeof(ImageSource), null, null);
 
         if (listing.HasImages)
         {

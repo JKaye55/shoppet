@@ -53,7 +53,7 @@
                             
                             <!-- Avatar -->
                             <Border Grid.Column="0" WidthRequest="50" HeightRequest="50" StrokeShape="RoundRectangle 25" StrokeThickness="0" BackgroundColor="{StaticResource Secondary}" VerticalOptions="Center">
-                                <Label Text="{Binding FullName, Converter={StaticResource InitialsConverter}}" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" FontFamily="NunitoBold" FontSize="18" />
+                                <Grid><Label Text="{Binding FullName, Converter={StaticResource InitialsConverter}}" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" FontFamily="NunitoBold" FontSize="18" /><Image Source="{Binding ProfilePicture, Converter={StaticResource Base64ToImageSourceConverter}}" Aspect="AspectFill"/></Grid>
                             </Border>
 
                             <!-- Text -->
@@ -85,7 +85,7 @@
                             
                             <!-- Avatar -->
                             <Border Grid.Column="0" WidthRequest="50" HeightRequest="50" StrokeShape="RoundRectangle 25" StrokeThickness="0" BackgroundColor="{StaticResource Secondary}" VerticalOptions="Center">
-                                <Label Text="{Binding Initials}" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" FontFamily="NunitoBold" FontSize="18" />
+                                <Grid><Label Text="{Binding Initials}" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" FontFamily="NunitoBold" FontSize="18" /><Image Source="{Binding ProfilePicture, Converter={StaticResource Base64ToImageSourceConverter}}" Aspect="AspectFill"/></Grid>
                             </Border>
 
                             <!-- Text -->

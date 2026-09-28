@@ -8,7 +8,8 @@ public class UserSearchResult
 { 
     public int UserId { get; set; } 
     public string FullName { get; set; } = string.Empty; 
-    public string Email { get; set; } = string.Empty; 
+    public string Email { get; set; } = string.Empty;
+    public string ProfilePicture { get; set; } = string.Empty; 
 }
 
 public class ApiService
@@ -607,6 +608,7 @@ public class AuthResponse
     public int UserId { get; set; }
     public string FullName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
+    public string ProfilePicture { get; set; } = string.Empty;
     public string Role { get; set; } = "PetOwner";
     public string Token { get; set; } = string.Empty;
 }

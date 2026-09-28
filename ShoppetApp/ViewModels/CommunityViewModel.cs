@@ -21,6 +21,9 @@ namespace ShoppetApp.ViewModels
         [ObservableProperty]
         private string _userInitials = "U";
 
+        [ObservableProperty]
+        private string _userProfilePicture = string.Empty;
+
         public CommunityViewModel(ApiService api, DatabaseService db)
         {
             _api = api;
@@ -33,6 +36,7 @@ namespace ShoppetApp.ViewModels
             if (_db.CurrentUser != null)
             {
                 UserInitials = string.IsNullOrWhiteSpace(_db.CurrentUser.FullName) ? "U" : _db.CurrentUser.FullName.Substring(0, 1).ToUpper();
+                UserProfilePicture = _db.CurrentUser.ProfilePicture;
             }
 
             IsRefreshing = true;

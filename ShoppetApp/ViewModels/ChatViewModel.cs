@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
 using ShoppetApp.Services;
@@ -16,13 +16,12 @@ public class ChatMessage
         public string SenderName { get; set; } = string.Empty;
     public bool IsDivider { get; set; }
     public string DividerText { get; set; } = string.Empty;
+    public string ProfilePicture { get; set; } = string.Empty;
     public string FormattedTime => Timestamp.ToLocalTime().ToString("HH:mm");
     public string Initials => string.IsNullOrWhiteSpace(SenderName) ? "U" : SenderName.Substring(0, 1).ToUpper();
 }
 
-[QueryProperty(nameof(ContactIdStr), "ContactId")]
-[QueryProperty(nameof(ContactName), "ContactName")]
-public partial class ChatViewModel : ObservableObject, IDisposable
+public partial class ChatViewModel : ObservableObject, IDisposable, Microsoft.Maui.Controls.IQueryAttributable
 {
     private readonly ApiService _api;
     private IDispatcherTimer? _timer;
@@ -34,6 +33,9 @@ public partial class ChatViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private string _contactName = string.Empty;
+
+    [ObservableProperty]
+    private string _profilePicture = string.Empty;
 
     [ObservableProperty]
     private ObservableCollection<ChatMessage> _messages = new();
@@ -51,8 +53,11 @@ public partial class ChatViewModel : ObservableObject, IDisposable
         _api = api;
     }
 
-    partial void OnContactIdStrChanged(string value)
+    public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
+        if (query.TryGetValue("ContactId", out var cid)) ContactIdStr = cid?.ToString() ?? string.Empty;
+        if (query.TryGetValue("ContactName", out var cn)) ContactName = cn?.ToString() ?? string.Empty;
+        if (query.TryGetValue("ProfilePicture", out var pp)) ProfilePicture = pp?.ToString() ?? string.Empty;
         _ = LoadMessagesAsync();
         StartPolling();
     }
@@ -119,6 +124,7 @@ public partial class ChatViewModel : ObservableObject, IDisposable
                     }
                     m.IsMine = m.SenderId == myId;
                     m.SenderName = m.IsMine ? myName : ContactName;
+                    m.ProfilePicture = m.IsMine ? string.Empty : ProfilePicture;
                     Messages.Add(m);
                 }
             });

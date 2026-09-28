@@ -31,7 +31,7 @@
                             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
                                 <!-- Profile Picture Placeholder -->
                                 <Border Grid.Column="0" WidthRequest="40" HeightRequest="40" BackgroundColor="{StaticResource Secondary}" StrokeShape="RoundRectangle 20" StrokeThickness="0">
-                                    <Label Text="{Binding UserInitials}" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" FontSize="16" FontFamily="NunitoBold" />
+                                    <Grid><Label Text="{Binding UserInitials}" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" FontSize="16" FontFamily="NunitoBold" /><Image Source="{Binding UserProfilePicture, Converter={StaticResource Base64ToImageSourceConverter}}" Aspect="AspectFill" /></Grid>
                                 </Border>
 
                                 <!-- Fake Input -->
@@ -65,7 +65,7 @@
                                             <!-- Post Header -->
                                             <HorizontalStackLayout Spacing="10">
                                                 <Border WidthRequest="40" HeightRequest="40" BackgroundColor="{StaticResource Secondary}" StrokeShape="RoundRectangle 20" StrokeThickness="0">
-                                                    <Label Text="{Binding Initials}" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" FontSize="16" FontFamily="NunitoBold" />
+                                                    <Grid><Label Text="{Binding Initials}" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" FontSize="16" FontFamily="NunitoBold" /><Image Source="{Binding ProfilePicture, Converter={StaticResource Base64ToImageSourceConverter}}" Aspect="AspectFill" /></Grid>
                                                 </Border>
                                                 <VerticalStackLayout VerticalOptions="Center">
                                                     <HorizontalStackLayout Spacing="5">

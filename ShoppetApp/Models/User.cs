@@ -1,4 +1,4 @@
-using SQLite;
+﻿using SQLite;
 
 namespace ShoppetApp.Models
 {
@@ -16,5 +16,6 @@ namespace ShoppetApp.Models
 
         // RBAC Role: "Admin", "BusinessOwner", or "PetOwner"
         public string Role { get; set; } = "PetOwner";
+        public string ProfilePicture { get; set; } = string.Empty;
     }
 }

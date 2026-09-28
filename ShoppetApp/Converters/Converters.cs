@@ -469,7 +469,7 @@ public class IsMineColorConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
     {
-        return (bool)value ? Application.Current.Resources["Primary"] : Application.Current.Resources["CardBg"];
+        return (bool)value ? Application.Current.Resources["Primary"] : Color.FromArgb("#F0F0F0");
     }
     public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
 }
@@ -504,3 +504,21 @@ public class InvertedBoolConverter : IValueConverter
 
 
 
+
+public class Base64ToImageSourceConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+    {
+        if (value is string base64 && !string.IsNullOrEmpty(base64))
+        {
+            try
+            {
+                byte[] imageBytes = System.Convert.FromBase64String(base64);
+                return ImageSource.FromStream(() => new MemoryStream(imageBytes));
+            }
+            catch { return null; }
+        }
+        return null;
+    }
+    public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
+}

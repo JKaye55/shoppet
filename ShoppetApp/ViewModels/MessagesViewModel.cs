@@ -9,6 +9,7 @@ public class Conversation
 {
     public int ContactId { get; set; }
     public string ContactName { get; set; } = string.Empty;
+      public string ProfilePicture { get; set; } = string.Empty;
     public string LastMessage { get; set; } = string.Empty;
     public DateTime Timestamp { get; set; }
     public string Initials => string.IsNullOrWhiteSpace(ContactName) ? "U" : ContactName.Substring(0, 1).ToUpper();
@@ -87,7 +88,8 @@ public partial class MessagesViewModel : ObservableObject
         await Shell.Current.GoToAsync("chat", new Dictionary<string, object>
         {
             { "ContactId", conv.ContactId.ToString() },
-            { "ContactName", conv.ContactName }
+            { "ContactName", conv.ContactName },
+              { "ProfilePicture", conv.ProfilePicture }
         });
     }
     
@@ -99,7 +101,8 @@ public partial class MessagesViewModel : ObservableObject
         await Shell.Current.GoToAsync("chat", new Dictionary<string, object>
         {
             { "ContactId", user.UserId.ToString() },
-            { "ContactName", user.FullName }
+            { "ContactName", user.FullName },
+              { "ProfilePicture", user.ProfilePicture }
         });
     }
 

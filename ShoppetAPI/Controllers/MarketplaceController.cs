@@ -22,7 +22,7 @@ namespace ShoppetAPI.Controllers
                 if (!string.IsNullOrWhiteSpace(category)) conditions.Add("m.Category = @Category");
                 if (!string.IsNullOrWhiteSpace(search)) conditions.Add("(m.Title LIKE @Search OR m.Description LIKE @Search OR m.Category LIKE @Search)");
                 var where = "WHERE " + string.Join(" AND ", conditions);
-                var query = $@"SELECT m.*, u.FullName AS SellerFullName FROM marketplacelistings m LEFT JOIN users u ON m.UserId = u.Id {where} ORDER BY m.CreatedAt DESC;";
+                var query = $@"SELECT m.*, u.FullName AS SellerFullName, u.ProfilePicture AS SellerProfilePic FROM marketplacelistings m LEFT JOIN users u ON m.UserId = u.Id {where} ORDER BY m.CreatedAt DESC;";
                 using var cmd = new MySqlCommand(query, connection);
                 if (!string.IsNullOrWhiteSpace(category)) cmd.Parameters.AddWithValue("@Category", category);
                 if (!string.IsNullOrWhiteSpace(search)) cmd.Parameters.AddWithValue("@Search", $"%{search}%");
@@ -34,6 +34,7 @@ namespace ShoppetAPI.Controllers
                         Id = Convert.ToInt32(reader["Id"]),
                         UserId = Convert.ToInt32(reader["UserId"]),
                         SellerName = reader["SellerFullName"] == DBNull.Value ? reader["SellerName"].ToString() : reader["SellerFullName"].ToString(),
+                        SellerProfilePic = reader["SellerProfilePic"] == DBNull.Value ? string.Empty : reader["SellerProfilePic"].ToString(),
                         Title = reader["Title"].ToString(),
                         Description = reader["Description"].ToString(),
                         Price = Convert.ToDecimal(reader["Price"]),
@@ -58,7 +59,7 @@ namespace ShoppetAPI.Controllers
                 string conn = _configuration.GetConnectionString("DefaultConnection")!;
                 using var connection = new MySqlConnection(conn);
                 await connection.OpenAsync();
-                var query = @"SELECT m.*, u.FullName AS SellerFullName FROM marketplacelistings m LEFT JOIN users u ON m.UserId = u.Id WHERE m.UserId = @UserId ORDER BY m.CreatedAt DESC;";
+                var query = @"SELECT m.*, u.FullName AS SellerFullName, u.ProfilePicture AS SellerProfilePic FROM marketplacelistings m LEFT JOIN users u ON m.UserId = u.Id WHERE m.UserId = @UserId ORDER BY m.CreatedAt DESC;";
                 using var cmd = new MySqlCommand(query, connection);
                 cmd.Parameters.AddWithValue("@UserId", userId);
                 var listings = new List<object>();
@@ -69,6 +70,7 @@ namespace ShoppetAPI.Controllers
                         Id = Convert.ToInt32(reader["Id"]),
                         UserId = Convert.ToInt32(reader["UserId"]),
                         SellerName = reader["SellerFullName"] == DBNull.Value ? reader["SellerName"].ToString() : reader["SellerFullName"].ToString(),
+                        SellerProfilePic = reader["SellerProfilePic"] == DBNull.Value ? string.Empty : reader["SellerProfilePic"].ToString(),
                         Title = reader["Title"].ToString(),
                         Description = reader["Description"].ToString(),
                         Price = Convert.ToDecimal(reader["Price"]),

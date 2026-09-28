@@ -77,7 +77,7 @@ namespace ShoppetAPI.Controllers
             {
                 using var conn = new MySqlConnection(_config.GetConnectionString("DefaultConnection"));
                 await conn.OpenAsync();
-                var sql = "SELECT Id, FullName, Email FROM users WHERE FullName LIKE @Query AND Id != @CurrentUserId LIMIT 20";
+                var sql = "SELECT Id, FullName, Email, ProfilePicture FROM users WHERE FullName LIKE @Query AND Id != @CurrentUserId LIMIT 20";
                 using var cmd = new MySqlCommand(sql, conn);
                 cmd.Parameters.AddWithValue("@Query", $"%{query}%");
                 cmd.Parameters.AddWithValue("@CurrentUserId", currentUserId);
@@ -88,7 +88,8 @@ namespace ShoppetAPI.Controllers
                     result.Add(new {
                         UserId = Convert.ToInt32(reader["Id"]),
                         FullName = reader["FullName"].ToString(),
-                        Email = reader["Email"].ToString()
+                        Email = reader["Email"].ToString(),
+                        ProfilePicture = reader["ProfilePicture"] == DBNull.Value ? string.Empty : reader["ProfilePicture"].ToString()
                     });
                 }
                 return Ok(result);
@@ -107,7 +108,7 @@ namespace ShoppetAPI.Controllers
                     SELECT 
                         c.Id AS ConversationId,
                         CASE WHEN c.User1Id = @UserId THEN c.User2Id ELSE c.User1Id END AS ContactId,
-                        u.FullName AS ContactName,
+                        u.FullName AS ContactName, u.ProfilePicture,
                         c.MessagesJSON,
                         c.LastUpdated
                     FROM conversations c
@@ -133,6 +134,7 @@ namespace ShoppetAPI.Controllers
                     result.Add(new {
                         ContactId = Convert.ToInt32(reader["ContactId"]),
                         ContactName = reader["ContactName"].ToString(),
+                        ProfilePicture = reader["ProfilePicture"] == DBNull.Value ? string.Empty : reader["ProfilePicture"].ToString(),
                         LastMessage = last?.Text ?? "",
                         Timestamp = Convert.ToDateTime(reader["LastUpdated"])
                     });
