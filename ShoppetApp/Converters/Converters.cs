@@ -521,4 +521,25 @@ public class Base64ToImageSourceConverter : IValueConverter
         return null;
     }
     public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
+
+// IsReadColorConverter: ✓ = gray (sent), ✓✓ = bright blue (seen)
+public class IsReadColorConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is bool isRead) return isRead ? Color.FromArgb("#4FC3F7") : Color.FromArgb("#AAAAAA");
+        return Color.FromArgb("#AAAAAA");
+    }
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
+}
+
+public class BoolToBoldConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is bool b && b) return FontAttributes.Bold;
+        return FontAttributes.None;
+    }
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
+}
 }

@@ -13,6 +13,7 @@
         <ResourceDictionary>
             <converters:InvertedBoolConverter x:Key="InvertedBoolConverter" />
             <converters:InitialsConverter x:Key="InitialsConverter" />
+
         </ResourceDictionary>
     </ContentPage.Resources>
 
@@ -90,12 +91,19 @@
 
                             <!-- Text -->
                             <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Margin="15,0,10,0" Spacing="2">
-                                <Label Text="{Binding ContactName}" FontFamily="NunitoBold" FontSize="16" TextColor="{StaticResource BodyText}" />
-                                <Label Text="{Binding LastMessage}" FontFamily="Nunito" FontSize="14" TextColor="#888888" MaxLines="1" LineBreakMode="TailTruncation" />
+                                <Label Text="{Binding ContactName}" FontFamily="NunitoBold" FontSize="16" TextColor="{StaticResource BodyText}" VerticalOptions="Center" />
+                                <Label Text="{Binding LastMessage}" FontFamily="Nunito" FontSize="14" TextColor="{StaticResource NavMuted}" MaxLines="1" LineBreakMode="TailTruncation" />
                             </VerticalStackLayout>
 
-                            <!-- Time -->
-                            <Label Grid.Column="2" Text="{Binding FormattedTime}" FontFamily="Nunito" FontSize="12" TextColor="{StaticResource NavMuted}" VerticalOptions="Start" />
+                            <!-- Time & Badge -->
+                            <VerticalStackLayout Grid.Column="2" VerticalOptions="Center" Spacing="8">
+                                <Label Text="{Binding FormattedTime}" FontFamily="Nunito" FontSize="12" TextColor="{StaticResource NavMuted}" HorizontalTextAlignment="End" />
+                                <Border BackgroundColor="{StaticResource Primary}" WidthRequest="12" HeightRequest="12" HorizontalOptions="End" IsVisible="{Binding HasUnread}" StrokeThickness="0">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="6" />
+                                    </Border.StrokeShape>
+                                </Border>
+                            </VerticalStackLayout>
 
                         </Grid>
                     </Border>

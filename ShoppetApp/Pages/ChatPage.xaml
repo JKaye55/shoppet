@@ -38,7 +38,7 @@
                 </VerticalStackLayout>
             </CollectionView.EmptyView>
             <CollectionView.ItemTemplate>
-                                <DataTemplate x:DataType="vm:ChatMessage">
+                <DataTemplate x:DataType="vm:ChatMessage">
                     <VerticalStackLayout>
                         <Label Text="{Binding DividerText}" IsVisible="{Binding IsDivider}" HorizontalOptions="Center" TextColor="{StaticResource NavMuted}" FontFamily="NunitoBold" FontSize="12" Margin="0,5,0,5" />
                         <Grid Margin="0,10" ColumnDefinitions="Auto, *, Auto" IsVisible="{Binding IsDivider, Converter={StaticResource InvertedBoolConverter}}">
@@ -64,7 +64,10 @@
                                     StrokeShape="RoundRectangle 18">
                                 <VerticalStackLayout Spacing="2">
                                     <Label Text="{Binding Text}" TextColor="{Binding IsMine, Converter={StaticResource IsMineTextColorConverter}}" FontFamily="Nunito" FontSize="15" />
-                                    <Label Text="{Binding FormattedTime}" TextColor="{Binding IsMine, Converter={StaticResource IsMineTimeColorConverter}}" FontFamily="Nunito" FontSize="10" HorizontalOptions="End" />
+                                    <HorizontalStackLayout HorizontalOptions="End" Spacing="4">
+                                        <Label Text="{Binding ReadReceipt}" IsVisible="{Binding ShowReadReceipt}" TextColor="{Binding ReadReceiptColor}" FontFamily="NunitoBold" FontSize="10" VerticalOptions="Center" />
+                                        <Label Text="{Binding FormattedTime}" TextColor="{Binding IsMine, Converter={StaticResource IsMineTimeColorConverter}}" FontFamily="Nunito" FontSize="10" VerticalOptions="Center" />
+                                    </HorizontalStackLayout>
                                 </VerticalStackLayout>
                             </Border>
                         </VerticalStackLayout>
@@ -86,7 +89,3 @@
         </Border>
     </Grid>
 </ContentPage>
-
-
-
-

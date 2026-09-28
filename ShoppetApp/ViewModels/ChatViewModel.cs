@@ -13,18 +13,26 @@ public class ChatMessage
     public string Text { get; set; } = string.Empty;
     public DateTime Timestamp { get; set; }
     public bool IsMine { get; set; }
-        public string SenderName { get; set; } = string.Empty;
+    public string SenderName { get; set; } = string.Empty;
     public bool IsDivider { get; set; }
     public string DividerText { get; set; } = string.Empty;
     public string ProfilePicture { get; set; } = string.Empty;
+    public bool IsRead { get; set; }
     public string FormattedTime => Timestamp.ToLocalTime().ToString("HH:mm");
+    public string ReadReceipt => IsMine ? (IsRead ? "✓✓" : "✓") : string.Empty;
+    public Color ReadReceiptColor => IsRead ? Color.FromArgb("#4FC3F7") : Color.FromArgb("#AAAAAA");
+    public bool ShowReadReceipt => IsMine;
     public string Initials => string.IsNullOrWhiteSpace(SenderName) ? "U" : SenderName.Substring(0, 1).ToUpper();
 }
 
 public partial class ChatViewModel : ObservableObject, IDisposable, Microsoft.Maui.Controls.IQueryAttributable
 {
+    // Fired after messages are loaded/updated so the view can scroll to bottom
+    public event Action? OnMessagesLoaded;
+
     private readonly ApiService _api;
     private IDispatcherTimer? _timer;
+    private bool _isLoadingMessages;
 
     [ObservableProperty]
     private string _contactIdStr = string.Empty;
@@ -45,8 +53,6 @@ public partial class ChatViewModel : ObservableObject, IDisposable, Microsoft.Ma
 
     [ObservableProperty]
     private bool _isBusy;
-    
-    private bool _isLoadingMessages;
 
     public ChatViewModel(ApiService api)
     {
@@ -55,13 +61,19 @@ public partial class ChatViewModel : ObservableObject, IDisposable, Microsoft.Ma
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
+        // Stop any existing polling before resetting
+        StopPolling();
+        Messages.Clear();
+        _isLoadingMessages = false;
+
         if (query.TryGetValue("ContactId", out var cid)) ContactIdStr = cid?.ToString() ?? string.Empty;
         if (query.TryGetValue("ContactName", out var cn)) ContactName = cn?.ToString() ?? string.Empty;
         if (query.TryGetValue("ProfilePicture", out var pp)) ProfilePicture = pp?.ToString() ?? string.Empty;
+
         _ = LoadMessagesAsync();
         StartPolling();
     }
-    
+
     public void StartPolling()
     {
         if (_timer != null) return;
@@ -70,7 +82,7 @@ public partial class ChatViewModel : ObservableObject, IDisposable, Microsoft.Ma
         _timer.Tick += async (s, e) => await LoadMessagesAsync();
         _timer.Start();
     }
-    
+
     public void StopPolling()
     {
         if (_timer != null)
@@ -87,58 +99,77 @@ public partial class ChatViewModel : ObservableObject, IDisposable, Microsoft.Ma
         _isLoadingMessages = true;
         try
         {
+            var myId = Preferences.Get("LoggedInUserId", 0);
+
+            // Tell the API to mark messages as read BEFORE fetching — 
+            // so the DB is updated and the next fetch returns IsRead=true
+            if (myId > 0 && ContactId > 0)
+            {
+                await _api.ResetUnreadCountAsync(myId, ContactId);
+            }
+
             var result = await _api.GetMessagesAsync(ContactId);
+
             MainThread.BeginInvokeOnMainThread(() =>
             {
-                                                var myId = Preferences.Get("LoggedInUserId", 0);
                 var myName = Preferences.Get("LoggedInUserName", "Me");
-                
+
                 var ordered = result.OrderBy(m => m.Timestamp).ToList();
                 var currentRealMessages = Messages.Where(m => !m.IsDivider).ToList();
 
-                if (ordered.Count <= currentRealMessages.Count)
+                // Skip re-rendering if nothing changed
+                if (ordered.Count > 0 && ordered.Count == currentRealMessages.Count)
                 {
                     bool isSame = true;
                     for (int i = 0; i < ordered.Count; i++)
                     {
-                        if (ordered[i].Timestamp != currentRealMessages[i].Timestamp || ordered[i].Text != currentRealMessages[i].Text)
+                        if (ordered[i].Timestamp != currentRealMessages[i].Timestamp ||
+                            ordered[i].Text != currentRealMessages[i].Text ||
+                            ordered[i].IsRead != currentRealMessages[i].IsRead)
                         {
-                            isSame = false; break;
+                            isSame = false;
+                            break;
                         }
                     }
                     if (isSame) return;
                 }
 
-                Messages.Clear();
+                var newMessages = new ObservableCollection<ChatMessage>();
                 DateTime? lastDate = null;
-                foreach(var m in ordered)
+                foreach (var m in ordered)
                 {
                     var localTime = m.Timestamp.ToLocalTime();
                     if (lastDate == null || lastDate.Value.Date != localTime.Date)
                     {
-                        Messages.Add(new ChatMessage { 
-                            IsDivider = true, 
-                            DividerText = localTime.ToString("MMM dd, yyyy, HH:mm") 
+                        newMessages.Add(new ChatMessage
+                        {
+                            IsDivider = true,
+                            DividerText = localTime.ToString("MMM dd, yyyy")
                         });
                         lastDate = localTime;
                     }
                     m.IsMine = m.SenderId == myId;
                     m.SenderName = m.IsMine ? myName : ContactName;
                     m.ProfilePicture = m.IsMine ? string.Empty : ProfilePicture;
-                    Messages.Add(m);
+                    newMessages.Add(m);
                 }
+
+                // Update the entire collection at once to prevent layout thrashing on Android
+                Messages = newMessages;
+
+                // Fire scroll event AFTER the collection is replaced
+                OnMessagesLoaded?.Invoke();
             });
         }
         catch { }
         finally { _isLoadingMessages = false; }
     }
 
-        [RelayCommand]
+    [RelayCommand]
     private async Task SendMessageAsync()
     {
         if (string.IsNullOrWhiteSpace(NewMessageText) || ContactId == 0 || IsBusy) return;
-        
-        // Optimistically add to UI
+
         var tempMsg = new ChatMessage
         {
             SenderId = Preferences.Get("LoggedInUserId", 0),
@@ -149,10 +180,11 @@ public partial class ChatViewModel : ObservableObject, IDisposable, Microsoft.Ma
             SenderName = Preferences.Get("LoggedInUserName", "Me")
         };
         Messages.Add(tempMsg);
-        
+        OnMessagesLoaded?.Invoke(); // scroll to new message immediately
+
         var textToSend = NewMessageText;
         NewMessageText = string.Empty;
-        
+
         IsBusy = true;
         try
         {
@@ -162,12 +194,12 @@ public partial class ChatViewModel : ObservableObject, IDisposable, Microsoft.Ma
                 Messages.Remove(tempMsg);
             }
         }
-        catch 
-        { 
+        catch
+        {
             Messages.Remove(tempMsg);
         }
         finally { IsBusy = false; }
-    } 
+    }
 
     [RelayCommand]
     private async Task GoBackAsync()
@@ -175,19 +207,9 @@ public partial class ChatViewModel : ObservableObject, IDisposable, Microsoft.Ma
         StopPolling();
         await Shell.Current.GoToAsync("..");
     }
-    
+
     public void Dispose()
     {
         StopPolling();
     }
 }
-
-
-
-
-
-
-
-
-
-

@@ -589,6 +589,31 @@ public class ApiService
             catch { return new List<ChatMessage>(); }
         }
 
+                public async Task<int> GetUnreadMessagesCountAsync(int userId)
+        {
+            try
+            {
+                var response = await _http.GetAsync($"messages/unreadCount/{userId}");
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    if (int.TryParse(content, out int count))
+                        return count;
+                }
+            }
+            catch { }
+            return 0;
+        }
+
+        public async Task ResetUnreadCountAsync(int userId, int contactId)
+        {
+            try
+            {
+                await _http.PostAsync($"messages/resetUnread/{userId}/{contactId}", null);
+            }
+            catch { }
+        }
+
         public async Task<bool> SendMessageAsync(int receiverId, int? listingId, string text)
         {
             try

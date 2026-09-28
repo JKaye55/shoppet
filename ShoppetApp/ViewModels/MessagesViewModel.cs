@@ -5,13 +5,19 @@ using ShoppetApp.Services;
 
 namespace ShoppetApp.ViewModels;
 
-public class Conversation
+public partial class Conversation : ObservableObject
 {
     public int ContactId { get; set; }
     public string ContactName { get; set; } = string.Empty;
-      public string ProfilePicture { get; set; } = string.Empty;
+    public string ProfilePicture { get; set; } = string.Empty;
     public string LastMessage { get; set; } = string.Empty;
     public DateTime Timestamp { get; set; }
+    
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasUnread))]
+    private int _unreadCount;
+    
+    public bool HasUnread => UnreadCount > 0;
     public string Initials => string.IsNullOrWhiteSpace(ContactName) ? "U" : ContactName.Substring(0, 1).ToUpper();
     public string FormattedTime => Timestamp.ToString("MMM dd, HH:mm");
 }
@@ -84,12 +90,18 @@ public partial class MessagesViewModel : ObservableObject
     private async Task OpenChatAsync(Conversation conv)
     {
         if (conv == null) return;
+        
+        if (conv.UnreadCount > 0)
+        {
+            conv.UnreadCount = 0;
+        }
+        
         SearchQuery = string.Empty; // Clear search when opening chat
         await Shell.Current.GoToAsync("chat", new Dictionary<string, object>
         {
             { "ContactId", conv.ContactId.ToString() },
             { "ContactName", conv.ContactName },
-              { "ProfilePicture", conv.ProfilePicture }
+            { "ProfilePicture", conv.ProfilePicture }
         });
     }
     
@@ -102,7 +114,7 @@ public partial class MessagesViewModel : ObservableObject
         {
             { "ContactId", user.UserId.ToString() },
             { "ContactName", user.FullName },
-              { "ProfilePicture", user.ProfilePicture }
+            { "ProfilePicture", user.ProfilePicture }
         });
     }
 
