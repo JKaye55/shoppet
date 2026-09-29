@@ -101,8 +101,18 @@ public partial class ContactFormViewModel : ObservableObject, IQueryAttributable
         bool confirm = await Shell.Current.DisplayAlertAsync("Delete", $"Remove {contact.Name}?", "Delete", "Cancel");
         if (!confirm) return;
 
-        await _db.DeleteContactAsync(contact);
-        WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
-        await Shell.Current.GoToAsync("..");
+        int result = await _db.DeleteContactAsync(contact);
+        if (result > 0)
+        {
+            WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
+            await Shell.Current.GoToAsync("..");
+        }
+        else
+        {
+            await Shell.Current.DisplayAlertAsync(
+                "Error",
+                "Failed to delete contact from the server.",
+                "OK");
+        }
     }
 }
