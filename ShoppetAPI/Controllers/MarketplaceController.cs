@@ -120,7 +120,16 @@ namespace ShoppetAPI.Controllers
                 string conn = _configuration.GetConnectionString("DefaultConnection")!;
                 using var connection = new MySqlConnection(conn);
                 await connection.OpenAsync();
-                var query = @"UPDATE marketplacelistings SET Title=@Title, Description=@Description, Price=@Price, Category=@Category, Condition_=@Condition, Location_=@Location, UpdatedAt=NOW() WHERE Id=@Id AND UserId=@UserId;";
+                var query = @"UPDATE marketplacelistings
+                              SET Title=@Title,
+                                  Description=@Description,
+                                  Price=@Price,
+                                  Category=@Category,
+                                  Condition_=@Condition,
+                                  Location_=@Location,
+                                  ImageUrls=@ImageUrls,
+                                  UpdatedAt=NOW()
+                              WHERE Id=@Id AND UserId=@UserId;";
                 using var cmd = new MySqlCommand(query, connection);
                 cmd.Parameters.AddWithValue("@Id", id);
                 cmd.Parameters.AddWithValue("@UserId", request.UserId);
@@ -130,7 +139,12 @@ namespace ShoppetAPI.Controllers
                 cmd.Parameters.AddWithValue("@Category", request.Category ?? "General");
                 cmd.Parameters.AddWithValue("@Condition", request.Condition ?? "Used");
                 cmd.Parameters.AddWithValue("@Location", request.Location ?? "");
-                await cmd.ExecuteNonQueryAsync();
+                cmd.Parameters.AddWithValue("@ImageUrls", (object?)request.ImageUrls ?? DBNull.Value);
+                int rows = await cmd.ExecuteNonQueryAsync();
+
+                if (rows == 0)
+                    return NotFound("Listing not found.");
+
                 return Ok(new { success = true });
             }
             catch (Exception ex) { return StatusCode(500, $"Error: {ex.Message}"); }
@@ -148,7 +162,11 @@ namespace ShoppetAPI.Controllers
                 using var cmd = new MySqlCommand(query, connection);
                 cmd.Parameters.AddWithValue("@Id", id);
                 cmd.Parameters.AddWithValue("@UserId", userId);
-                await cmd.ExecuteNonQueryAsync();
+                int rows = await cmd.ExecuteNonQueryAsync();
+
+                if (rows == 0)
+                    return NotFound("Listing not found.");
+
                 return Ok(new { success = true });
             }
             catch (Exception ex) { return StatusCode(500, $"Error: {ex.Message}"); }
@@ -156,5 +174,15 @@ namespace ShoppetAPI.Controllers
     }
 
     public class CreateListingRequest { public int UserId { get; set; } public string? SellerName { get; set; } public string? Title { get; set; } public string? Description { get; set; } public decimal Price { get; set; } public string? Category { get; set; } public string? Condition { get; set; } public string? Location { get; set; } public string? ImageUrls { get; set; } }
-    public class EditListingRequest { public int UserId { get; set; } public string? Title { get; set; } public string? Description { get; set; } public decimal Price { get; set; } public string? Category { get; set; } public string? Condition { get; set; } public string? Location { get; set; } }
+    public class EditListingRequest
+    {
+        public int UserId { get; set; }
+        public string? Title { get; set; }
+        public string? Description { get; set; }
+        public decimal Price { get; set; }
+        public string? Category { get; set; }
+        public string? Condition { get; set; }
+        public string? Location { get; set; }
+        public string? ImageUrls { get; set; }
+    }
 }
