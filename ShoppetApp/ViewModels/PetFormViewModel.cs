@@ -129,7 +129,10 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
     {
         try
         {
-            var result = await MediaPicker.Default.PickPhotoAsync(new MediaPickerOptions { Title = "Please pick a photo" });
+            var results = await MediaPicker.Default.PickPhotosAsync(
+                new MediaPickerOptions { Title = "Please pick a photo" });
+            var result = results.FirstOrDefault();
+
             if (result != null)
             {
                 var newFile = Path.Combine(FileSystem.AppDataDirectory, result.FileName);
