@@ -83,7 +83,12 @@ public class ApiService
         {
             var res = await _http.PostAsJsonAsync("auth/register", new { fullName, email, password });
             if (res.IsSuccessStatusCode)
-                return ApiResult<AuthResponse>.Ok(await res.Content.ReadFromJsonAsync<AuthResponse>()!);
+            {
+                var data = await res.Content.ReadFromJsonAsync<AuthResponse>();
+                return data is not null
+                    ? ApiResult<AuthResponse>.Ok(data)
+                    : ApiResult<AuthResponse>.Fail("Server returned an empty registration response.");
+            }
             var err = await res.Content.ReadAsStringAsync();
             return ApiResult<AuthResponse>.Fail(res.StatusCode == System.Net.HttpStatusCode.Conflict
                 ? "Email is already registered." : $"Registration failed: {err}");
@@ -100,7 +105,12 @@ public class ApiService
         {
             var res = await _http.PostAsJsonAsync("auth/login", new { email, password });
             if (res.IsSuccessStatusCode)
-                return ApiResult<AuthResponse>.Ok(await res.Content.ReadFromJsonAsync<AuthResponse>()!);
+            {
+                var data = await res.Content.ReadFromJsonAsync<AuthResponse>();
+                return data is not null
+                    ? ApiResult<AuthResponse>.Ok(data)
+                    : ApiResult<AuthResponse>.Fail("Server returned an empty login response.");
+            }
             return ApiResult<AuthResponse>.Fail("Invalid email or password.");
         }
         catch (Exception ex)
@@ -569,7 +579,8 @@ public class ApiService
             try
             {
                 var userId = Preferences.Get("LoggedInUserId", 0);
-                return await _http.GetFromJsonAsync<IEnumerable<Conversation>>($"messages/{userId}");
+                return await _http.GetFromJsonAsync<IEnumerable<Conversation>>($"messages/{userId}")
+                    ?? Array.Empty<Conversation>();
             }
             catch { return new List<Conversation>(); }
         }
@@ -579,8 +590,9 @@ public class ApiService
             try
             {
                 var userId = Preferences.Get("LoggedInUserId", 0);
-                var result = await _http.GetFromJsonAsync<IEnumerable<ChatMessage>>($"messages/chat/{userId}/{contactId}");
-                foreach(var msg in result)
+                var result = await _http.GetFromJsonAsync<IEnumerable<ChatMessage>>($"messages/chat/{userId}/{contactId}")
+                    ?? Array.Empty<ChatMessage>();
+                foreach (var msg in result)
                 {
                     msg.IsMine = msg.SenderId == userId;
                 }
