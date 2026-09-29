@@ -20,6 +20,14 @@ namespace ShoppetAPI.Controllers
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(request.FullName) ||
+                    string.IsNullOrWhiteSpace(request.Email) ||
+                    string.IsNullOrWhiteSpace(request.Password))
+                {
+                    return BadRequest("Full name, email, and password are required.");
+                }
+
+                string normalizedEmail = request.Email.Trim();
                 string connString = _configuration.GetConnectionString("DefaultConnection")!;
 
                 using (var connection = new MySqlConnection(connString))
@@ -27,7 +35,7 @@ namespace ShoppetAPI.Controllers
                     await connection.OpenAsync();
 
                     var checkCmd = new MySqlCommand("SELECT COUNT(*) FROM Users WHERE Email = @Email", connection);
-                    checkCmd.Parameters.AddWithValue("@Email", request.Email);
+                    checkCmd.Parameters.AddWithValue("@Email", normalizedEmail);
                     long count = (long)await checkCmd.ExecuteScalarAsync();
 
                     if (count > 0)
@@ -42,7 +50,7 @@ namespace ShoppetAPI.Controllers
                         VALUES (@FullName, @Email, @PasswordHash, NOW(), @Role)", connection);
 
                     insertCmd.Parameters.AddWithValue("@FullName", request.FullName.Trim());
-                    insertCmd.Parameters.AddWithValue("@Email", request.Email.Trim());
+                    insertCmd.Parameters.AddWithValue("@Email", normalizedEmail);
                     insertCmd.Parameters.AddWithValue("@PasswordHash", hashedPassword);
                     insertCmd.Parameters.AddWithValue("@Role", "PetOwner");
 
@@ -53,8 +61,9 @@ namespace ShoppetAPI.Controllers
                     {
                         UserId = newUserId,
                         FullName = request.FullName.Trim(),
-                        Email = request.Email.Trim(),
+                        Email = normalizedEmail,
                         Role = "PetOwner",
+                        ProfilePicture = string.Empty,
                         Token = "sample-token"
                     });
                 }
@@ -70,14 +79,21 @@ namespace ShoppetAPI.Controllers
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(request.Email) ||
+                    string.IsNullOrWhiteSpace(request.Password))
+                {
+                    return BadRequest("Email and password are required.");
+                }
+
+                string normalizedEmail = request.Email.Trim();
                 string connString = _configuration.GetConnectionString("DefaultConnection")!;
 
                 using (var connection = new MySqlConnection(connString))
                 {
                     await connection.OpenAsync();
 
-                    var cmd = new MySqlCommand("SELECT Id, FullName, Email, PasswordHash, Role FROM Users WHERE Email = @Email", connection);
-                    cmd.Parameters.AddWithValue("@Email", request.Email);
+                    var cmd = new MySqlCommand("SELECT Id, FullName, Email, PasswordHash, Role, ProfilePicture FROM Users WHERE Email = @Email", connection);
+                    cmd.Parameters.AddWithValue("@Email", normalizedEmail);
 
                     using (var reader = await cmd.ExecuteReaderAsync())
                     {
@@ -90,6 +106,9 @@ namespace ShoppetAPI.Controllers
                             string role = reader.IsDBNull(reader.GetOrdinal("Role"))
                                 ? "PetOwner"
                                 : reader.GetString("Role");
+                            string profilePicture = reader.IsDBNull(reader.GetOrdinal("ProfilePicture"))
+                                ? string.Empty
+                                : reader.GetString("ProfilePicture");
 
                             // Verify the entered password against the stored BCrypt hash
                             bool isValidPassword = BCrypt.Net.BCrypt.Verify(request.Password, passwordHash);
@@ -102,6 +121,7 @@ namespace ShoppetAPI.Controllers
                                     FullName = fullName,
                                     Email = email,
                                     Role = role,
+                                    ProfilePicture = profilePicture,
                                     Token = "sample-token"
                                 });
                             }
@@ -137,6 +157,7 @@ namespace ShoppetAPI.Controllers
         public string FullName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string Role { get; set; } = "PetOwner";
+        public string ProfilePicture { get; set; } = string.Empty;
         public string Token { get; set; } = string.Empty;
     }
 }
