@@ -277,6 +277,7 @@ namespace ShoppetAPI.Controllers
                     FOR UPDATE", connection, transaction);
                 itemsCmd.Parameters.AddWithValue("@CartId", cartId);
 
+                string? stockError = null;
                 using (var reader = await itemsCmd.ExecuteReaderAsync())
                 {
                     while (await reader.ReadAsync())
@@ -284,22 +285,29 @@ namespace ShoppetAPI.Controllers
                         int quantity = reader.GetInt32("Quantity");
                         int stock = reader.GetInt32("StockQuantity");
                         bool available = reader.GetBoolean("IsAvailable");
+                        string productName = reader.GetString("Name");
 
                         if (!available || quantity > stock)
                         {
-                            await transaction.RollbackAsync();
-                            return BadRequest($"{reader.GetString("Name")} no longer has enough stock.");
+                            stockError = $"{productName} no longer has enough stock.";
+                            break;
                         }
 
                         decimal price = reader.GetDecimal("Price");
                         totalAmount += quantity * price;
                         cartItems.Add((
                             reader.GetInt32("ProductId"),
-                            reader.GetString("Name"),
+                            productName,
                             quantity,
                             price,
                             stock));
                     }
+                }
+
+                if (stockError is not null)
+                {
+                    await transaction.RollbackAsync();
+                    return BadRequest(stockError);
                 }
 
                 if (cartItems.Count == 0)
@@ -330,12 +338,14 @@ namespace ShoppetAPI.Controllers
                     orderItemCmd.Parameters.AddWithValue("@UnitPrice", item.Price);
                     await orderItemCmd.ExecuteNonQueryAsync();
 
+                    int remainingStock = item.Stock - item.Quantity;
                     var stockCmd = new MySqlCommand(@"
                         UPDATE products
-                        SET StockQuantity = StockQuantity - @Quantity,
-                            IsAvailable = CASE WHEN StockQuantity - @Quantity > 0 THEN 1 ELSE 0 END
+                        SET StockQuantity = @RemainingStock,
+                            IsAvailable = @IsAvailable
                         WHERE Id = @ProductId", connection, transaction);
-                    stockCmd.Parameters.AddWithValue("@Quantity", item.Quantity);
+                    stockCmd.Parameters.AddWithValue("@RemainingStock", remainingStock);
+                    stockCmd.Parameters.AddWithValue("@IsAvailable", remainingStock > 0);
                     stockCmd.Parameters.AddWithValue("@ProductId", item.ProductId);
                     await stockCmd.ExecuteNonQueryAsync();
                 }
