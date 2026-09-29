@@ -74,6 +74,9 @@ namespace ShoppetAPI.Controllers
         {
             try
             {
+                if (request.UserId <= 0)
+                    return BadRequest("A valid user ID is required.");
+
                 string connString = _configuration.GetConnectionString("DefaultConnection")!;
 
                 using (var connection = new MySqlConnection(connString))
@@ -81,8 +84,7 @@ namespace ShoppetAPI.Controllers
                     await connection.OpenAsync();
 
                     var query = @"INSERT INTO pets (UserId, Name, Species, Breed, AgeYears, Weight, PhotoUrl, CreatedAt) 
-                                  VALUES (@UserId, @Name, @Species, @Breed, @AgeYears, @Weight, @PhotoUrl, @CreatedAt);
-                                  SELECT LAST_INSERT_ID();";
+                                  VALUES (@UserId, @Name, @Species, @Breed, @AgeYears, @Weight, @PhotoUrl, @CreatedAt)";
 
                     long newId = 0;
                     using (var cmd = new MySqlCommand(query, connection))
@@ -96,11 +98,8 @@ namespace ShoppetAPI.Controllers
                         cmd.Parameters.AddWithValue("@PhotoUrl", request.PhotoUrl ?? string.Empty);
                         cmd.Parameters.AddWithValue("@CreatedAt", DateTime.UtcNow);
 
-                        object result = await cmd.ExecuteScalarAsync();
-                        if (result != null)
-                        {
-                            newId = Convert.ToInt64(result);
-                        }
+                        await cmd.ExecuteNonQueryAsync();
+                        newId = cmd.LastInsertedId;
                     }
 
                     // Return the newly created pet object so the mobile app can update its local ID
