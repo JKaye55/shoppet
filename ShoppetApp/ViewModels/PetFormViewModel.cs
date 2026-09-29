@@ -207,8 +207,18 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
         bool confirm = await Shell.Current.DisplayAlertAsync("Delete Pet", $"Remove {pet.Name}?", "Delete", "Cancel");
         if (!confirm) return;
 
-        await _db.DeletePetAsync(pet);
-        WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
-        await Shell.Current.GoToAsync("..");
+        int result = await _db.DeletePetAsync(pet);
+        if (result > 0)
+        {
+            WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
+            await Shell.Current.GoToAsync("..");
+        }
+        else
+        {
+            await Shell.Current.DisplayAlertAsync(
+                "Error",
+                "Failed to delete pet from the server.",
+                "OK");
+        }
     }
 }
