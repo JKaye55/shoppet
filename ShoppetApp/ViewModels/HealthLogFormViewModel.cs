@@ -109,7 +109,7 @@ public partial class HealthLogFormViewModel : ObservableObject, IQueryAttributab
         }
         catch (Exception ex)
         {
-            await Shell.Current.DisplayAlert("Error", $"Could not attach document: {ex.Message}", "OK");
+            await Shell.Current.DisplayAlertAsync("Error", $"Could not attach document: {ex.Message}", "OK");
         }
     }
 
@@ -125,7 +125,7 @@ public partial class HealthLogFormViewModel : ObservableObject, IQueryAttributab
     {
         if (string.IsNullOrWhiteSpace(Name))
         {
-            await Shell.Current.DisplayAlert("Validation", "Record name is required.", "OK");
+            await Shell.Current.DisplayAlertAsync("Validation", "Record name is required.", "OK");
             return;
         }
 
@@ -163,7 +163,7 @@ public partial class HealthLogFormViewModel : ObservableObject, IQueryAttributab
         }
         else
         {
-            await Shell.Current.DisplayAlert("Error", "Failed to save health record to server.", "OK");
+            await Shell.Current.DisplayAlertAsync("Error", "Failed to save health record to server.", "OK");
         }
     }
 
@@ -174,7 +174,7 @@ public partial class HealthLogFormViewModel : ObservableObject, IQueryAttributab
         var log = (await _api.GetHealthLogsAsync(PetId)).FirstOrDefault(l => l.Id == LogId);
         if (log is null) return;
 
-        bool confirm = await Shell.Current.DisplayAlert("Delete", $"Remove {log.Name}?", "Delete", "Cancel");
+        bool confirm = await Shell.Current.DisplayAlertAsync("Delete", $"Remove {log.Name}?", "Delete", "Cancel");
         if (!confirm) return;
 
         await _api.DeleteHealthLogAsync(PetId, log.Id);

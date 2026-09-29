@@ -58,13 +58,13 @@ public partial class ContactFormViewModel : ObservableObject, IQueryAttributable
     {
         if (string.IsNullOrWhiteSpace(Name))
         {
-            await Shell.Current.DisplayAlert("Validation", "Name or clinic is required.", "OK");
+            await Shell.Current.DisplayAlertAsync("Validation", "Name or clinic is required.", "OK");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(Phone))
         {
-            await Shell.Current.DisplayAlert("Validation", "Phone number is required.", "OK");
+            await Shell.Current.DisplayAlertAsync("Validation", "Phone number is required.", "OK");
             return;
         }
 
@@ -87,7 +87,7 @@ public partial class ContactFormViewModel : ObservableObject, IQueryAttributable
         }
         else
         {
-            await Shell.Current.DisplayAlert("Error", "Failed to save contact to server.", "OK");
+            await Shell.Current.DisplayAlertAsync("Error", "Failed to save contact to server.", "OK");
         }
     }
 
@@ -98,7 +98,7 @@ public partial class ContactFormViewModel : ObservableObject, IQueryAttributable
         var contact = await _db.GetContactAsync(ContactId);
         if (contact is null) return;
 
-        bool confirm = await Shell.Current.DisplayAlert("Delete", $"Remove {contact.Name}?", "Delete", "Cancel");
+        bool confirm = await Shell.Current.DisplayAlertAsync("Delete", $"Remove {contact.Name}?", "Delete", "Cancel");
         if (!confirm) return;
 
         await _db.DeleteContactAsync(contact);

@@ -124,7 +124,7 @@ public partial class FoodLogFormViewModel : ObservableObject, IQueryAttributable
     {
         if (string.IsNullOrWhiteSpace(FoodName))
         {
-            await Shell.Current.DisplayAlert("Validation", "Food name is required.", "OK");
+            await Shell.Current.DisplayAlertAsync("Validation", "Food name is required.", "OK");
             return;
         }
 
@@ -134,7 +134,7 @@ public partial class FoodLogFormViewModel : ObservableObject, IQueryAttributable
 
         if (minutes >= 60)
         {
-            await Shell.Current.DisplayAlert("Validation", "Minutes must be between 0 and 59.", "OK");
+            await Shell.Current.DisplayAlertAsync("Validation", "Minutes must be between 0 and 59.", "OK");
             return;
         }
 
@@ -171,7 +171,7 @@ public partial class FoodLogFormViewModel : ObservableObject, IQueryAttributable
         }
         else
         {
-            await Shell.Current.DisplayAlert("Error", "Failed to save food log to server.", "OK");
+            await Shell.Current.DisplayAlertAsync("Error", "Failed to save food log to server.", "OK");
         }
     }
 
@@ -185,7 +185,7 @@ public partial class FoodLogFormViewModel : ObservableObject, IQueryAttributable
         if (log is null)
             return;
 
-        var confirm = await Shell.Current.DisplayAlert(
+        var confirm = await Shell.Current.DisplayAlertAsync(
             "Delete Food Log",
             $"Remove {log.FoodName}?",
             "Delete",

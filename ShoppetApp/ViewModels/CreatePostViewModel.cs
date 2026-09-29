@@ -104,7 +104,7 @@ namespace ShoppetApp.ViewModels
                     {
                         if (AttachedMedia.Count >= 5)
                         {
-                            await Shell.Current.DisplayAlert("Limit Reached", "You can only attach a maximum of 5 photos.", "OK");
+                            await Shell.Current.DisplayAlertAsync("Limit Reached", "You can only attach a maximum of 5 photos.", "OK");
                             break;
                         }
 
@@ -145,7 +145,7 @@ namespace ShoppetApp.ViewModels
             }
             else
             {
-                await Shell.Current.DisplayAlert("Error", "Failed to post story. Try again.", "OK");
+                await Shell.Current.DisplayAlertAsync("Error", "Failed to post story. Try again.", "OK");
             }
         }
     }

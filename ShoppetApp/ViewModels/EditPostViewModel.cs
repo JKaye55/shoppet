@@ -111,12 +111,12 @@ namespace ShoppetApp.ViewModels
                     PostToEdit.PetName = petName;
                     PostToEdit.ImageUrls = imageUrls;
                     
-                    await Shell.Current.DisplayAlert("Success", "Post updated successfully.", "OK");
+                    await Shell.Current.DisplayAlertAsync("Success", "Post updated successfully.", "OK");
                     await Shell.Current.GoToAsync("..");
                 }
                 else
                 {
-                    await Shell.Current.DisplayAlert("Error", "Failed to update post.", "OK");
+                    await Shell.Current.DisplayAlertAsync("Error", "Failed to update post.", "OK");
                 }
             }
             finally
