@@ -15,7 +15,6 @@ public static class MauiProgram
         builder
             .UseMauiApp<App>()
             .UseMauiCommunityToolkit()
-            .UseMauiCommunityToolkitMediaElement(false)
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("Nunito-Regular.ttf", "Nunito");
@@ -25,6 +24,15 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
+
+#if ANDROID
+        if (OperatingSystem.IsAndroidVersionAtLeast(26))
+        {
+            builder.UseMauiCommunityToolkitMediaElement(false);
+        }
+#else
+        builder.UseMauiCommunityToolkitMediaElement(false);
+#endif
 
 #if DEBUG
         builder.Logging.AddDebug();
