@@ -37,9 +37,9 @@ public partial class OnboardingPage : ContentPage
 
     private async Task AnimateSlideChange()
     {
-        await TextContent.FadeTo(0, 125, Easing.Linear);
+        await TextContent.FadeToAsync(0, 125, Easing.Linear);
         ApplySlide(animate: true);
-        await TextContent.FadeTo(1, 125, Easing.Linear);
+        await TextContent.FadeToAsync(1, 125, Easing.Linear);
     }
 
     private void ApplySlide(bool animate)

@@ -5,8 +5,6 @@ namespace ShoppetApp.Pages;
 public partial class MessagesPage : ContentPage
 {
     private readonly MessagesViewModel _viewModel;
-    private bool _isFirstLoad = true;
-
     public MessagesPage(MessagesViewModel viewModel)
     {
         InitializeComponent();

@@ -36,7 +36,7 @@ public partial class ShopPage : ContentPage
 
     // --- Tab switching ---
 
-    private async void OnExploreTabClicked(object sender, EventArgs e)
+    private async void OnExploreTabClicked(object? sender, EventArgs e)
     {
         _isSellTab = false;
         BtnExplore.BackgroundColor = (Color)Application.Current!.Resources["Primary"];
@@ -48,7 +48,7 @@ public partial class ShopPage : ContentPage
         await LoadExploreListingsAsync();
     }
 
-    private async void OnSellTabClicked(object sender, EventArgs e)
+    private async void OnSellTabClicked(object? sender, EventArgs e)
     {
         _isSellTab = true;
         BtnSell.BackgroundColor = (Color)Application.Current!.Resources["Primary"];
@@ -60,7 +60,7 @@ public partial class ShopPage : ContentPage
         await LoadMyListingsAsync();
     }
 
-    private void OnSearchTapped(object sender, TappedEventArgs e)
+    private void OnSearchTapped(object? sender, TappedEventArgs e)
     {
         SearchPanel.IsVisible = !SearchPanel.IsVisible;
         if (!SearchPanel.IsVisible)
@@ -71,7 +71,7 @@ public partial class ShopPage : ContentPage
         }
     }
 
-    private async void OnSearchTextChanged(object sender, TextChangedEventArgs e)
+    private async void OnSearchTextChanged(object? sender, TextChangedEventArgs e)
     {
         _currentSearch = e.NewTextValue?.Trim() ?? "";
         if (!_isSellTab)
@@ -101,13 +101,13 @@ public partial class ShopPage : ContentPage
 
     // --- Category Filter ---
 
-    private async void OnCategoryAllClicked(object sender, EventArgs e)
+    private async void OnCategoryAllClicked(object? sender, EventArgs e)
     {
         _currentCategory = "";
         await LoadExploreListingsAsync();
     }
 
-    private async void OnCategoryClicked(object sender, EventArgs e)
+    private async void OnCategoryClicked(object? sender, EventArgs e)
     {
         if (sender is Button btn && btn.CommandParameter is string cat)
         {
@@ -118,7 +118,7 @@ public partial class ShopPage : ContentPage
 
     // --- Explore Listing Detail Modal ---
 
-    private void OnListingTapped(object sender, SelectionChangedEventArgs e)
+    private void OnListingTapped(object? sender, SelectionChangedEventArgs e)
     {
         if (e.CurrentSelection.FirstOrDefault() is MarketplaceListing listing)
         {
@@ -139,7 +139,7 @@ public partial class ShopPage : ContentPage
         DetailLocation.Text = string.IsNullOrEmpty(listing.Location) ? "Location not specified" : listing.Location;
         DetailTime.Text = listing.TimeAgo;
         DetailSellerInitial.Text = listing.Initials;
-        DetailSellerImage.Source = (ImageSource?)new ShoppetApp.Converters.Base64ToImageSourceConverter().Convert(listing.SellerProfilePic, typeof(ImageSource), null, null);
+        DetailSellerImage.Source = (ImageSource?)new ShoppetApp.Converters.Base64ToImageSourceConverter().Convert(listing.SellerProfilePic, typeof(ImageSource), null, System.Globalization.CultureInfo.InvariantCulture);
 
         if (listing.HasImages)
         {
@@ -160,9 +160,9 @@ public partial class ShopPage : ContentPage
         DetailModal.IsVisible = true;
     }
 
-    private void OnDismissModal(object sender, EventArgs e) => DetailModal.IsVisible = false;
+    private void OnDismissModal(object? sender, EventArgs e) => DetailModal.IsVisible = false;
 
-    private async void OnMessageSellerClicked(object sender, EventArgs e)
+    private async void OnMessageSellerClicked(object? sender, EventArgs e)
     {
         if (_currentListing != null)
         {
@@ -174,11 +174,11 @@ public partial class ShopPage : ContentPage
             });
         }
     }
-    private void OnModalBodyTapped(object sender, TappedEventArgs e) { }
+    private void OnModalBodyTapped(object? sender, TappedEventArgs e) { }
 
     // --- Sell Tab: Photo Picker ---
 
-    private async void OnPickPhotoClicked(object sender, EventArgs e)
+    private async void OnPickPhotoClicked(object? sender, EventArgs e)
     {
         try
         {
@@ -194,7 +194,7 @@ public partial class ShopPage : ContentPage
             {
                 if (_pickedPhotoPaths.Count >= 5)
                 {
-                    await DisplayAlert("Limit Reached", "You can only attach up to 5 photos.", "OK");
+                    await DisplayAlertAsync("Limit Reached", "You can only attach up to 5 photos.", "OK");
                     break;
                 }
                 _pickedPhotoPaths.Add(file.FullPath);
@@ -207,7 +207,7 @@ public partial class ShopPage : ContentPage
         }
     }
 
-    private void OnRemovePickedPhoto(object sender, TappedEventArgs e)
+    private void OnRemovePickedPhoto(object? sender, TappedEventArgs e)
     {
         if (e.Parameter is string path)
         {
@@ -225,7 +225,7 @@ public partial class ShopPage : ContentPage
 
     // --- Sell Tab: Create/Edit/Delete ---
 
-    private void OnPostItemClicked(object sender, EventArgs e)
+    private void OnPostItemClicked(object? sender, EventArgs e)
     {
         _editingListing = null;
         PostModalTitle.Text = "Post a Pet Item";
@@ -233,7 +233,7 @@ public partial class ShopPage : ContentPage
         PostModal.IsVisible = true;
     }
 
-    private void OnEditListingClicked(object sender, EventArgs e)
+    private void OnEditListingClicked(object? sender, EventArgs e)
     {
         if (sender is Button btn && btn.CommandParameter is MarketplaceListing listing)
         {
@@ -254,11 +254,11 @@ public partial class ShopPage : ContentPage
         }
     }
 
-    private async void OnDeleteListingClicked(object sender, EventArgs e)
+    private async void OnDeleteListingClicked(object? sender, EventArgs e)
     {
         if (sender is Button btn && btn.CommandParameter is MarketplaceListing listing)
         {
-            bool confirm = await DisplayAlert("Delete Listing", $"Are you sure you want to delete \"{listing.Title}\"?", "Yes, Delete", "Cancel");
+            bool confirm = await DisplayAlertAsync("Delete Listing", $"Are you sure you want to delete \"{listing.Title}\"?", "Yes, Delete", "Cancel");
             if (!confirm) return;
             if (_db.CurrentUser == null) return;
 
@@ -267,22 +267,22 @@ public partial class ShopPage : ContentPage
             {
                 MyListings.Remove(listing);
                 SellEmptyLabel.IsVisible = !MyListings.Any();
-                await DisplayAlert("Deleted", "Listing removed.", "OK");
+                await DisplayAlertAsync("Deleted", "Listing removed.", "OK");
             }
             else
             {
-                await DisplayAlert("Error", "Could not delete listing. Try again.", "OK");
+                await DisplayAlertAsync("Error", "Could not delete listing. Try again.", "OK");
             }
         }
     }
 
-    private void OnCancelPostClicked(object sender, EventArgs e)
+    private void OnCancelPostClicked(object? sender, EventArgs e)
     {
         PostModal.IsVisible = false;
         ClearPostForm();
     }
 
-    private async void OnSaveListingClicked(object sender, EventArgs e)
+    private async void OnSaveListingClicked(object? sender, EventArgs e)
     {
         if (_db.CurrentUser == null) return;
 
@@ -296,13 +296,13 @@ public partial class ShopPage : ContentPage
 
         if (string.IsNullOrEmpty(title) || string.IsNullOrEmpty(desc))
         {
-            await DisplayAlert("Missing Info", "Please fill in Title and Description.", "OK");
+            await DisplayAlertAsync("Missing Info", "Please fill in Title and Description.", "OK");
             return;
         }
 
         if (!decimal.TryParse(priceStr, out decimal price) || price < 0)
         {
-            await DisplayAlert("Invalid Price", "Please enter a valid price.", "OK");
+            await DisplayAlertAsync("Invalid Price", "Please enter a valid price.", "OK");
             return;
         }
 
@@ -353,11 +353,11 @@ public partial class ShopPage : ContentPage
             ClearPostForm();
             await LoadMyListingsAsync();
             await LoadExploreListingsAsync();
-            await DisplayAlert("Success", wasEditing ? "Listing updated!" : "Item posted to Marketplace!", "OK");
+            await DisplayAlertAsync("Success", wasEditing ? "Listing updated!" : "Item posted to Marketplace!", "OK");
         }
         else
         {
-            await DisplayAlert("Error", "Something went wrong. Please try again.", "OK");
+            await DisplayAlertAsync("Error", "Something went wrong. Please try again.", "OK");
         }
     }
 
