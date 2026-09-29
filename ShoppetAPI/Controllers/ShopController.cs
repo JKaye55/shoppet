@@ -28,7 +28,17 @@ namespace ShoppetAPI.Controllers
                 {
                     await connection.OpenAsync();
 
-                    var query = @"SELECT DISTINCT p.Id, p.Name, p.Description, p.Price, p.ImageUrl, p.StockQuantity, p.IsAvailable, p.CreatedAt 
+                    var query = @"SELECT
+                                      p.Id,
+                                      p.Name,
+                                      p.Description,
+                                      p.Price,
+                                      p.ImageUrl,
+                                      p.StockQuantity,
+                                      p.IsAvailable,
+                                      p.CreatedAt,
+                                      GROUP_CONCAT(DISTINCT pc.Name ORDER BY pc.Name SEPARATOR ',') AS SpeciesNames,
+                                      GROUP_CONCAT(DISTINCT sc.Name ORDER BY sc.Name SEPARATOR ',') AS CategoryNames
                                   FROM products p
                                   LEFT JOIN productpetcategories ppc ON p.Id = ppc.ProductId
                                   LEFT JOIN petcategories pc ON ppc.PetCategoryId = pc.Id
@@ -57,6 +67,17 @@ namespace ShoppetAPI.Controllers
                         cmd.Parameters.AddWithValue("@search", $"%{search}%");
                     }
 
+                    query += @" GROUP BY
+                                    p.Id,
+                                    p.Name,
+                                    p.Description,
+                                    p.Price,
+                                    p.ImageUrl,
+                                    p.StockQuantity,
+                                    p.IsAvailable,
+                                    p.CreatedAt
+                                ORDER BY p.Name";
+
                     cmd.CommandText = query;
 
                     using (var reader = await cmd.ExecuteReaderAsync())
@@ -72,7 +93,17 @@ namespace ShoppetAPI.Controllers
                                 ImageUrl = reader.IsDBNull(reader.GetOrdinal("ImageUrl")) ? "" : reader.GetString("ImageUrl"),
                                 StockQuantity = reader.GetInt32("StockQuantity"),
                                 IsAvailable = reader.GetBoolean("IsAvailable"),
-                                CreatedAt = reader.GetDateTime("CreatedAt")
+                                CreatedAt = reader.GetDateTime("CreatedAt"),
+                                Species = reader.IsDBNull(reader.GetOrdinal("SpeciesNames"))
+                                    ? new List<string>()
+                                    : reader.GetString("SpeciesNames")
+                                        .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                        .ToList(),
+                                Categories = reader.IsDBNull(reader.GetOrdinal("CategoryNames"))
+                                    ? new List<string>()
+                                    : reader.GetString("CategoryNames")
+                                        .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                        .ToList()
                             });
                         }
                     }
