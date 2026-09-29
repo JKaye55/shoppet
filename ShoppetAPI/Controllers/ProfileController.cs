@@ -20,6 +20,9 @@ namespace ShoppetAPI.Controllers
         [HttpGet("{userId}")]
         public async Task<IActionResult> GetProfile(int userId)
         {
+            if (userId <= 0)
+                return BadRequest("A valid user ID is required.");
+
             try
             {
                 using var conn = new MySqlConnection(_config.GetConnectionString("DefaultConnection"));
@@ -46,6 +49,12 @@ namespace ShoppetAPI.Controllers
         [HttpPut("update")]
         public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest req)
         {
+            if (req.UserId <= 0)
+                return BadRequest("A valid user ID is required.");
+
+            if (string.IsNullOrWhiteSpace(req.FullName))
+                return BadRequest("Full name is required.");
+
             try
             {
                 using var conn = new MySqlConnection(_config.GetConnectionString("DefaultConnection"));
@@ -59,7 +68,10 @@ namespace ShoppetAPI.Controllers
                     c1.Parameters.AddWithValue("@FullName", req.FullName);
                     c1.Parameters.AddWithValue("@Pic", req.ProfilePictureBase64);
                     c1.Parameters.AddWithValue("@UserId", req.UserId);
-                    await c1.ExecuteNonQueryAsync();
+                    int rows = await c1.ExecuteNonQueryAsync();
+
+                    if (rows == 0)
+                        return NotFound("User not found.");
 
                     return Ok(new { success = true });
                 }
