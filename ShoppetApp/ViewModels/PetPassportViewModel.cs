@@ -128,25 +128,46 @@ public partial class PetPassportViewModel : ObservableObject, IQueryAttributable
             shouldComplete = true;
         }
 
+        bool success;
         if (shouldComplete)
         {
-            await _api.CompleteHealthLogAsync(PetId, log.Id, nextDueDate);
+            success = await _api.CompleteHealthLogAsync(PetId, log.Id, nextDueDate);
         }
         else
         {
             log.DueDate = nextDueDate;
-            await _api.SaveHealthLogAsync(PetId, log);
+            success = await _api.SaveHealthLogAsync(PetId, log) is not null;
         }
-        
-        WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
+
+        if (success)
+        {
+            WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
+        }
+        else
+        {
+            await Shell.Current.DisplayAlertAsync(
+                "Error",
+                "Failed to update the health record on the server.",
+                "OK");
+        }
     }
     
     [RelayCommand]
     private async Task MarkCompletedAsync(HealthLog log)
     {
         if (log == null) return;
-        await _api.CompleteHealthLogAsync(PetId, log.Id, log.DueDate);
-        WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
+        bool success = await _api.CompleteHealthLogAsync(PetId, log.Id, log.DueDate);
+        if (success)
+        {
+            WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
+        }
+        else
+        {
+            await Shell.Current.DisplayAlertAsync(
+                "Error",
+                "Failed to complete the health record on the server.",
+                "OK");
+        }
     }
 
     [RelayCommand]
@@ -165,8 +186,18 @@ public partial class PetPassportViewModel : ObservableObject, IQueryAttributable
     private async Task MarkFedDoneAsync(FoodLog log)
     {
         if (log is null) return;
-        await _api.CompleteFoodLogAsync(PetId, log.Id);
-        WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
+        bool success = await _api.CompleteFoodLogAsync(PetId, log.Id);
+        if (success)
+        {
+            WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
+        }
+        else
+        {
+            await Shell.Current.DisplayAlertAsync(
+                "Error",
+                "Failed to complete the feeding record on the server.",
+                "OK");
+        }
     }
 }
 
