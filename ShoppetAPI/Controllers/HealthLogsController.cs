@@ -82,8 +82,17 @@ namespace ShoppetAPI.Controllers
                 using (var connection = new MySqlConnection(connString))
                 {
                     await connection.OpenAsync();
-                    var query = @"INSERT INTO healthlogs (PetId, Type, Name, DueDate, Completed, DateAdministered, ValidityInterval, ValidityUnit, MedicationIntervalHours, TimeStarted, DosageTotal, DosageRemaining, CheckupDate, DocumentPaths, CreatedAt) 
-                                  VALUES (@PetId, @Type, @Name, @DueDate, 0, @DateAdministered, @ValidityInterval, @ValidityUnit, @MedicationIntervalHours, @TimeStarted, @DosageTotal, @DosageRemaining, @CheckupDate, @DocumentPaths, NOW())";
+                    var query = @"INSERT INTO healthlogs
+                                  (PetId, Type, Name, DueDate, Completed, DateAdministered,
+                                   ValidityInterval, ValidityUnit, MedicationIntervalHours,
+                                   TimeStarted, DosageTotal, DosageRemaining, CheckupDate,
+                                   DocumentPaths, CreatedAt, CompletedAt)
+                                  VALUES
+                                  (@PetId, @Type, @Name, @DueDate, @Completed, @DateAdministered,
+                                   @ValidityInterval, @ValidityUnit, @MedicationIntervalHours,
+                                   @TimeStarted, @DosageTotal, @DosageRemaining, @CheckupDate,
+                                   @DocumentPaths, NOW(),
+                                   CASE WHEN @Completed = 1 THEN NOW() ELSE NULL END)";
 
                     using (var cmd = new MySqlCommand(query, connection))
                     {
@@ -91,6 +100,7 @@ namespace ShoppetAPI.Controllers
                         cmd.Parameters.AddWithValue("@Type", request.Type ?? "vaccine");
                         cmd.Parameters.AddWithValue("@Name", request.Name ?? "");
                         cmd.Parameters.AddWithValue("@DueDate", request.DueDate ?? "");
+                        cmd.Parameters.AddWithValue("@Completed", request.Completed);
                         cmd.Parameters.AddWithValue("@DateAdministered", request.DateAdministered ?? "");
                         cmd.Parameters.AddWithValue("@ValidityInterval", request.ValidityInterval);
                         cmd.Parameters.AddWithValue("@ValidityUnit", request.ValidityUnit ?? "Months");
@@ -100,8 +110,11 @@ namespace ShoppetAPI.Controllers
                         cmd.Parameters.AddWithValue("@DosageRemaining", request.DosageRemaining);
                         cmd.Parameters.AddWithValue("@CheckupDate", request.CheckupDate ?? "");
                         cmd.Parameters.AddWithValue("@DocumentPaths", request.DocumentPaths ?? "");
+                        cmd.Parameters.AddWithValue("@Completed", request.Completed);
 
-                        await cmd.ExecuteNonQueryAsync();
+                        int rows = await cmd.ExecuteNonQueryAsync();
+                        if (rows == 0)
+                            return NotFound("Health record not found.");
                         newId = cmd.LastInsertedId;
                     }
                 }
@@ -127,8 +140,14 @@ namespace ShoppetAPI.Controllers
                                   SET Type=@Type, Name=@Name, DueDate=@DueDate, DateAdministered=@DateAdministered, 
                                       ValidityInterval=@ValidityInterval, ValidityUnit=@ValidityUnit, 
                                       MedicationIntervalHours=@MedicationIntervalHours, TimeStarted=@TimeStarted, 
-                                      DosageTotal=@DosageTotal, DosageRemaining=@DosageRemaining, 
-                                      CheckupDate=@CheckupDate, DocumentPaths=@DocumentPaths
+                                      DosageTotal=@DosageTotal, DosageRemaining=@DosageRemaining,
+                                      CheckupDate=@CheckupDate, DocumentPaths=@DocumentPaths,
+                                      Completed=@Completed,
+                                      CompletedAt=CASE
+                                          WHEN @Completed = 1 AND CompletedAt IS NULL THEN NOW()
+                                          WHEN @Completed = 0 THEN NULL
+                                          ELSE CompletedAt
+                                      END
                                   WHERE Id = @Id AND PetId = @PetId";
 
                     using (var cmd = new MySqlCommand(query, connection))
@@ -225,6 +244,7 @@ namespace ShoppetAPI.Controllers
         public string Type { get; set; } = "vaccine";
         public string Name { get; set; } = string.Empty;
         public string DueDate { get; set; } = string.Empty;
+        public bool Completed { get; set; }
         public string DateAdministered { get; set; } = string.Empty;
         public int ValidityInterval { get; set; }
         public string ValidityUnit { get; set; } = "Months";
