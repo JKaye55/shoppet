@@ -198,7 +198,7 @@ namespace ShoppetApp.ViewModels
         private async Task DeleteCommentAsync(CommunityComment comment)
         {
             if (comment == null) return;
-            bool confirm = await Shell.Current.DisplayAlert("Delete Comment", "Are you sure you want to delete this comment?", "Yes", "No");
+            bool confirm = await Shell.Current.DisplayAlertAsync("Delete Comment", "Are you sure you want to delete this comment?", "Yes", "No");
             if (!confirm) return;
 
             var success = await _api.DeleteCommentAsync(comment.Id);
@@ -211,7 +211,7 @@ namespace ShoppetApp.ViewModels
             }
             else
             {
-                await Shell.Current.DisplayAlert("Error", "Failed to delete comment.", "OK");
+                await Shell.Current.DisplayAlertAsync("Error", "Failed to delete comment.", "OK");
             }
         }
 

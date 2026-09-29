@@ -56,7 +56,7 @@ public partial class PetsListViewModel : ObservableObject, IRecipient<DataChange
     [RelayCommand]
     private async Task DeletePetAsync(Pet pet)
     {
-        var confirm = await Shell.Current.DisplayAlert(
+        var confirm = await Shell.Current.DisplayAlertAsync(
             "Delete Pet",
             $"Remove {pet.Name} and all health records?",
             "Delete",

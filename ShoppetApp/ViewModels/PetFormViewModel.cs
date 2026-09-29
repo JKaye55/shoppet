@@ -143,7 +143,7 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
         }
         catch (Exception ex)
         {
-            await Shell.Current.DisplayAlert("Error", $"Photo picker failed: {ex.Message}", "OK");
+            await Shell.Current.DisplayAlertAsync("Error", $"Photo picker failed: {ex.Message}", "OK");
         }
     }
 
@@ -152,21 +152,21 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
     {
         if (string.IsNullOrWhiteSpace(Name))
         {
-            await Shell.Current.DisplayAlert("Validation", "Pet name is required.", "OK");
+            await Shell.Current.DisplayAlertAsync("Validation", "Pet name is required.", "OK");
             return;
         }
 
         _ = int.TryParse(AgeYearsText, out var age);
         if (age > 25)
         {
-            await Shell.Current.DisplayAlert("Validation", "Age cannot exceed 25 years.", "OK");
+            await Shell.Current.DisplayAlertAsync("Validation", "Age cannot exceed 25 years.", "OK");
             return;
         }
 
         int currentUserId = Preferences.Get("LoggedInUserId", 0);
         if (currentUserId == 0)
         {
-            await Shell.Current.DisplayAlert("Error", "User session not found. Please log in again.", "OK");
+            await Shell.Current.DisplayAlertAsync("Error", "User session not found. Please log in again.", "OK");
             return;
         }
 
@@ -190,7 +190,7 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
         }
         else
         {
-            await Shell.Current.DisplayAlert("Error", "Failed to save pet to the server.", "OK");
+            await Shell.Current.DisplayAlertAsync("Error", "Failed to save pet to the server.", "OK");
         }
     }
 
@@ -201,7 +201,7 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
         var pet = await _db.GetPetAsync(PetId);
         if (pet is null) return;
 
-        bool confirm = await Shell.Current.DisplayAlert("Delete Pet", $"Remove {pet.Name}?", "Delete", "Cancel");
+        bool confirm = await Shell.Current.DisplayAlertAsync("Delete Pet", $"Remove {pet.Name}?", "Delete", "Cancel");
         if (!confirm) return;
 
         await _db.DeletePetAsync(pet);
