@@ -110,11 +110,8 @@ namespace ShoppetAPI.Controllers
                         cmd.Parameters.AddWithValue("@DosageRemaining", request.DosageRemaining);
                         cmd.Parameters.AddWithValue("@CheckupDate", request.CheckupDate ?? "");
                         cmd.Parameters.AddWithValue("@DocumentPaths", request.DocumentPaths ?? "");
-                        cmd.Parameters.AddWithValue("@Completed", request.Completed);
 
-                        int rows = await cmd.ExecuteNonQueryAsync();
-                        if (rows == 0)
-                            return NotFound("Health record not found.");
+                        await cmd.ExecuteNonQueryAsync();
                         newId = cmd.LastInsertedId;
                     }
                 }
@@ -166,8 +163,11 @@ namespace ShoppetAPI.Controllers
                         cmd.Parameters.AddWithValue("@DosageRemaining", request.DosageRemaining);
                         cmd.Parameters.AddWithValue("@CheckupDate", request.CheckupDate ?? "");
                         cmd.Parameters.AddWithValue("@DocumentPaths", request.DocumentPaths ?? "");
+                        cmd.Parameters.AddWithValue("@Completed", request.Completed);
 
-                        await cmd.ExecuteNonQueryAsync();
+                        int rows = await cmd.ExecuteNonQueryAsync();
+                        if (rows == 0)
+                            return NotFound("Health record not found.");
                     }
                 }
                 return Ok();
