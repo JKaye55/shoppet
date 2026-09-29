@@ -89,7 +89,13 @@ namespace ShoppetApp.ViewModels
             if (post == null || _db.CurrentUser == null) return;
             post.IsLikedByMe = !post.IsLikedByMe;
             post.LikesCount += post.IsLikedByMe ? 1 : -1;
-            await _api.ToggleLikeAsync(post.Id, _db.CurrentUser.Id);
+
+            bool serverState = await _api.ToggleLikeAsync(post.Id, _db.CurrentUser.Id);
+            if (serverState != post.IsLikedByMe)
+            {
+                post.IsLikedByMe = serverState;
+                post.LikesCount += post.IsLikedByMe ? 1 : -1;
+            }
         }
 
         [RelayCommand]
