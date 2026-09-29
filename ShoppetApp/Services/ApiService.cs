@@ -247,6 +247,8 @@ public class ApiService
                 log.IntervalHours,
                 log.IntervalMinutes,
                 log.StartTimestamp,
+                log.LastFedTimestamp,
+                log.FedDate,
                 log.Notes
             };
             HttpResponseMessage res;
@@ -269,12 +271,16 @@ public class ApiService
     {
         try
         {
-            var res = await _http.PostAsync($"pets/{petId}/foodlogs/{logId}/done", null);
-            if (res.IsSuccessStatusCode)
-                return await res.Content.ReadFromJsonAsync<FoodLog>();
+            var res = await _http.PutAsync($"pets/{petId}/foodlogs/{logId}/complete", null);
+            if (!res.IsSuccessStatusCode)
+                return null;
+
+            return (await GetFoodLogsAsync(petId)).FirstOrDefault(x => x.Id == logId);
         }
-        catch { }
-        return null;
+        catch
+        {
+            return null;
+        }
     }
 
     public async Task<bool> DeleteFoodLogAsync(int petId, int logId)
@@ -344,69 +350,137 @@ public class ApiService
 
     public async Task<CartDto?> GetCartAsync()
     {
-        try { return await _http.GetFromJsonAsync<CartDto>("cart"); }
-        catch { return null; }
+        try
+        {
+            int userId = Preferences.Get("LoggedInUserId", 0);
+            if (userId <= 0) return null;
+            return await _http.GetFromJsonAsync<CartDto>($"cart?userId={userId}");
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     public async Task<CartDto?> AddToCartAsync(AddToCartRequest request)
     {
         try
         {
-            var res = await _http.PostAsJsonAsync("cart/items", request);
-            if (res.IsSuccessStatusCode) return await res.Content.ReadFromJsonAsync<CartDto>();
+            int userId = Preferences.Get("LoggedInUserId", 0);
+            if (userId <= 0 || request.ProductId <= 0 || request.Quantity <= 0)
+                return null;
+
+            var res = await _http.PostAsJsonAsync("cart/items", new
+            {
+                UserId = userId,
+                request.ProductId,
+                request.Quantity
+            });
+
+            return res.IsSuccessStatusCode
+                ? await res.Content.ReadFromJsonAsync<CartDto>()
+                : null;
         }
-        catch { }
-        return null;
+        catch
+        {
+            return null;
+        }
     }
 
     public async Task<CartDto?> UpdateCartItemAsync(int itemId, UpdateCartItemRequest request)
     {
         try
         {
-            var res = await _http.PutAsJsonAsync($"cart/items/{itemId}", request);
-            if (res.IsSuccessStatusCode) return await res.Content.ReadFromJsonAsync<CartDto>();
+            int userId = Preferences.Get("LoggedInUserId", 0);
+            if (userId <= 0 || itemId <= 0 || request.Quantity <= 0)
+                return null;
+
+            var res = await _http.PutAsJsonAsync(
+                $"cart/items/{itemId}?userId={userId}",
+                request);
+
+            return res.IsSuccessStatusCode
+                ? await res.Content.ReadFromJsonAsync<CartDto>()
+                : null;
         }
-        catch { }
-        return null;
+        catch
+        {
+            return null;
+        }
     }
 
     public async Task<CartDto?> RemoveFromCartAsync(int itemId)
     {
         try
         {
-            var res = await _http.DeleteAsync($"cart/items/{itemId}");
-            if (res.IsSuccessStatusCode) return await res.Content.ReadFromJsonAsync<CartDto>();
+            int userId = Preferences.Get("LoggedInUserId", 0);
+            if (userId <= 0 || itemId <= 0)
+                return null;
+
+            var res = await _http.DeleteAsync($"cart/items/{itemId}?userId={userId}");
+            return res.IsSuccessStatusCode
+                ? await res.Content.ReadFromJsonAsync<CartDto>()
+                : null;
         }
-        catch { }
-        return null;
+        catch
+        {
+            return null;
+        }
     }
 
     public async Task<CartDto?> ClearCartAsync()
     {
         try
         {
-            var res = await _http.DeleteAsync("cart");
-            if (res.IsSuccessStatusCode) return await res.Content.ReadFromJsonAsync<CartDto>();
+            int userId = Preferences.Get("LoggedInUserId", 0);
+            if (userId <= 0)
+                return null;
+
+            var res = await _http.DeleteAsync($"cart?userId={userId}");
+            return res.IsSuccessStatusCode
+                ? await res.Content.ReadFromJsonAsync<CartDto>()
+                : null;
         }
-        catch { }
-        return null;
+        catch
+        {
+            return null;
+        }
     }
 
     public async Task<OrderDto?> CheckoutAsync()
     {
         try
         {
-            var res = await _http.PostAsync("cart/checkout", null);
-            if (res.IsSuccessStatusCode) return await res.Content.ReadFromJsonAsync<OrderDto>();
+            int userId = Preferences.Get("LoggedInUserId", 0);
+            if (userId <= 0)
+                return null;
+
+            var res = await _http.PostAsync($"cart/checkout?userId={userId}", null);
+            return res.IsSuccessStatusCode
+                ? await res.Content.ReadFromJsonAsync<OrderDto>()
+                : null;
         }
-        catch { }
-        return null;
+        catch
+        {
+            return null;
+        }
     }
 
     public async Task<List<OrderDto>> GetOrdersAsync()
     {
-        try { return await _http.GetFromJsonAsync<List<OrderDto>>("cart/orders") ?? []; }
-        catch { return []; }
+        try
+        {
+            int userId = Preferences.Get("LoggedInUserId", 0);
+            if (userId <= 0)
+                return [];
+
+            return await _http.GetFromJsonAsync<List<OrderDto>>(
+                $"cart/orders?userId={userId}") ?? [];
+        }
+        catch
+        {
+            return [];
+        }
     }
 
     // --- Community API ---
