@@ -39,16 +39,15 @@ namespace ShoppetAPI.Controllers
 
                     var insertCmd = new MySqlCommand(@"
                         INSERT INTO Users (FullName, Email, PasswordHash, CreatedAt, Role)
-                        VALUES (@FullName, @Email, @PasswordHash, NOW(), @Role);
-                        SELECT LAST_INSERT_ID();", connection);
+                        VALUES (@FullName, @Email, @PasswordHash, NOW(), @Role)", connection);
 
                     insertCmd.Parameters.AddWithValue("@FullName", request.FullName.Trim());
                     insertCmd.Parameters.AddWithValue("@Email", request.Email.Trim());
                     insertCmd.Parameters.AddWithValue("@PasswordHash", hashedPassword);
                     insertCmd.Parameters.AddWithValue("@Role", "PetOwner");
 
-                    object? result = await insertCmd.ExecuteScalarAsync();
-                    int newUserId = Convert.ToInt32(result);
+                    await insertCmd.ExecuteNonQueryAsync();
+                    int newUserId = Convert.ToInt32(insertCmd.LastInsertedId);
 
                     return Ok(new AuthResponse
                     {
