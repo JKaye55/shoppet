@@ -183,7 +183,7 @@ public class ApiService
                 log.DocumentPaths
             };
             HttpResponseMessage res;
-            if (log.Id == 0)
+            if (log.Id <= 0)
                 res = await _http.PostAsJsonAsync($"pets/{petId}/healthlogs", body);
             else
                 res = await _http.PutAsJsonAsync($"pets/{petId}/healthlogs/{log.Id}", body);
@@ -240,7 +240,7 @@ public class ApiService
                 log.Notes
             };
             HttpResponseMessage res;
-            if (log.Id == 0)
+            if (log.Id <= 0)
                 res = await _http.PostAsJsonAsync($"pets/{petId}/foodlogs", body);
             else
                 res = await _http.PutAsJsonAsync($"pets/{petId}/foodlogs/{log.Id}", body);
