@@ -16,7 +16,31 @@ namespace ShoppetApp.Services
 
         private readonly string _mysqlConnectionString = "Server=localhost;Database=shoppetdb;Uid=root;Pwd=;";
 
-        public User? CurrentUser { get; set; }
+        private User? _currentUser;
+        public User? CurrentUser
+        {
+            get
+            {
+                if (_currentUser is null)
+                {
+                    int id = Preferences.Get("LoggedInUserId", 0);
+                    if (id > 0)
+                    {
+                        _currentUser = new User
+                        {
+                            Id = id,
+                            FullName = Preferences.Get("LoggedInUserName", string.Empty),
+                            Email = Preferences.Get("LoggedInUserEmail", string.Empty),
+                            Role = Preferences.Get("LoggedInUserRole", "PetOwner"),
+                            ProfilePicture = Preferences.Get("LoggedInUserProfilePicture", string.Empty)
+                        };
+                    }
+                }
+                return _currentUser;
+            }
+            set => _currentUser = value;
+        }
+
         public ApiService? ApiService { get; set; }
 
         public DatabaseService()
