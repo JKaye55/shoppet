@@ -137,6 +137,8 @@ namespace ShoppetAPI.Controllers
                         cmd.Parameters.AddWithValue("@IntervalHours", request.IntervalHours);
                         cmd.Parameters.AddWithValue("@IntervalMinutes", request.IntervalMinutes);
                         cmd.Parameters.AddWithValue("@StartTimestamp", request.StartTimestamp ?? "");
+                        cmd.Parameters.AddWithValue("@LastFedTimestamp", request.LastFedTimestamp ?? "");
+                        cmd.Parameters.AddWithValue("@FedDate", request.FedDate ?? "");
                         cmd.Parameters.AddWithValue("@Notes", request.Notes ?? "");
 
                         int rows = await cmd.ExecuteNonQueryAsync();
