@@ -194,9 +194,19 @@ public partial class FoodLogFormViewModel : ObservableObject, IQueryAttributable
         if (!confirm)
             return;
 
-        await _api.DeleteFoodLogAsync(PetId, log.Id);
-        WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
-        await Shell.Current.GoToAsync("..");
+        bool deleted = await _api.DeleteFoodLogAsync(PetId, log.Id);
+        if (deleted)
+        {
+            WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
+            await Shell.Current.GoToAsync("..");
+        }
+        else
+        {
+            await Shell.Current.DisplayAlertAsync(
+                "Error",
+                "Failed to delete food log from the server.",
+                "OK");
+        }
     }
 }
 
