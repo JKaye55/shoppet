@@ -8,7 +8,7 @@ namespace ShoppetApp;
 
 public static class MauiProgram
 {
-    public static IServiceProvider Services { get; private set; }
+    public static IServiceProvider Services { get; private set; } = null!;
     public static MauiApp CreateMauiApp()
     {
         var builder = MauiApp.CreateBuilder();
