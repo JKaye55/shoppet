@@ -109,9 +109,19 @@ namespace ShoppetApp.ViewModels
             if (!confirm)
                 return;
 
-            await _db.DeleteContactAsync(contact);
-            WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
-            await LoadAsync();
+            int result = await _db.DeleteContactAsync(contact);
+            if (result > 0)
+            {
+                WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
+                await LoadAsync();
+            }
+            else
+            {
+                await Shell.Current.DisplayAlertAsync(
+                    "Error",
+                    "Failed to delete contact from the server.",
+                    "OK");
+            }
         }
 
         [RelayCommand]
