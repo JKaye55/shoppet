@@ -49,7 +49,7 @@ namespace ShoppetApp.ViewModels
                 {
                     AttachedMedia.Add(new MediaAttachment { FilePath = img, IsVideo = false });
                 }
-                LoadPetsAsync();
+                _ = LoadPetsAsync();
             }
         }
 
