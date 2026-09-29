@@ -48,12 +48,12 @@ public partial class PetPassportPage : ContentPage, IQueryAttributable
         var hideSection = showHealth ? FoodSection : HealthSection;
         var showSection = showHealth ? HealthSection : FoodSection;
 
-        await hideSection.FadeTo(0, 150, Easing.SinOut);
+        await hideSection.FadeToAsync(0, 150, Easing.SinOut);
         hideSection.IsVisible = false;
 
         showSection.Opacity = 0;
         showSection.IsVisible = true;
-        await showSection.FadeTo(1, 200, Easing.SinIn);
+        await showSection.FadeToAsync(1, 200, Easing.SinIn);
 
         ApplyTabStyle(activeHealth: showHealth, animate: true);
     }
