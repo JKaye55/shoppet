@@ -2,6 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:ShoppetApp.ViewModels"
+             xmlns:models="clr-namespace:ShoppetApp.Models"
              x:Class="ShoppetApp.Pages.EditPostPage"
              x:DataType="vm:EditPostViewModel"
              Shell.NavBarIsVisible="False"
@@ -37,7 +38,7 @@
                                 <Binding Path="SelectedPets" />
                             </BindableLayout.ItemsSource>
                             <BindableLayout.ItemTemplate>
-                                <DataTemplate>
+                                <DataTemplate x:DataType="models:Pet">
                                     <Border Padding="10,5" StrokeShape="RoundRectangle 10" Stroke="{StaticResource Secondary30}" BackgroundColor="{StaticResource Secondary30}" >
                                         <Label Text="{Binding Name}" TextColor="{StaticResource BodyText}" FontSize="12" />
                                     </Border>
@@ -69,7 +70,7 @@
                         <LinearItemsLayout Orientation="Horizontal" ItemSpacing="10" />
                     </CollectionView.ItemsLayout>
                     <CollectionView.ItemTemplate>
-                        <DataTemplate>
+                        <DataTemplate x:DataType="vm:MediaAttachment">
                             <Grid WidthRequest="100" HeightRequest="100" Margin="0,5">
                                 <RoundRectangle CornerRadius="10" Fill="#222222" />
                                 
@@ -119,7 +120,7 @@
                     
                     <CollectionView ItemsSource="{Binding MyPets}" SelectedItems="{Binding SelectedPets}" SelectionMode="Multiple" HeightRequest="200">
                         <CollectionView.ItemTemplate>
-                            <DataTemplate>
+                            <DataTemplate x:DataType="models:Pet">
                                 <Grid Padding="10">
                                     <VisualStateManager.VisualStateGroups>
                                         <VisualStateGroup Name="CommonStates">
