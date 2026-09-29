@@ -17,19 +17,19 @@ public partial class AuthViewModel : ObservableObject
         _apiService = apiService;
     }
 
-    [ObservableProperty] private bool _isLogin = true;
-    [ObservableProperty] private string _fullName = string.Empty;
-    [ObservableProperty] private string _email = string.Empty;
-    [ObservableProperty] private string _password = string.Empty;
-    [ObservableProperty] private string _confirmPassword = string.Empty;
-    [ObservableProperty] private bool _isPasswordVisible;
-    [ObservableProperty] private bool _isConfirmPasswordVisible;
-    [ObservableProperty] private string _fullNameError = string.Empty;
-    [ObservableProperty] private string _emailError = string.Empty;
-    [ObservableProperty] private string _passwordError = string.Empty;
-    [ObservableProperty] private string _confirmPasswordError = string.Empty;
-    [ObservableProperty] private bool _isBusy;
-    [ObservableProperty] private string _generalError = string.Empty;
+    [ObservableProperty] public partial bool IsLogin { get; set; } = true;
+    [ObservableProperty] public partial string FullName { get; set; } = string.Empty;
+    [ObservableProperty] public partial string Email { get; set; } = string.Empty;
+    [ObservableProperty] public partial string Password { get; set; } = string.Empty;
+    [ObservableProperty] public partial string ConfirmPassword { get; set; } = string.Empty;
+    [ObservableProperty] public partial bool IsPasswordVisible { get; set; }
+    [ObservableProperty] public partial bool IsConfirmPasswordVisible { get; set; }
+    [ObservableProperty] public partial string FullNameError { get; set; } = string.Empty;
+    [ObservableProperty] public partial string EmailError { get; set; } = string.Empty;
+    [ObservableProperty] public partial string PasswordError { get; set; } = string.Empty;
+    [ObservableProperty] public partial string ConfirmPasswordError { get; set; } = string.Empty;
+    [ObservableProperty] public partial bool IsBusy { get; set; }
+    [ObservableProperty] public partial string GeneralError { get; set; } = string.Empty;
 
     public string WelcomeTitle => IsLogin ? "Welcome Back" : "Create Account";
     public string SubmitText => IsLogin ? "Log In" : "Create Account";
