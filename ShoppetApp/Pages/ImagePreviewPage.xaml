@@ -8,14 +8,14 @@
 
     <Grid>
         <!-- The Image -->
-        <Image x:Name="PreviewImage" Aspect="AspectFit" HorizontalOptions="FillAndExpand" VerticalOptions="FillAndExpand" />
+        <Image x:Name="PreviewImage" Aspect="AspectFit" HorizontalOptions="Fill" VerticalOptions="Fill" />
 
         <!-- The Video -->
         <toolkit:MediaElement x:Name="PreviewVideo" 
                               ShouldAutoPlay="True"
                               ShouldShowPlaybackControls="True"
-                              HorizontalOptions="FillAndExpand" 
-                              VerticalOptions="FillAndExpand" 
+                              HorizontalOptions="Fill" 
+                              VerticalOptions="Fill" 
                               IsVisible="False" />
 
         <!-- Close Button -->
