@@ -37,18 +37,25 @@ namespace ShoppetAPI.Controllers
 
                     string hashedPassword = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
-                    var insertCmd = new MySqlCommand(
-                        "INSERT INTO Users (FullName, Email, PasswordHash) VALUES (@FullName, @Email, @PasswordHash)", connection);
-                    insertCmd.Parameters.AddWithValue("@FullName", request.FullName);
-                    insertCmd.Parameters.AddWithValue("@Email", request.Email);
-                    insertCmd.Parameters.AddWithValue("@PasswordHash", hashedPassword);
+                    var insertCmd = new MySqlCommand(@"
+                        INSERT INTO Users (FullName, Email, PasswordHash, CreatedAt, Role)
+                        VALUES (@FullName, @Email, @PasswordHash, NOW(), @Role);
+                        SELECT LAST_INSERT_ID();", connection);
 
-                    await insertCmd.ExecuteNonQueryAsync();
+                    insertCmd.Parameters.AddWithValue("@FullName", request.FullName.Trim());
+                    insertCmd.Parameters.AddWithValue("@Email", request.Email.Trim());
+                    insertCmd.Parameters.AddWithValue("@PasswordHash", hashedPassword);
+                    insertCmd.Parameters.AddWithValue("@Role", "PetOwner");
+
+                    object? result = await insertCmd.ExecuteScalarAsync();
+                    int newUserId = Convert.ToInt32(result);
 
                     return Ok(new AuthResponse
                     {
-                        FullName = request.FullName,
-                        Email = request.Email,
+                        UserId = newUserId,
+                        FullName = request.FullName.Trim(),
+                        Email = request.Email.Trim(),
+                        Role = "PetOwner",
                         Token = "sample-token"
                     });
                 }
@@ -70,7 +77,7 @@ namespace ShoppetAPI.Controllers
                 {
                     await connection.OpenAsync();
 
-                    var cmd = new MySqlCommand("SELECT Id, FullName, Email, PasswordHash FROM Users WHERE Email = @Email", connection);
+                    var cmd = new MySqlCommand("SELECT Id, FullName, Email, PasswordHash, Role FROM Users WHERE Email = @Email", connection);
                     cmd.Parameters.AddWithValue("@Email", request.Email);
 
                     using (var reader = await cmd.ExecuteReaderAsync())
@@ -81,6 +88,9 @@ namespace ShoppetAPI.Controllers
                             string fullName = reader.GetString("FullName");
                             string email = reader.GetString("Email");
                             string passwordHash = reader.GetString("PasswordHash");
+                            string role = reader.IsDBNull(reader.GetOrdinal("Role"))
+                                ? "PetOwner"
+                                : reader.GetString("Role");
 
                             // Verify the entered password against the stored BCrypt hash
                             bool isValidPassword = BCrypt.Net.BCrypt.Verify(request.Password, passwordHash);
@@ -92,6 +102,7 @@ namespace ShoppetAPI.Controllers
                                     UserId = userId,
                                     FullName = fullName,
                                     Email = email,
+                                    Role = role,
                                     Token = "sample-token"
                                 });
                             }
@@ -126,6 +137,7 @@ namespace ShoppetAPI.Controllers
         public int UserId { get; set; }
         public string FullName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+        public string Role { get; set; } = "PetOwner";
         public string Token { get; set; } = string.Empty;
     }
 }
