@@ -7,7 +7,7 @@ namespace ShoppetApp.Pages;
 public partial class ShopPage : ContentPage
 {
     private readonly ApiService _api;
-    private MarketplaceListing _currentListing;
+    private MarketplaceListing? _currentListing;
     private readonly DatabaseService _db;
     private ObservableCollection<MarketplaceListing> MyListings { get; } = new();
     private List<MarketplaceListing> _allExploreListings = new();
