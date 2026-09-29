@@ -61,7 +61,9 @@ namespace ShoppetApp.ViewModels
         {
             try
             {
-                var photo = await MediaPicker.PickPhotoAsync();
+                var photos = await MediaPicker.Default.PickPhotosAsync();
+                var photo = photos.FirstOrDefault();
+
                 if (photo != null)
                 {
                     using var stream = await photo.OpenReadAsync();
