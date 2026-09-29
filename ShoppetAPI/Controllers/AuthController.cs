@@ -110,11 +110,35 @@ namespace ShoppetAPI.Controllers
                                 ? string.Empty
                                 : reader.GetString("ProfilePicture");
 
-                            // Verify the entered password against the stored BCrypt hash
-                            bool isValidPassword = BCrypt.Net.BCrypt.Verify(request.Password, passwordHash);
+                            bool isBcryptHash =
+                                passwordHash.StartsWith("$2a$", StringComparison.Ordinal) ||
+                                passwordHash.StartsWith("$2b$", StringComparison.Ordinal) ||
+                                passwordHash.StartsWith("$2y$", StringComparison.Ordinal);
+
+                            bool isValidPassword = isBcryptHash
+                                ? BCrypt.Net.BCrypt.Verify(request.Password, passwordHash)
+                                : string.Equals(
+                                    request.Password,
+                                    passwordHash,
+                                    StringComparison.Ordinal);
 
                             if (isValidPassword)
                             {
+                                // One-time migration for legacy imported accounts that still
+                                // contain a plain-text password in the PasswordHash column.
+                                if (!isBcryptHash)
+                                {
+                                    await reader.DisposeAsync();
+
+                                    string upgradedHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+                                    using var migrateCmd = new MySqlCommand(
+                                        "UPDATE Users SET PasswordHash = @PasswordHash WHERE Id = @Id",
+                                        connection);
+                                    migrateCmd.Parameters.AddWithValue("@PasswordHash", upgradedHash);
+                                    migrateCmd.Parameters.AddWithValue("@Id", userId);
+                                    await migrateCmd.ExecuteNonQueryAsync();
+                                }
+
                                 return Ok(new AuthResponse
                                 {
                                     UserId = userId,
