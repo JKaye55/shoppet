@@ -12,14 +12,14 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
 {
     private readonly DatabaseService _db;
 
-    [ObservableProperty] private int _petId;
-    [ObservableProperty] private string _name = string.Empty;
-    [ObservableProperty] private string _breed = string.Empty;
-    [ObservableProperty] private string _photoUrl = string.Empty;
-    [ObservableProperty] private bool _isEditMode;
+    [ObservableProperty] public partial int PetId { get; set; }
+    [ObservableProperty] public partial string Name { get; set; } = string.Empty;
+    [ObservableProperty] public partial string Breed { get; set; } = string.Empty;
+    [ObservableProperty] public partial string PhotoUrl { get; set; } = string.Empty;
+    [ObservableProperty] public partial bool IsEditMode { get; set; }
 
     [ObservableProperty]
-    private string _species = "Dog";
+    public partial string Species { get; set; } = "Dog";
 
     partial void OnSpeciesChanged(string value)
     {

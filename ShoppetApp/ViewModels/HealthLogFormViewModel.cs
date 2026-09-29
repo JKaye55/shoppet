@@ -15,23 +15,23 @@ public partial class HealthLogFormViewModel : ObservableObject, IQueryAttributab
     [NotifyPropertyChangedFor(nameof(IsVaccine))]
     [NotifyPropertyChangedFor(nameof(IsMedication))]
     [NotifyPropertyChangedFor(nameof(IsCheckup))]
-    private string _logType = "vaccine";
+    public partial string LogType { get; set; } = "vaccine";
 
-    [ObservableProperty] private int _petId;
-    [ObservableProperty] private int _logId;
-    [ObservableProperty] private string _name = string.Empty;
-    [ObservableProperty] private DateTime _dueDate = DateTime.Today.AddDays(1);
-    [ObservableProperty] private TimeSpan _dueTime = DateTime.Now.TimeOfDay;
-    [ObservableProperty] private bool _completed;
-    [ObservableProperty] private DateTime _dateAdministered = DateTime.Today;
-    [ObservableProperty] private string _validityIntervalText = "1";
-    [ObservableProperty] private string _validityUnit = "Months";
-    [ObservableProperty] private string _medicationIntervalHoursText = "8";
-    [ObservableProperty] private string _dosageTotalText = "14";
-    [ObservableProperty] private DateTime _checkupDate = DateTime.Today;
-    [ObservableProperty] private DateTime _timeStartedDate = DateTime.Today;
-    [ObservableProperty] private TimeSpan _timeStartedTime = DateTime.Now.TimeOfDay;
-    [ObservableProperty] private bool _isEditMode;
+    [ObservableProperty] public partial int PetId { get; set; }
+    [ObservableProperty] public partial int LogId { get; set; }
+    [ObservableProperty] public partial string Name { get; set; } = string.Empty;
+    [ObservableProperty] public partial DateTime DueDate { get; set; } = DateTime.Today.AddDays(1);
+    [ObservableProperty] public partial TimeSpan DueTime { get; set; } = DateTime.Now.TimeOfDay;
+    [ObservableProperty] public partial bool Completed { get; set; }
+    [ObservableProperty] public partial DateTime DateAdministered { get; set; } = DateTime.Today;
+    [ObservableProperty] public partial string ValidityIntervalText { get; set; } = "1";
+    [ObservableProperty] public partial string ValidityUnit { get; set; } = "Months";
+    [ObservableProperty] public partial string MedicationIntervalHoursText { get; set; } = "8";
+    [ObservableProperty] public partial string DosageTotalText { get; set; } = "14";
+    [ObservableProperty] public partial DateTime CheckupDate { get; set; } = DateTime.Today;
+    [ObservableProperty] public partial DateTime TimeStartedDate { get; set; } = DateTime.Today;
+    [ObservableProperty] public partial TimeSpan TimeStartedTime { get; set; } = DateTime.Now.TimeOfDay;
+    [ObservableProperty] public partial bool IsEditMode { get; set; }
 
     public List<string> DocumentPathsList { get; } = new();
 

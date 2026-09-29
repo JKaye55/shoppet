@@ -12,10 +12,10 @@ public partial class PetPassportViewModel : ObservableObject, IQueryAttributable
 {
     private readonly ApiService _api;
 
-    [ObservableProperty] private Pet? _pet;
-    [ObservableProperty] private ObservableCollection<HealthLog> _healthLogs = [];
-    [ObservableProperty] private ObservableCollection<FoodLog> _foodLogs = [];
-    [ObservableProperty] private bool _isBusy;
+    [ObservableProperty] public partial Pet? Pet { get; set; }
+    [ObservableProperty] public partial ObservableCollection<HealthLog> HealthLogs { get; set; } = [];
+    [ObservableProperty] public partial ObservableCollection<FoodLog> FoodLogs { get; set; } = [];
+    [ObservableProperty] public partial bool IsBusy { get; set; }
 
     public int PetId { get; private set; }
 

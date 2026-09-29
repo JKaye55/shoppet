@@ -12,11 +12,11 @@ public partial class HomeViewModel : ObservableObject, IRecipient<DataChangedMes
 {
     private readonly DatabaseService _db;
 
-    [ObservableProperty] private ObservableCollection<Pet> _pets = [];
-    [ObservableProperty] private ObservableCollection<HealthLog> _actionRequiredLogs = [];
-    [ObservableProperty] private ObservableCollection<StoryCard> _stories = [];
-    [ObservableProperty] private StoryCard? _activeStory;
-    [ObservableProperty] private bool _isBusy;
+    [ObservableProperty] public partial ObservableCollection<Pet> Pets { get; set; } = [];
+    [ObservableProperty] public partial ObservableCollection<HealthLog> ActionRequiredLogs { get; set; } = [];
+    [ObservableProperty] public partial ObservableCollection<StoryCard> Stories { get; set; } = [];
+    [ObservableProperty] public partial StoryCard? ActiveStory { get; set; }
+    [ObservableProperty] public partial bool IsBusy { get; set; }
 
     public string Greeting
     {

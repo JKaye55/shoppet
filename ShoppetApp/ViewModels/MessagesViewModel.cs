@@ -15,7 +15,7 @@ public partial class Conversation : ObservableObject
     
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasUnread))]
-    private int _unreadCount;
+    public partial int UnreadCount { get; set; }
     
     public bool HasUnread => UnreadCount > 0;
     public string Initials => string.IsNullOrWhiteSpace(ContactName) ? "U" : ContactName.Substring(0, 1).ToUpper();
@@ -27,19 +27,19 @@ public partial class MessagesViewModel : ObservableObject
     private readonly ApiService _api;
 
     [ObservableProperty]
-    private ObservableCollection<Conversation> _conversations = new();
+    public partial ObservableCollection<Conversation> Conversations { get; set; } = new();
     
     [ObservableProperty]
-    private ObservableCollection<UserSearchResult> _searchResults = new();
+    public partial ObservableCollection<UserSearchResult> SearchResults { get; set; } = new();
 
     [ObservableProperty]
-    private string _searchQuery = string.Empty;
+    public partial string SearchQuery { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private bool _isBusy;
+    public partial bool IsBusy { get; set; }
     
     [ObservableProperty]
-    private bool _isSearching;
+    public partial bool IsSearching { get; set; }
 
     public MessagesViewModel(ApiService api)
     {
