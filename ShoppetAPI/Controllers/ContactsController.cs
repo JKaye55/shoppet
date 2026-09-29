@@ -136,6 +136,36 @@ namespace ShoppetAPI.Controllers
                 return StatusCode(500, $"Error updating contact: {ex.Message}");
             }
         }
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteContact(int id)
+        {
+            try
+            {
+                string connString = _configuration.GetConnectionString("DefaultConnection")!;
+
+                using (var connection = new MySqlConnection(connString))
+                {
+                    await connection.OpenAsync();
+
+                    var cmd = new MySqlCommand(
+                        "DELETE FROM emergencycontacts WHERE Id = @Id",
+                        connection);
+                    cmd.Parameters.AddWithValue("@Id", id);
+
+                    int rowsAffected = await cmd.ExecuteNonQueryAsync();
+
+                    if (rowsAffected == 0)
+                        return NotFound("Contact not found.");
+
+                    return Ok(new { message = "Contact deleted successfully" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error deleting contact: {ex.Message}");
+            }
+        }
+
     }
 
     public class ContactRequest
