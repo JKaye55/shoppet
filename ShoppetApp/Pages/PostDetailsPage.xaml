@@ -86,7 +86,7 @@
                                     </Border>
                                     
                                     <!-- Thread Content -->
-                                    <VerticalStackLayout Grid.Column="1" HorizontalOptions="FillAndExpand" Spacing="2">
+                                    <VerticalStackLayout Grid.Column="1" HorizontalOptions="Fill" Spacing="2">
                                         <!-- Author Name ? ParentName -->
                                         <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
                                             <Label Text="{Binding AuthorName}" TextColor="#AAAAAA" FontFamily="NunitoBold" FontSize="13" VerticalOptions="Center" />
