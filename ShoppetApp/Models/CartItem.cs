@@ -12,21 +12,21 @@ public partial class CartItem : ObservableObject
     public int UserId { get; set; }
 
     [ObservableProperty]
-    private int _productId;
+    public partial int ProductId { get; set; }
 
     [ObservableProperty]
-    private string _productName = string.Empty;
+    public partial string ProductName { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string _imageUrl = string.Empty;
+    public partial string ImageUrl { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private decimal _unitPrice;
+    public partial decimal UnitPrice { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(TotalPrice))]
     [NotifyPropertyChangedFor(nameof(TotalAmount))]
-    private int _quantity = 1;
+    public partial int Quantity { get; set; } = 1;
 
     // Manual property with [Ignore] so SQLite skips it without field attribute warnings
     private Product? _product;
