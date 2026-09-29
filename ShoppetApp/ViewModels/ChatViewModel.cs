@@ -32,24 +32,24 @@ public partial class ChatViewModel : ObservableObject, IDisposable, Microsoft.Ma
     private bool _isLoadingMessages;
 
     [ObservableProperty]
-    private string _contactIdStr = string.Empty;
+    public partial string ContactIdStr { get; set; } = string.Empty;
 
     public int ContactId => int.TryParse(ContactIdStr, out var id) ? id : 0;
 
     [ObservableProperty]
-    private string _contactName = string.Empty;
+    public partial string ContactName { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string _profilePicture = string.Empty;
+    public partial string ProfilePicture { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private ObservableCollection<ChatMessage> _messages = new();
+    public partial ObservableCollection<ChatMessage> Messages { get; set; } = new();
 
     [ObservableProperty]
-    private string _newMessageText = string.Empty;
+    public partial string NewMessageText { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private bool _isBusy;
+    public partial bool IsBusy { get; set; }
 
     public ChatViewModel(ApiService api)
     {
