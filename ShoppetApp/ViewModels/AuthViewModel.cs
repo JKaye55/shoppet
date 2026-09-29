@@ -109,7 +109,9 @@ public partial class AuthViewModel : ObservableObject
                     // ⭐ Save user session locally for API mapping + Community RBAC
                     Preferences.Set("LoggedInUserId", result.Data.UserId);
                     Preferences.Set("LoggedInUserName", result.Data.FullName);
+                    Preferences.Set("LoggedInUserEmail", result.Data.Email);
                     Preferences.Set("LoggedInUserRole", string.IsNullOrEmpty(result.Data.Role) ? "PetOwner" : result.Data.Role);
+                    Preferences.Set("LoggedInUserProfilePicture", result.Data.ProfilePicture ?? string.Empty);
 
                     _databaseService.CurrentUser = new User
                     {
@@ -157,7 +159,9 @@ public partial class AuthViewModel : ObservableObject
                     // ⭐ Save user session locally for API mapping + Community RBAC
                     Preferences.Set("LoggedInUserId", result.Data.UserId);
                     Preferences.Set("LoggedInUserName", result.Data.FullName);
+                    Preferences.Set("LoggedInUserEmail", result.Data.Email);
                     Preferences.Set("LoggedInUserRole", string.IsNullOrEmpty(result.Data.Role) ? "PetOwner" : result.Data.Role);
+                    Preferences.Set("LoggedInUserProfilePicture", result.Data.ProfilePicture ?? string.Empty);
 
                     _databaseService.CurrentUser = new User
                     {
