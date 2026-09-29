@@ -428,18 +428,26 @@ namespace ShoppetApp.Services
             
             if (ApiService != null)
             {
-                try {
+                try
+                {
                     var apiSaved = await ApiService.SavePetAsync(pet);
-                    if (apiSaved != null) {
-                        var oldId = pet.Id;
-                        pet.Id = apiSaved.Id;
-                        if (oldId < 0) {
-                            await Database.ExecuteAsync("DELETE FROM Pet WHERE Id = ?", oldId);
-                        }
-                        var existing = await Database.Table<Pet>().Where(x => x.Id == pet.Id).FirstOrDefaultAsync();
-                        return existing == null ? await Database.InsertAsync(pet) : await Database.UpdateAsync(pet);
+                    if (apiSaved == null)
+                        return 0;
+
+                    var oldId = pet.Id;
+                    pet.Id = apiSaved.Id;
+                    if (oldId < 0)
+                    {
+                        await Database.ExecuteAsync("DELETE FROM Pet WHERE Id = ?", oldId);
                     }
-                } catch { }
+
+                    var existing = await Database.Table<Pet>().Where(x => x.Id == pet.Id).FirstOrDefaultAsync();
+                    return existing == null ? await Database.InsertAsync(pet) : await Database.UpdateAsync(pet);
+                }
+                catch
+                {
+                    return 0;
+                }
             }
 
             return isNew ? await Database.InsertAsync(pet) : await Database.UpdateAsync(pet);
@@ -799,18 +807,26 @@ namespace ShoppetApp.Services
             
             if (ApiService != null)
             {
-                try {
+                try
+                {
                     var apiSaved = await ApiService.SaveContactAsync(contact);
-                    if (apiSaved != null) {
-                        var oldId = contact.Id;
-                        contact.Id = apiSaved.Id;
-                        if (oldId < 0) {
-                            await Database.ExecuteAsync("DELETE FROM Contact WHERE Id = ?", oldId);
-                        }
-                        var existing = await Database.Table<AppContact>().Where(x => x.Id == contact.Id).FirstOrDefaultAsync();
-                        return existing == null ? await Database.InsertAsync(contact) : await Database.UpdateAsync(contact);
+                    if (apiSaved == null)
+                        return 0;
+
+                    var oldId = contact.Id;
+                    contact.Id = apiSaved.Id;
+                    if (oldId < 0)
+                    {
+                        await Database.ExecuteAsync("DELETE FROM Contact WHERE Id = ?", oldId);
                     }
-                } catch { }
+
+                    var existing = await Database.Table<AppContact>().Where(x => x.Id == contact.Id).FirstOrDefaultAsync();
+                    return existing == null ? await Database.InsertAsync(contact) : await Database.UpdateAsync(contact);
+                }
+                catch
+                {
+                    return 0;
+                }
             }
 
             return isNew ? await Database.InsertAsync(contact) : await Database.UpdateAsync(contact);
