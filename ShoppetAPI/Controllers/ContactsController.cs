@@ -71,6 +71,9 @@ namespace ShoppetAPI.Controllers
         {
             try
             {
+                if (request.UserId <= 0)
+                    return BadRequest("A valid user ID is required.");
+
                 string connString = _configuration.GetConnectionString("DefaultConnection")!;
                 long newId = 0;
 
@@ -78,8 +81,7 @@ namespace ShoppetAPI.Controllers
                 {
                     await connection.OpenAsync();
                     var query = @"INSERT INTO emergencycontacts (UserId, Name, Role, Address, Phone, IsEmergency) 
-                                  VALUES (@UserId, @Name, @Role, @Address, @Phone, @IsEmergency);
-                                  SELECT LAST_INSERT_ID();";
+                                  VALUES (@UserId, @Name, @Role, @Address, @Phone, @IsEmergency)";
 
                     using (var cmd = new MySqlCommand(query, connection))
                     {
@@ -90,8 +92,8 @@ namespace ShoppetAPI.Controllers
                         cmd.Parameters.AddWithValue("@Phone", request.Phone ?? "");
                         cmd.Parameters.AddWithValue("@IsEmergency", request.IsEmergency);
 
-                        object result = await cmd.ExecuteScalarAsync();
-                        if (result != null) newId = Convert.ToInt64(result);
+                        await cmd.ExecuteNonQueryAsync();
+                        newId = cmd.LastInsertedId;
                     }
                 }
 
