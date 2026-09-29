@@ -197,9 +197,19 @@ public partial class HealthLogFormViewModel : ObservableObject, IQueryAttributab
         bool confirm = await Shell.Current.DisplayAlertAsync("Delete", $"Remove {log.Name}?", "Delete", "Cancel");
         if (!confirm) return;
 
-        await _api.DeleteHealthLogAsync(PetId, log.Id);
-        WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
-        await Shell.Current.GoToAsync("..");
+        bool deleted = await _api.DeleteHealthLogAsync(PetId, log.Id);
+        if (deleted)
+        {
+            WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
+            await Shell.Current.GoToAsync("..");
+        }
+        else
+        {
+            await Shell.Current.DisplayAlertAsync(
+                "Error",
+                "Failed to delete health record from the server.",
+                "OK");
+        }
     }
 }
 
