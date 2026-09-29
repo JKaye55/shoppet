@@ -18,6 +18,5 @@ public partial class MessagesPage : ContentPage
         // Always reload when appearing so the conversation list reflects 
         // the latest state (including unread counts reset by the API)
         await _viewModel.LoadConversationsAsync();
-        _isFirstLoad = false;
     }
 }
