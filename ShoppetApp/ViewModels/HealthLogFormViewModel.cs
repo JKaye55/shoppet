@@ -70,6 +70,17 @@ public partial class HealthLogFormViewModel : ObservableObject, IQueryAttributab
         MedicationIntervalHoursText = log.MedicationIntervalHours.ToString();
         DosageTotalText = log.DosageTotal.ToString();
 
+        DocumentPathsList.Clear();
+        if (!string.IsNullOrWhiteSpace(log.DocumentPaths))
+        {
+            foreach (var path in log.DocumentPaths.Split(
+                         new[] { ';', '|' },
+                         StringSplitOptions.RemoveEmptyEntries))
+            {
+                DocumentPathsList.Add(path);
+            }
+        }
+
         if (DateTime.TryParse(log.DueDate, out var parsedDue))
         {
             DueDate = parsedDue.Date;
@@ -133,6 +144,15 @@ public partial class HealthLogFormViewModel : ObservableObject, IQueryAttributab
         double.TryParse(MedicationIntervalHoursText, out var medInterval);
         int.TryParse(DosageTotalText, out var dosageTotal);
 
+        int dosageRemaining = dosageTotal;
+        if (LogId > 0)
+        {
+            var existing = (await _api.GetHealthLogsAsync(PetId))
+                .FirstOrDefault(x => x.Id == LogId);
+            if (existing is not null)
+                dosageRemaining = Math.Min(existing.DosageRemaining, dosageTotal);
+        }
+
         var finalDueDate = DueDate.Date.Add(DueTime);
         var finalTimeStarted = TimeStartedDate.Date.Add(TimeStartedTime);
 
@@ -150,7 +170,7 @@ public partial class HealthLogFormViewModel : ObservableObject, IQueryAttributab
             MedicationIntervalHours = medInterval,
             TimeStarted = finalTimeStarted.ToString("yyyy/MM/dd, HH:mm"),
             DosageTotal = dosageTotal,
-            DosageRemaining = dosageTotal,
+            DosageRemaining = dosageRemaining,
             CheckupDate = CheckupDate.ToString("yyyy/MM/dd, 00:00"),
             DocumentPaths = string.Join(";", DocumentPathsList)
         };
