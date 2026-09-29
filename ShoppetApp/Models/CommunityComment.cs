@@ -16,13 +16,13 @@ namespace ShoppetApp.Models
         public DateTime CreatedAt { get; set; }
 
         [ObservableProperty]
-        private int _likeCount;
+        public partial int LikeCount { get; set; }
 
         [ObservableProperty]
-        private bool _isLikedByMe;
+        public partial bool IsLikedByMe { get; set; }
 
         [ObservableProperty]
-        private bool _canDelete;
+        public partial bool CanDelete { get; set; }
 
         // Computed helpers
         public bool IsReply => ParentCommentId.HasValue;
@@ -47,22 +47,22 @@ namespace ShoppetApp.Models
         public System.Collections.Generic.List<CommunityComment> AllDescendants { get; set; } = new();
         
         [ObservableProperty]
-        private int _visibleDescendantsCount;
+        public partial int VisibleDescendantsCount { get; set; }
 
         [ObservableProperty]
-        private int _totalDescendantsCount;
+        public partial int TotalDescendantsCount { get; set; }
 
         [ObservableProperty]
-        private bool _isPaginatorVisible;
+        public partial bool IsPaginatorVisible { get; set; }
 
         [ObservableProperty]
-        private string _paginatorText = string.Empty;
+        public partial string PaginatorText { get; set; } = string.Empty;
 
         [ObservableProperty]
-        private bool _isHideVisible;
+        public partial bool IsHideVisible { get; set; }
         
         [ObservableProperty]
-        private int _depth;
+        public partial int Depth { get; set; }
         
         public Microsoft.Maui.Thickness ReplyMargin => new Microsoft.Maui.Thickness(Depth == 0 ? 0 : 46 + (Depth - 1) * 36, 0, 0, 10);
         

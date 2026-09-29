@@ -19,7 +19,7 @@ namespace ShoppetApp.Models
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         [ObservableProperty]
-        private bool _isOptionsVisible;
+        public partial bool IsOptionsVisible { get; set; }
 
         public List<string> ImageList => string.IsNullOrEmpty(ImageUrls)
             ? new List<string>()

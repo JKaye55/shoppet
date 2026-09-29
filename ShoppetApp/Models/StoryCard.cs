@@ -8,11 +8,11 @@ public partial class StoryCard : ObservableObject
     public string Text { get; set; } = string.Empty;
     public string Image { get; set; } = string.Empty;
 
-    [ObservableProperty] private double _rotation;
-    [ObservableProperty] private double _translationY;
-    [ObservableProperty] private double _translationX;
-    [ObservableProperty] private double _scale = 1;
-    [ObservableProperty] private double _opacity = 1;
-    [ObservableProperty] private int _zIndex;
-    [ObservableProperty] private bool _isActive;
+    [ObservableProperty] public partial double Rotation { get; set; }
+    [ObservableProperty] public partial double TranslationY { get; set; }
+    [ObservableProperty] public partial double TranslationX { get; set; }
+    [ObservableProperty] public partial double Scale { get; set; } = 1;
+    [ObservableProperty] public partial double Opacity { get; set; } = 1;
+    [ObservableProperty] public partial int ZIndex { get; set; }
+    [ObservableProperty] public partial bool IsActive { get; set; }
 }

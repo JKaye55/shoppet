@@ -17,16 +17,16 @@ namespace ShoppetApp.Models
         public bool IsEdited { get; set; } = false;
 
         [ObservableProperty]
-        private int _likesCount;
+        public partial int LikesCount { get; set; }
 
         [ObservableProperty]
-        private int _commentsCount;
+        public partial int CommentsCount { get; set; }
 
         [ObservableProperty]
-        private bool _isLikedByMe;
+        public partial bool IsLikedByMe { get; set; }
 
         [ObservableProperty]
-        private bool _isOptionsVisible;
+        public partial bool IsOptionsVisible { get; set; }
 
         public List<string> ImageList => string.IsNullOrEmpty(ImageUrls)
             ? new List<string>()

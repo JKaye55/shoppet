@@ -13,16 +13,16 @@ namespace ShoppetApp.ViewModels
         private readonly DatabaseService _db;
 
         [ObservableProperty]
-        private ObservableCollection<CommunityPost> _posts = new();
+        public partial ObservableCollection<CommunityPost> Posts { get; set; } = new();
 
         [ObservableProperty]
-        private bool _isRefreshing;
+        public partial bool IsRefreshing { get; set; }
 
         [ObservableProperty]
-        private string _userInitials = "U";
+        public partial string UserInitials { get; set; } = "U";
 
         [ObservableProperty]
-        private string _userProfilePicture = string.Empty;
+        public partial string UserProfilePicture { get; set; } = string.Empty;
 
         public CommunityViewModel(ApiService api, DatabaseService db)
         {
