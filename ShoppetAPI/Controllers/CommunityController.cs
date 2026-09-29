@@ -60,20 +60,42 @@ namespace ShoppetAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> CreatePost([FromBody] CreatePostRequest request)
         {
+            if (request.UserId <= 0)
+                return BadRequest("A valid user ID is required.");
+
+            if (string.IsNullOrWhiteSpace(request.Content) &&
+                string.IsNullOrWhiteSpace(request.ImageUrls))
+                return BadRequest("Post content or media is required.");
+
             try
             {
                 string conn = _configuration.GetConnectionString("DefaultConnection")!;
                 using var connection = new MySqlConnection(conn);
                 await connection.OpenAsync();
-                var query = "INSERT INTO communityposts (UserId, AuthorName, PetName, Content, ImageUrl, Timestamp, IsEdited) VALUES (@UserId, '', '', @Content, @ImageUrls, NOW(), 0)";
+
+                var query = @"INSERT INTO communityposts
+                              (UserId, PetId, AuthorName, PetName, Content, ImageUrl, Timestamp, IsEdited)
+                              VALUES
+                              (@UserId, @PetId, @AuthorName, @PetName, @Content, @ImageUrls, NOW(), 0)";
                 using var cmd = new MySqlCommand(query, connection);
                 cmd.Parameters.AddWithValue("@UserId", request.UserId);
-                cmd.Parameters.AddWithValue("@Content", request.Content);
+                cmd.Parameters.AddWithValue("@PetId", request.PetId.HasValue ? request.PetId.Value : DBNull.Value);
+                cmd.Parameters.AddWithValue("@AuthorName", request.AuthorName?.Trim() ?? string.Empty);
+                cmd.Parameters.AddWithValue("@PetName", request.PetName?.Trim() ?? string.Empty);
+                cmd.Parameters.AddWithValue("@Content", request.Content ?? string.Empty);
                 cmd.Parameters.AddWithValue("@ImageUrls", (object?)request.ImageUrls ?? DBNull.Value);
+
                 await cmd.ExecuteNonQueryAsync();
-                return Ok(new { success = true });
+                return Ok(new
+                {
+                    success = true,
+                    id = Convert.ToInt32(cmd.LastInsertedId)
+                });
             }
-            catch (Exception ex) { return StatusCode(500, $"Error creating post: {ex.Message}"); }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error creating post: {ex.Message}");
+            }
         }
 
         [HttpPost("{postId}/like")]
@@ -260,19 +282,88 @@ namespace ShoppetAPI.Controllers
         [HttpDelete("comments/{commentId}")]
         public async Task<IActionResult> DeleteComment(int commentId)
         {
+            if (commentId <= 0)
+                return BadRequest("A valid comment ID is required.");
+
             try
             {
-                string conn = _configuration.GetConnectionString("DefaultConnection")!; using var connection = new MySqlConnection(conn);
+                string conn = _configuration.GetConnectionString("DefaultConnection")!;
+                using var connection = new MySqlConnection(conn);
                 await connection.OpenAsync();
-                
-                // Usually deleting a parent comment should cascade replies, this depends on DB schema
-                using var cmd = new MySqlCommand("DELETE FROM communitycomments WHERE Id = @Id OR ParentCommentId = @Id", connection);
-                cmd.Parameters.AddWithValue("@Id", commentId);
-                var rows = await cmd.ExecuteNonQueryAsync();
-                if (rows == 0) return NotFound();
-                return Ok(new { success = true });
+
+                var postCmd = new MySqlCommand(
+                    "SELECT PostId FROM communitycomments WHERE Id = @Id",
+                    connection);
+                postCmd.Parameters.AddWithValue("@Id", commentId);
+                var postIdResult = await postCmd.ExecuteScalarAsync();
+
+                if (postIdResult is null)
+                    return NotFound();
+
+                int postId = Convert.ToInt32(postIdResult);
+
+                var rows = new List<(int Id, int? ParentId)>();
+                var loadCmd = new MySqlCommand(
+                    "SELECT Id, ParentCommentId FROM communitycomments WHERE PostId = @PostId",
+                    connection);
+                loadCmd.Parameters.AddWithValue("@PostId", postId);
+
+                using (var reader = await loadCmd.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        rows.Add((
+                            reader.GetInt32("Id"),
+                            reader.IsDBNull(reader.GetOrdinal("ParentCommentId"))
+                                ? null
+                                : reader.GetInt32("ParentCommentId")));
+                    }
+                }
+
+                var ids = new HashSet<int> { commentId };
+                bool changed;
+                do
+                {
+                    changed = false;
+                    foreach (var row in rows)
+                    {
+                        if (row.ParentId.HasValue &&
+                            ids.Contains(row.ParentId.Value) &&
+                            ids.Add(row.Id))
+                        {
+                            changed = true;
+                        }
+                    }
+                }
+                while (changed);
+
+                using var transaction = await connection.BeginTransactionAsync();
+
+                foreach (int id in ids)
+                {
+                    var likesCmd = new MySqlCommand(
+                        "DELETE FROM communitycommentlikes WHERE CommentId = @Id",
+                        connection, transaction);
+                    likesCmd.Parameters.AddWithValue("@Id", id);
+                    await likesCmd.ExecuteNonQueryAsync();
+                }
+
+                foreach (int id in ids.OrderByDescending(x => x))
+                {
+                    var commentCmd = new MySqlCommand(
+                        "DELETE FROM communitycomments WHERE Id = @Id",
+                        connection, transaction);
+                    commentCmd.Parameters.AddWithValue("@Id", id);
+                    await commentCmd.ExecuteNonQueryAsync();
+                }
+
+                await transaction.CommitAsync();
+                return Ok(new { success = true, deletedCount = ids.Count });
             }
-            catch (Exception ex) { return StatusCode(500, $"Error deleting comment: {ex.Message}"); }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error deleting comment: {ex.Message}");
+            }
         }
     }
 
