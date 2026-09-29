@@ -12,12 +12,12 @@ namespace ShoppetApp.ViewModels
     {
         private readonly DatabaseService _db;
 
-        [ObservableProperty] private System.Collections.ObjectModel.ObservableCollection<ContactModel> _contacts = [];
-        [ObservableProperty] private bool _isBusy;
-                        [ObservableProperty] private string _fullName = string.Empty;
-        [ObservableProperty] private bool _isAdmin;
-        [ObservableProperty] private bool _isBusinessOwner;
-        [ObservableProperty] private ImageSource? _profileImageSource;
+        [ObservableProperty] public partial System.Collections.ObjectModel.ObservableCollection<ContactModel> Contacts { get; set; } = [];
+        [ObservableProperty] public partial bool IsBusy { get; set; }
+                        [ObservableProperty] public partial string FullName { get; set; } = string.Empty;
+        [ObservableProperty] public partial bool IsAdmin { get; set; }
+        [ObservableProperty] public partial bool IsBusinessOwner { get; set; }
+        [ObservableProperty] public partial ImageSource? ProfileImageSource { get; set; }
         private readonly ShoppetApp.Services.ApiService _api;
 
         // Raised when a contact row is tapped — page subscribes to show the modal

@@ -12,10 +12,10 @@ namespace ShoppetApp.ViewModels
         private readonly DatabaseService _db;
 
         [ObservableProperty]
-        private ObservableCollection<CommunityPost> _myPosts = new();
+        public partial ObservableCollection<CommunityPost> MyPosts { get; set; } = new();
 
         [ObservableProperty]
-        private bool _isBusy;
+        public partial bool IsBusy { get; set; }
 
         public PostSettingsViewModel(ApiService api, DatabaseService db)
         {

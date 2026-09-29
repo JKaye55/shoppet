@@ -11,7 +11,7 @@ public partial class FilterItem : ObservableObject
     public string Name { get; }
 
     [ObservableProperty]
-    private bool _isSelected;
+    public partial bool IsSelected { get; set; }
 
     public FilterItem(string name)
     {
@@ -30,7 +30,7 @@ public partial class ShopViewModel : ObservableObject
     public ObservableCollection<FilterItem> SpeciesList { get; } = new();
 
     [ObservableProperty]
-    private string _searchText = string.Empty;
+    public partial string SearchText { get; set; } = string.Empty;
 
     public ShopViewModel(CartService cartService, DatabaseService db)
     {

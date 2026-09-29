@@ -13,26 +13,26 @@ namespace ShoppetApp.ViewModels
         private readonly DatabaseService _db;
 
         [ObservableProperty]
-        private CommunityPost? _post;
+        public partial CommunityPost? Post { get; set; }
 
         [ObservableProperty]
-        private ObservableCollection<CommunityComment> _comments = new();
+        public partial ObservableCollection<CommunityComment> Comments { get; set; } = new();
 
         [ObservableProperty]
-        private string _newCommentText = string.Empty;
+        public partial string NewCommentText { get; set; } = string.Empty;
 
         [ObservableProperty]
-        private bool _isRefreshing;
+        public partial bool IsRefreshing { get; set; }
 
         // Reply state: tracks which comment is being replied to
         [ObservableProperty]
-        private CommunityComment? _replyingToComment;
+        public partial CommunityComment? ReplyingToComment { get; set; }
 
         [ObservableProperty]
-        private string _replyingToName = string.Empty;
+        public partial string ReplyingToName { get; set; } = string.Empty;
 
         [ObservableProperty]
-        private bool _isReplying;
+        public partial bool IsReplying { get; set; }
 
         [RelayCommand]
         private async Task GoBackAsync()

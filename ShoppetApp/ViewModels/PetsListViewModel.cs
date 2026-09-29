@@ -12,8 +12,8 @@ public partial class PetsListViewModel : ObservableObject, IRecipient<DataChange
 {
     private readonly DatabaseService _db;
 
-    [ObservableProperty] private ObservableCollection<Pet> _pets = [];
-    [ObservableProperty] private bool _isBusy;
+    [ObservableProperty] public partial ObservableCollection<Pet> Pets { get; set; } = [];
+    [ObservableProperty] public partial bool IsBusy { get; set; }
 
     public PetsListViewModel(DatabaseService db)
     {
