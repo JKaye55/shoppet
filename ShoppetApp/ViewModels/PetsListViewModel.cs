@@ -65,7 +65,17 @@ public partial class PetsListViewModel : ObservableObject, IRecipient<DataChange
         if (!confirm)
             return;
 
-        await _db.DeletePetAsync(pet);
-        WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
+        int result = await _db.DeletePetAsync(pet);
+        if (result > 0)
+        {
+            WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
+        }
+        else
+        {
+            await Shell.Current.DisplayAlertAsync(
+                "Error",
+                "Failed to delete pet from the server.",
+                "OK");
+        }
     }
 }
