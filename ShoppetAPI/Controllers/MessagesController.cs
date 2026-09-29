@@ -35,6 +35,15 @@ namespace ShoppetAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> SendMessage([FromBody] SendMessageRequest req)
         {
+            if (req.SenderId <= 0 || req.ReceiverId <= 0)
+                return BadRequest("Valid sender and receiver IDs are required.");
+
+            if (req.SenderId == req.ReceiverId)
+                return BadRequest("You cannot message yourself.");
+
+            if (string.IsNullOrWhiteSpace(req.Text))
+                return BadRequest("Message text is required.");
+
             try
             {
                 var msg = new MessageItem
@@ -111,6 +120,9 @@ namespace ShoppetAPI.Controllers
         [HttpGet("{userId}")]
         public async Task<IActionResult> GetConversations(int userId)
         {
+            if (userId <= 0)
+                return BadRequest("A valid user ID is required.");
+
             try
             {
                 using var conn = new MySqlConnection(_config.GetConnectionString("DefaultConnection"));
@@ -160,6 +172,9 @@ namespace ShoppetAPI.Controllers
         [HttpGet("chat/{userId}/{contactId}")]
         public async Task<IActionResult> GetMessages(int userId, int contactId)
         {
+            if (userId <= 0 || contactId <= 0)
+                return BadRequest("Valid user IDs are required.");
+
             try
             {
                 int user1 = Math.Min(userId, contactId);
@@ -192,6 +207,9 @@ namespace ShoppetAPI.Controllers
         [HttpGet("unreadCount/{userId}")]
         public async Task<IActionResult> GetUnreadCount(int userId)
         {
+            if (userId <= 0)
+                return BadRequest("A valid user ID is required.");
+
             try
             {
                 using var conn = new MySqlConnection(_config.GetConnectionString("DefaultConnection"));
