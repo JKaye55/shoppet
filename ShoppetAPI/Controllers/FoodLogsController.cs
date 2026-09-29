@@ -169,7 +169,9 @@ namespace ShoppetAPI.Controllers
                     {
                         cmd.Parameters.AddWithValue("@Id", id);
                         cmd.Parameters.AddWithValue("@PetId", petId);
-                        await cmd.ExecuteNonQueryAsync();
+                        int rows = await cmd.ExecuteNonQueryAsync();
+                        if (rows == 0)
+                            return NotFound("Food log not found.");
                     }
                 }
 
@@ -198,7 +200,9 @@ namespace ShoppetAPI.Controllers
                         cmd.Parameters.AddWithValue("@Id", id);
                         cmd.Parameters.AddWithValue("@PetId", petId);
                         cmd.Parameters.AddWithValue("@LastFed", lastFed);
-                        await cmd.ExecuteNonQueryAsync();
+                        int rows = await cmd.ExecuteNonQueryAsync();
+                        if (rows == 0)
+                            return NotFound("Food log not found.");
                     }
                 }
 
