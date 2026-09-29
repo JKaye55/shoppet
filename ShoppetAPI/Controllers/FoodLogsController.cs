@@ -69,6 +69,9 @@ namespace ShoppetAPI.Controllers
         {
             try
             {
+                if (petId <= 0)
+                    return BadRequest("A valid pet ID is required.");
+
                 string connString = _configuration.GetConnectionString("DefaultConnection")!;
                 long newId = 0;
 
@@ -76,8 +79,7 @@ namespace ShoppetAPI.Controllers
                 {
                     await connection.OpenAsync();
                     var query = @"INSERT INTO foodlogs (PetId, FoodName, AmountGrams, IntervalHours, IntervalMinutes, StartTimestamp, LastFedTimestamp, FedDate, Notes, CreatedAt, IsCompleted) 
-                                  VALUES (@PetId, @FoodName, @AmountGrams, @IntervalHours, @IntervalMinutes, @StartTimestamp, '', '', @Notes, NOW(), 0);
-                                  SELECT LAST_INSERT_ID();";
+                                  VALUES (@PetId, @FoodName, @AmountGrams, @IntervalHours, @IntervalMinutes, @StartTimestamp, '', '', @Notes, NOW(), 0)";
 
                     using (var cmd = new MySqlCommand(query, connection))
                     {
@@ -89,8 +91,8 @@ namespace ShoppetAPI.Controllers
                         cmd.Parameters.AddWithValue("@StartTimestamp", request.StartTimestamp ?? "");
                         cmd.Parameters.AddWithValue("@Notes", request.Notes ?? "");
 
-                        object result = await cmd.ExecuteScalarAsync();
-                        if (result != null) newId = Convert.ToInt64(result);
+                        await cmd.ExecuteNonQueryAsync();
+                        newId = cmd.LastInsertedId;
                     }
                 }
 
