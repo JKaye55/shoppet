@@ -137,7 +137,17 @@ namespace ShoppetApp.ViewModels
         }
 
         [RelayCommand]
-        private void Logout() => NavigationHelper.GoToAuth();
+        private void Logout()
+        {
+            _api.ClearToken();
+            _db.Logout();
+            Preferences.Remove("LoggedInUserId");
+            Preferences.Remove("LoggedInUserName");
+            Preferences.Remove("LoggedInUserEmail");
+            Preferences.Remove("LoggedInUserRole");
+            Preferences.Remove("LoggedInUserProfilePicture");
+            NavigationHelper.GoToAuth();
+        }
     }
 }
 
