@@ -193,7 +193,9 @@ namespace ShoppetAPI.Controllers
                     {
                         cmd.Parameters.AddWithValue("@Id", id);
                         cmd.Parameters.AddWithValue("@PetId", petId);
-                        await cmd.ExecuteNonQueryAsync();
+                        int rows = await cmd.ExecuteNonQueryAsync();
+                        if (rows == 0)
+                            return NotFound("Health record not found.");
                     }
                 }
 
@@ -221,7 +223,9 @@ namespace ShoppetAPI.Controllers
                         cmd.Parameters.AddWithValue("@Id", id);
                         cmd.Parameters.AddWithValue("@PetId", petId);
                         cmd.Parameters.AddWithValue("@NextDueDate", req.NextDueDate ?? "");
-                        await cmd.ExecuteNonQueryAsync();
+                        int rows = await cmd.ExecuteNonQueryAsync();
+                        if (rows == 0)
+                            return NotFound("Health record not found.");
                     }
                 }
 
