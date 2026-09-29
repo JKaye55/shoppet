@@ -36,7 +36,7 @@ namespace ShoppetAPI.Controllers
 
                     var checkCmd = new MySqlCommand("SELECT COUNT(*) FROM Users WHERE Email = @Email", connection);
                     checkCmd.Parameters.AddWithValue("@Email", normalizedEmail);
-                    long count = (long)await checkCmd.ExecuteScalarAsync();
+                    long count = Convert.ToInt64(await checkCmd.ExecuteScalarAsync());
 
                     if (count > 0)
                     {
