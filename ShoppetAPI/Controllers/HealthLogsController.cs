@@ -73,6 +73,9 @@ namespace ShoppetAPI.Controllers
         {
             try
             {
+                if (petId <= 0)
+                    return BadRequest("A valid pet ID is required.");
+
                 string connString = _configuration.GetConnectionString("DefaultConnection")!;
                 long newId = 0;
 
@@ -80,8 +83,7 @@ namespace ShoppetAPI.Controllers
                 {
                     await connection.OpenAsync();
                     var query = @"INSERT INTO healthlogs (PetId, Type, Name, DueDate, Completed, DateAdministered, ValidityInterval, ValidityUnit, MedicationIntervalHours, TimeStarted, DosageTotal, DosageRemaining, CheckupDate, DocumentPaths, CreatedAt) 
-                                  VALUES (@PetId, @Type, @Name, @DueDate, 0, @DateAdministered, @ValidityInterval, @ValidityUnit, @MedicationIntervalHours, @TimeStarted, @DosageTotal, @DosageRemaining, @CheckupDate, @DocumentPaths, NOW());
-                                  SELECT LAST_INSERT_ID();";
+                                  VALUES (@PetId, @Type, @Name, @DueDate, 0, @DateAdministered, @ValidityInterval, @ValidityUnit, @MedicationIntervalHours, @TimeStarted, @DosageTotal, @DosageRemaining, @CheckupDate, @DocumentPaths, NOW())";
 
                     using (var cmd = new MySqlCommand(query, connection))
                     {
@@ -99,8 +101,8 @@ namespace ShoppetAPI.Controllers
                         cmd.Parameters.AddWithValue("@CheckupDate", request.CheckupDate ?? "");
                         cmd.Parameters.AddWithValue("@DocumentPaths", request.DocumentPaths ?? "");
 
-                        object result = await cmd.ExecuteScalarAsync();
-                        if (result != null) newId = Convert.ToInt64(result);
+                        await cmd.ExecuteNonQueryAsync();
+                        newId = cmd.LastInsertedId;
                     }
                 }
 
