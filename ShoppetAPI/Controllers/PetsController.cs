@@ -125,6 +125,62 @@ namespace ShoppetAPI.Controllers
             }
         }
 
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdatePet(int id, [FromBody] PetCreateRequest request)
+        {
+            try
+            {
+                string connString = _configuration.GetConnectionString("DefaultConnection")!;
+
+                using (var connection = new MySqlConnection(connString))
+                {
+                    await connection.OpenAsync();
+
+                    var query = @"UPDATE pets
+                                  SET Name = @Name,
+                                      Species = @Species,
+                                      Breed = @Breed,
+                                      AgeYears = @AgeYears,
+                                      Weight = @Weight,
+                                      PhotoUrl = @PhotoUrl
+                                  WHERE Id = @Id AND UserId = @UserId";
+
+                    using (var cmd = new MySqlCommand(query, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@Id", id);
+                        cmd.Parameters.AddWithValue("@UserId", request.UserId);
+                        cmd.Parameters.AddWithValue("@Name", request.Name ?? string.Empty);
+                        cmd.Parameters.AddWithValue("@Species", request.Species ?? "Dog");
+                        cmd.Parameters.AddWithValue("@Breed", request.Breed ?? string.Empty);
+                        cmd.Parameters.AddWithValue("@AgeYears", request.AgeYears);
+                        cmd.Parameters.AddWithValue("@Weight", request.Weight ?? string.Empty);
+                        cmd.Parameters.AddWithValue("@PhotoUrl", request.PhotoUrl ?? string.Empty);
+
+                        int rowsAffected = await cmd.ExecuteNonQueryAsync();
+
+                        if (rowsAffected == 0)
+                            return NotFound("Pet not found.");
+
+                        return Ok(new
+                        {
+                            Id = id,
+                            UserId = request.UserId,
+                            request.Name,
+                            request.Species,
+                            request.Breed,
+                            request.AgeYears,
+                            request.Weight,
+                            request.PhotoUrl
+                        });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error updating pet: {ex.Message}");
+            }
+        }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeletePet(int id)
         {
