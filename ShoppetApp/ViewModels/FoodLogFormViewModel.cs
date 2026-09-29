@@ -163,9 +163,16 @@ public partial class FoodLogFormViewModel : ObservableObject, IQueryAttributable
             Notes = Notes.Trim()
         };
 
-        await _api.SaveFoodLogAsync(PetId, log);
-        WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
-        await Shell.Current.GoToAsync("..");
+        var result = await _api.SaveFoodLogAsync(PetId, log);
+        if (result != null)
+        {
+            WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
+            await Shell.Current.GoToAsync("..");
+        }
+        else
+        {
+            await Shell.Current.DisplayAlert("Error", "Failed to save food log to server.", "OK");
+        }
     }
 
     [RelayCommand]
