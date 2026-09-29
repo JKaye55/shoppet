@@ -30,7 +30,7 @@ public partial class ImagePreviewPage : ContentPage
         InitializeComponent();
     }
 
-    private async void OnCloseTapped(object sender, TappedEventArgs e)
+    private async void OnCloseTapped(object? sender, TappedEventArgs e)
     {
         if (PreviewVideo.IsVisible)
         {
