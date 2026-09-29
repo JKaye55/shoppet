@@ -81,6 +81,8 @@ public class HealthLog
     [Ignore]
     public string[] DocumentsList => string.IsNullOrEmpty(DocumentPaths)
         ? []
-        : DocumentPaths.Split('|', StringSplitOptions.RemoveEmptyEntries);
+        : DocumentPaths.Split(
+            new[] { ';', '|' },
+            StringSplitOptions.RemoveEmptyEntries);
 }
 
