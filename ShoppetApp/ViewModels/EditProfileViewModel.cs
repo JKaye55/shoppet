@@ -7,10 +7,12 @@ namespace ShoppetApp.ViewModels
     public partial class EditProfileViewModel : ObservableObject
     {
         private readonly ApiService _api;
+        private readonly DatabaseService _db;
 
-        public EditProfileViewModel(ApiService api)
+        public EditProfileViewModel(ApiService api, DatabaseService db)
         {
             _api = api;
+            _db = db;
             _ = LoadDataAsync();
         }
 
@@ -98,7 +100,14 @@ namespace ShoppetApp.ViewModels
                 if (success)
                 {
                     Preferences.Set("LoggedInUserName", FullName);
-                    // Force refresh of ProfileViewModel if needed by raising an event, or it will refresh on load.
+                    Preferences.Set("LoggedInUserProfilePicture", ProfilePictureBase64 ?? string.Empty);
+
+                    if (_db.CurrentUser is not null)
+                    {
+                        _db.CurrentUser.FullName = FullName;
+                        _db.CurrentUser.ProfilePicture = ProfilePictureBase64 ?? string.Empty;
+                    }
+
                     await Shell.Current.GoToAsync("..");
                 }
                 else
