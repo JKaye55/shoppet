@@ -691,97 +691,191 @@ namespace ShoppetApp.Services
         }
 
         // --- Products & E-Commerce Cart ---
-        public Task<List<Product>> GetProductsAsync() => Task.FromResult(new List<Product>
+        public async Task<List<Product>> GetProductsAsync()
         {
-            new Product { Id = 1, Name = "Royal Canin Mini Adult", Category = "Food", Price = 950.00m, StockQuantity = 15, Description = "Balanced nutrition for small adult dogs." },
-            new Product { Id = 2, Name = "NexGard Spectra (10-25kg)", Category = "Pharmacy", Price = 650.00m, StockQuantity = 20, Description = "Flea, tick, and heartworm protection." }
-        });
+            if (ApiService != null)
+            {
+                try
+                {
+                    return await ApiService.GetProductsAsync();
+                }
+                catch { }
+            }
 
-        public Task<List<string>> GetCategoriesAsync() => Task.FromResult(new List<string> { "All", "Food", "Pharmacy", "Accessories", "Healthcare" });
+            return new List<Product>();
+        }
+
+        public async Task<List<string>> GetCategoriesAsync()
+        {
+            if (ApiService != null)
+            {
+                try
+                {
+                    var categories = await ApiService.GetCategoriesAsync();
+                    return new[] { "All" }
+                        .Concat(categories.Select(x => x.Name))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+                }
+                catch { }
+            }
+
+            return new List<string> { "All" };
+        }
+
+        private async Task<List<CartItem>> SyncServerCartAsync(CartDto? cart)
+        {
+            await Database.CreateTableAsync<CartItem>();
+            int userId = Preferences.Get("LoggedInUserId", 0);
+
+            if (cart == null)
+                return await Database.Table<CartItem>()
+                    .Where(x => x.UserId == userId)
+                    .ToListAsync();
+
+            var current = await Database.Table<CartItem>()
+                .Where(x => x.UserId == userId)
+                .ToListAsync();
+
+            foreach (var item in current)
+                await Database.DeleteAsync(item);
+
+            foreach (var item in cart.Items)
+            {
+                await Database.InsertAsync(new CartItem
+                {
+                    Id = item.Id,
+                    UserId = userId,
+                    ProductId = item.ProductId,
+                    ProductName = item.ProductName,
+                    ImageUrl = item.ImageUrl ?? string.Empty,
+                    UnitPrice = item.UnitPrice,
+                    Quantity = item.Quantity
+                });
+            }
+
+            return await Database.Table<CartItem>()
+                .Where(x => x.UserId == userId)
+                .ToListAsync();
+        }
 
         public async Task<List<CartItem>> GetCartAsync()
         {
             try
             {
+                if (ApiService != null)
+                    return await SyncServerCartAsync(await ApiService.GetCartAsync());
+
                 await Database.CreateTableAsync<CartItem>();
-                int currentUserId = Preferences.Get("LoggedInUserId", 0);
-                var items = await Database.Table<CartItem>().Where(c => c.UserId == currentUserId).ToListAsync();
-                return items ?? new List<CartItem>();
+                int userId = Preferences.Get("LoggedInUserId", 0);
+                return await Database.Table<CartItem>()
+                    .Where(x => x.UserId == userId)
+                    .ToListAsync();
             }
-            catch { return new List<CartItem>(); }
+            catch
+            {
+                return new List<CartItem>();
+            }
         }
 
         public async Task<int> AddToCartAsync(CartItem item)
         {
-            await Database.CreateTableAsync<CartItem>();
-            item.UserId = Preferences.Get("LoggedInUserId", 0);
-            return await Database.InsertAsync(item);
+            return await AddToCartAsync(item.ProductId, item.Quantity);
         }
 
         public async Task<int> AddToCartAsync(int productId, int quantity)
         {
-            await Database.CreateTableAsync<CartItem>();
-            int currentUserId = Preferences.Get("LoggedInUserId", 0);
-            var existing = await Database.Table<CartItem>().Where(c => c.ProductId == productId && c.UserId == currentUserId).FirstOrDefaultAsync();
-            if (existing != null)
+            if (ApiService != null)
             {
-                existing.Quantity += quantity;
-                return await Database.UpdateAsync(existing);
+                var cart = await ApiService.AddToCartAsync(
+                    new AddToCartRequest(productId, quantity));
+
+                if (cart == null)
+                    return 0;
+
+                await SyncServerCartAsync(cart);
+                return 1;
             }
-            return await Database.InsertAsync(new CartItem { ProductId = productId, Quantity = quantity, UserId = currentUserId });
+
+            return 0;
         }
 
         public async Task<int> RemoveFromCartAsync(CartItem item)
         {
-            await Database.CreateTableAsync<CartItem>();
-            return await Database.DeleteAsync(item);
+            return await RemoveFromCartAsync(item.Id);
         }
 
         public async Task<int> RemoveFromCartAsync(int cartItemId)
         {
-            await Database.CreateTableAsync<CartItem>();
-            var item = await Database.Table<CartItem>().Where(c => c.Id == cartItemId).FirstOrDefaultAsync();
-            return item != null ? await Database.DeleteAsync(item) : 0;
+            if (ApiService != null)
+            {
+                var cart = await ApiService.RemoveFromCartAsync(cartItemId);
+                if (cart == null)
+                    return 0;
+
+                await SyncServerCartAsync(cart);
+                return 1;
+            }
+
+            return 0;
         }
 
         public async Task<int> UpdateCartItemAsync(CartItem item)
         {
-            await Database.CreateTableAsync<CartItem>();
-            return await Database.UpdateAsync(item);
+            return await UpdateCartItemAsync(item.Id, item.Quantity);
         }
 
         public async Task<int> UpdateCartItemAsync(int cartItemId, int quantity)
         {
-            await Database.CreateTableAsync<CartItem>();
-            var item = await Database.Table<CartItem>().Where(c => c.Id == cartItemId).FirstOrDefaultAsync();
-            if (item != null)
+            if (ApiService != null)
             {
-                item.Quantity = quantity;
-                return await Database.UpdateAsync(item);
+                var cart = await ApiService.UpdateCartItemAsync(
+                    cartItemId,
+                    new UpdateCartItemRequest(quantity));
+
+                if (cart == null)
+                    return 0;
+
+                await SyncServerCartAsync(cart);
+                return 1;
             }
+
             return 0;
         }
 
         public async Task<int> ClearCartAsync()
         {
-            await Database.CreateTableAsync<CartItem>();
-            int currentUserId = Preferences.Get("LoggedInUserId", 0);
-            var items = await Database.Table<CartItem>().Where(c => c.UserId == currentUserId).ToListAsync();
-            int count = 0;
-            foreach(var item in items) {
-                count += await Database.DeleteAsync(item);
+            if (ApiService != null)
+            {
+                var cart = await ApiService.ClearCartAsync();
+                if (cart == null)
+                    return 0;
+
+                await SyncServerCartAsync(cart);
+                return 1;
             }
-            return count;
+
+            return 0;
         }
 
         public async Task<bool> CheckoutAsync()
         {
+            if (ApiService == null)
+                return false;
+
+            var order = await ApiService.CheckoutAsync();
+            if (order == null)
+                return false;
+
             await Database.CreateTableAsync<CartItem>();
-            int currentUserId = Preferences.Get("LoggedInUserId", 0);
-            var items = await Database.Table<CartItem>().Where(c => c.UserId == currentUserId).ToListAsync();
-            foreach(var item in items) {
+            int userId = Preferences.Get("LoggedInUserId", 0);
+            var localItems = await Database.Table<CartItem>()
+                .Where(x => x.UserId == userId)
+                .ToListAsync();
+
+            foreach (var item in localItems)
                 await Database.DeleteAsync(item);
-            }
+
             return true;
         }
 
