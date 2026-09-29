@@ -78,8 +78,12 @@ namespace ShoppetAPI.Controllers
                 using (var connection = new MySqlConnection(connString))
                 {
                     await connection.OpenAsync();
-                    var query = @"INSERT INTO foodlogs (PetId, FoodName, AmountGrams, IntervalHours, IntervalMinutes, StartTimestamp, LastFedTimestamp, FedDate, Notes, CreatedAt, IsCompleted) 
-                                  VALUES (@PetId, @FoodName, @AmountGrams, @IntervalHours, @IntervalMinutes, @StartTimestamp, '', '', @Notes, NOW(), 0)";
+                    var query = @"INSERT INTO foodlogs
+                                  (PetId, FoodName, AmountGrams, IntervalHours, IntervalMinutes,
+                                   StartTimestamp, LastFedTimestamp, FedDate, Notes, CreatedAt, IsCompleted)
+                                  VALUES
+                                  (@PetId, @FoodName, @AmountGrams, @IntervalHours, @IntervalMinutes,
+                                   @StartTimestamp, @LastFedTimestamp, @FedDate, @Notes, NOW(), 0)";
 
                     using (var cmd = new MySqlCommand(query, connection))
                     {
@@ -89,6 +93,8 @@ namespace ShoppetAPI.Controllers
                         cmd.Parameters.AddWithValue("@IntervalHours", request.IntervalHours);
                         cmd.Parameters.AddWithValue("@IntervalMinutes", request.IntervalMinutes);
                         cmd.Parameters.AddWithValue("@StartTimestamp", request.StartTimestamp ?? "");
+                        cmd.Parameters.AddWithValue("@LastFedTimestamp", request.LastFedTimestamp ?? "");
+                        cmd.Parameters.AddWithValue("@FedDate", request.FedDate ?? "");
                         cmd.Parameters.AddWithValue("@Notes", request.Notes ?? "");
 
                         await cmd.ExecuteNonQueryAsync();
@@ -115,8 +121,11 @@ namespace ShoppetAPI.Controllers
                     await connection.OpenAsync();
                     var query = @"UPDATE foodlogs 
                                   SET FoodName=@FoodName, AmountGrams=@AmountGrams, 
-                                      IntervalHours=@IntervalHours, IntervalMinutes=@IntervalMinutes, 
-                                      StartTimestamp=@StartTimestamp, Notes=@Notes
+                                      IntervalHours=@IntervalHours, IntervalMinutes=@IntervalMinutes,
+                                      StartTimestamp=@StartTimestamp,
+                                      LastFedTimestamp=@LastFedTimestamp,
+                                      FedDate=@FedDate,
+                                      Notes=@Notes
                                   WHERE Id = @Id AND PetId = @PetId";
 
                     using (var cmd = new MySqlCommand(query, connection))
@@ -130,7 +139,9 @@ namespace ShoppetAPI.Controllers
                         cmd.Parameters.AddWithValue("@StartTimestamp", request.StartTimestamp ?? "");
                         cmd.Parameters.AddWithValue("@Notes", request.Notes ?? "");
 
-                        await cmd.ExecuteNonQueryAsync();
+                        int rows = await cmd.ExecuteNonQueryAsync();
+                        if (rows == 0)
+                            return NotFound("Food log not found.");
                     }
                 }
                 return Ok();
@@ -205,6 +216,8 @@ namespace ShoppetAPI.Controllers
         public int IntervalHours { get; set; }
         public int IntervalMinutes { get; set; }
         public string StartTimestamp { get; set; } = string.Empty;
+        public string LastFedTimestamp { get; set; } = string.Empty;
+        public string FedDate { get; set; } = string.Empty;
         public string Notes { get; set; } = string.Empty;
     }
 }
