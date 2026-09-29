@@ -43,7 +43,7 @@ namespace ShoppetApp.Models
 
         public System.Collections.ObjectModel.ObservableCollection<CommunityComment> Replies { get; } = new();
 
-        public CommunityComment TopLevelParent { get; set; }
+        public CommunityComment? TopLevelParent { get; set; }
         public System.Collections.Generic.List<CommunityComment> AllDescendants { get; set; } = new();
         
         [ObservableProperty]
