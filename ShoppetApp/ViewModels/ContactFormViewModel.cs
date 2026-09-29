@@ -11,12 +11,12 @@ public partial class ContactFormViewModel : ObservableObject, IQueryAttributable
 {
     private readonly DatabaseService _db;
 
-    [ObservableProperty] private int _contactId;
-    [ObservableProperty] private string _name = string.Empty;
-    [ObservableProperty] private string _role = "Veterinarian";
-    [ObservableProperty] private string _address = string.Empty;
-    [ObservableProperty] private string _phone = string.Empty;
-    [ObservableProperty] private bool _isEmergency = true;
+    [ObservableProperty] public partial int ContactId { get; set; }
+    [ObservableProperty] public partial string Name { get; set; } = string.Empty;
+    [ObservableProperty] public partial string Role { get; set; } = "Veterinarian";
+    [ObservableProperty] public partial string Address { get; set; } = string.Empty;
+    [ObservableProperty] public partial string Phone { get; set; } = string.Empty;
+    [ObservableProperty] public partial bool IsEmergency { get; set; } = true;
 
     public IList<string> RoleOptions { get; } = ["Veterinarian", "Clinic", "Family", "Pet Sitter", "Groomer", "Other"];
 

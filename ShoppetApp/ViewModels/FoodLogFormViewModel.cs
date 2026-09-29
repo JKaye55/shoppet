@@ -11,13 +11,13 @@ public partial class FoodLogFormViewModel : ObservableObject, IQueryAttributable
 {
     private readonly ApiService _api;
 
-    [ObservableProperty] private int _petId;
-    [ObservableProperty] private int _logId;
-    [ObservableProperty] private string _foodName = string.Empty;
-    [ObservableProperty] private DateTime _fedDate = DateTime.Today;
-    [ObservableProperty] private TimeSpan _startTime = DateTime.Now.TimeOfDay;
-    [ObservableProperty] private bool _isEditMode;
-    [ObservableProperty] private string _notes = string.Empty;
+    [ObservableProperty] public partial int PetId { get; set; }
+    [ObservableProperty] public partial int LogId { get; set; }
+    [ObservableProperty] public partial string FoodName { get; set; } = string.Empty;
+    [ObservableProperty] public partial DateTime FedDate { get; set; } = DateTime.Today;
+    [ObservableProperty] public partial TimeSpan StartTime { get; set; } = DateTime.Now.TimeOfDay;
+    [ObservableProperty] public partial bool IsEditMode { get; set; }
+    [ObservableProperty] public partial string Notes { get; set; } = string.Empty;
 
     // ── Interval: split into integer Hours + Minutes ──────────────────────────
     private string _intervalHoursText = string.Empty;

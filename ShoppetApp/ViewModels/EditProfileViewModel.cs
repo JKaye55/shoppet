@@ -15,16 +15,16 @@ namespace ShoppetApp.ViewModels
         }
 
         [ObservableProperty]
-        private string _fullName = string.Empty;
+        public partial string FullName { get; set; } = string.Empty;
 
         [ObservableProperty]
-        private string _profilePictureBase64 = string.Empty;
+        public partial string ProfilePictureBase64 { get; set; } = string.Empty;
 
         [ObservableProperty]
-        private ImageSource? _profileImageSource;
+        public partial ImageSource? ProfileImageSource { get; set; }
 
         [ObservableProperty]
-        private bool _isBusy;
+        public partial bool IsBusy { get; set; }
 
         private async Task LoadDataAsync()
         {

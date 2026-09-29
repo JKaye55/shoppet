@@ -13,25 +13,25 @@ namespace ShoppetApp.ViewModels
         private readonly DatabaseService _db;
 
         [ObservableProperty]
-        private CommunityPost _postToEdit = new CommunityPost();
+        public partial CommunityPost PostToEdit { get; set; } = new CommunityPost();
 
         [ObservableProperty]
-        private string _content = string.Empty;
+        public partial string Content { get; set; } = string.Empty;
 
         [ObservableProperty]
-        private ObservableCollection<Pet> _myPets = new();
+        public partial ObservableCollection<Pet> MyPets { get; set; } = new();
 
         [ObservableProperty]
-        private ObservableCollection<object> _selectedPets = new();
+        public partial ObservableCollection<object> SelectedPets { get; set; } = new();
 
         [ObservableProperty]
-        private ObservableCollection<MediaAttachment> _attachedMedia = new();
+        public partial ObservableCollection<MediaAttachment> AttachedMedia { get; set; } = new();
 
         [ObservableProperty]
-        private bool _isPetModalVisible;
+        public partial bool IsPetModalVisible { get; set; }
 
         [ObservableProperty]
-        private bool _isBusy;
+        public partial bool IsBusy { get; set; }
 
         public EditPostViewModel(ApiService api, DatabaseService db)
         {

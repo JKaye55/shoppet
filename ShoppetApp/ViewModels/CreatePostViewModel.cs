@@ -9,10 +9,10 @@ namespace ShoppetApp.ViewModels
     public partial class MediaAttachment : ObservableObject
     {
         [ObservableProperty]
-        private string _filePath = string.Empty;
+        public partial string FilePath { get; set; } = string.Empty;
 
         [ObservableProperty]
-        private bool _isVideo;
+        public partial bool IsVideo { get; set; }
 
         public bool IsImage => !IsVideo;
     }
@@ -23,19 +23,19 @@ namespace ShoppetApp.ViewModels
         private readonly DatabaseService _db;
 
         [ObservableProperty]
-        private string _content = string.Empty;
+        public partial string Content { get; set; } = string.Empty;
 
         [ObservableProperty]
-        private ObservableCollection<object> _selectedPets = new();
+        public partial ObservableCollection<object> SelectedPets { get; set; } = new();
 
         [ObservableProperty]
-        private ObservableCollection<MediaAttachment> _attachedMedia = new();
+        public partial ObservableCollection<MediaAttachment> AttachedMedia { get; set; } = new();
 
         [ObservableProperty]
-        private ObservableCollection<Pet> _myPets = new();
+        public partial ObservableCollection<Pet> MyPets { get; set; } = new();
 
         [ObservableProperty]
-        private bool _isPetModalVisible;
+        public partial bool IsPetModalVisible { get; set; }
 
         public string UserFullName => _db.CurrentUser?.FullName ?? "User";
         public string UserInitials => string.IsNullOrWhiteSpace(UserFullName) ? "U" : UserFullName.Substring(0, 1).ToUpper();
