@@ -17,7 +17,7 @@
             <Border Grid.Row="1" BackgroundColor="{StaticResource CardBg}" StrokeThickness="0" Padding="16,12,16,0">
                 <VerticalStackLayout Spacing="12">
                     <HorizontalStackLayout>
-                        <Label Text="Marketplace" FontFamily="NunitoExtraBold" FontSize="26" TextColor="{StaticResource BodyText}" VerticalOptions="Center" HorizontalOptions="FillAndExpand"/>
+                        <Label Text="Marketplace" FontFamily="NunitoExtraBold" FontSize="26" TextColor="{StaticResource BodyText}" VerticalOptions="Center" HorizontalOptions="Fill"/>
                         <Label Text="&#x2315;" FontSize="22" TextColor="{StaticResource BodyText}" VerticalOptions="Center" Margin="0,0,10,0">
                             <Label.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="OnSearchTapped"/>
