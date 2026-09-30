@@ -141,7 +141,9 @@ public class CommunityController : ControllerBase
             await connection.OpenAsync();
             await using var cmd=new SqlCommand(@"
                 SELECT c.Id,c.PostId,c.UserId,c.ParentCommentId,c.Body,c.CreatedAt,
-                       u.FullName,u.ProfilePicture,pu.FullName,
+                       COALESCE(u.FullName,NULLIF(c.AuthorName,''),'Guest') AS AuthorName,
+                       u.ProfilePicture,
+                       COALESCE(pu.FullName,NULLIF(pc.AuthorName,'')) AS ParentAuthorName,
                        (SELECT COUNT(*) FROM CommunityCommentLikes l WHERE l.CommentId=c.Id) AS LikeCount,
                        CASE WHEN EXISTS(
                            SELECT 1 FROM CommunityCommentLikes l WHERE l.CommentId=c.Id AND l.UserId=@UserId
