@@ -31,6 +31,8 @@ public partial class PetPassportViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty] private ObservableCollection<HealthLog> _healthLogs = [];
     [ObservableProperty] private ObservableCollection<FoodLog> _foodLogs = [];
     [ObservableProperty] private bool _isBusy;
+    [ObservableProperty] private bool _hasLoadError;
+    [ObservableProperty] private string _loadErrorMessage = string.Empty;
 
     public int PetId { get; private set; }
 
@@ -55,9 +57,13 @@ public partial class PetPassportViewModel : ObservableObject, IQueryAttributable
             return;
 
         IsBusy = true;
+        HasLoadError = false;
+        LoadErrorMessage = string.Empty;
         try
         {
-                        Pet = (await _api.GetPetsAsync()).FirstOrDefault(p => p.Id == PetId);
+            Pet = (await _api.GetPetsAsync()).FirstOrDefault(p => p.Id == PetId);
+            if (Pet is null)
+                throw new InvalidOperationException("The selected pet was not returned by the shared database.");
             
             var logs = await _api.GetHealthLogsAsync(PetId);
             var sortedHLogs = logs
@@ -75,11 +81,20 @@ public partial class PetPassportViewModel : ObservableObject, IQueryAttributable
                 .ToList();
             FoodLogs = new ObservableCollection<FoodLog>(sortedFLogs);
         }
+        catch (Exception ex)
+        {
+            HasLoadError = true;
+            LoadErrorMessage = "Could not load this pet's shared health and feeding data. Check ShoppetAPI and retry.";
+            System.Diagnostics.Debug.WriteLine($"Pet passport load failed: {ex}");
+        }
         finally
         {
             IsBusy = false;
         }
     }
+
+    [RelayCommand]
+    private async Task RetryAsync() => await LoadAsync();
 
     [RelayCommand]
     private async Task GoBackAsync() =>
