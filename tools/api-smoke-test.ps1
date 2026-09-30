@@ -553,10 +553,10 @@ $script:Results | Format-Table -AutoSize
 Write-Host "Passed: $script:Passed"
 Write-Host "Failed: $script:Failed"
 Write-Host ""
-Write-Host "Note: temporary smoke-test user accounts are intentionally left in users"
+Write-Host "Note: temporary smoke-test user accounts are intentionally left in UserAccounts"
 Write-Host "because the current product has no user-delete API."
 if ($IncludeCheckout) {
-    Write-Host "Checkout testing creates one real test order and decrements one product stock."
+    Write-Host "Checkout testing creates one SQL Server test order and decrements one seeded test product stock."
 }
 Write-Host ""
 
