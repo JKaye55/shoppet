@@ -1,3 +1,4 @@
+using ShoppetAPI.Security;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 
@@ -17,6 +18,11 @@ public class ContactsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetContacts([FromQuery] int? userId = null)
     {
+        int authenticatedUserId = this.AuthenticatedUserId();
+        if (authenticatedUserId <= 0) return Unauthorized();
+        if (userId.HasValue && userId.Value != authenticatedUserId) return Forbid();
+        userId = authenticatedUserId;
+
         try
         {
             var contacts = new List<object>();
@@ -53,6 +59,8 @@ public class ContactsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateContact([FromBody] ContactRequest request)
     {
+        if (!this.IsAuthenticatedUser(request.UserId)) return Forbid();
+        if (!this.IsAuthenticatedUser(request.UserId)) return Forbid();
         var validationError = ValidateRequest(request);
         if (validationError is not null) return BadRequest(validationError);
 
@@ -98,6 +106,7 @@ public class ContactsController : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> DeleteContact(int id, [FromQuery] int userId)
     {
+        if (!this.IsAuthenticatedUser(userId)) return Forbid();
         try
         {
             await using var connection = new SqlConnection(ConnectionString);
