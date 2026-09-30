@@ -374,32 +374,45 @@ public sealed class SharedDatabaseInitializer
                 VALUES ('Dog'), ('Cat'), ('Bird'), ('Small Pet');
               END;",
 
-            @"IF NOT EXISTS (SELECT 1 FROM dbo.ShopProducts)
+            @"IF NOT EXISTS (SELECT 1 FROM dbo.ShopProducts WHERE IsAvailable=1 AND StockQuantity>0)
               BEGIN
-                INSERT INTO dbo.ShopProducts
-                    (Name, Description, Price, ImageUrl, StockQuantity, IsAvailable, CreatedAt)
-                VALUES
-                    ('Sample Pet Accessory',
-                     'Local integration test product.',
-                     99.00,
-                     '',
-                     25,
-                     1,
-                     SYSDATETIME());
+                DECLARE @ProductId int =
+                    (SELECT TOP 1 Id FROM dbo.ShopProducts WHERE Name='Sample Pet Accessory');
 
-                DECLARE @ProductId int = SCOPE_IDENTITY();
-                DECLARE @AccessoryId int =
-                    (SELECT TOP 1 Id FROM dbo.ShopCategories WHERE Name='Accessories');
-                DECLARE @DogId int =
-                    (SELECT TOP 1 Id FROM dbo.PetCategories WHERE Name='Dog');
+                IF @ProductId IS NOT NULL
+                BEGIN
+                    UPDATE dbo.ShopProducts
+                    SET StockQuantity=25, IsAvailable=1
+                    WHERE Id=@ProductId;
+                END
+                ELSE
+                BEGIN
+                    INSERT INTO dbo.ShopProducts
+                        (Name, Description, Price, ImageUrl, StockQuantity, IsAvailable, CreatedAt)
+                    VALUES
+                        ('Sample Pet Accessory',
+                         'Local integration test product.',
+                         99.00,
+                         '',
+                         25,
+                         1,
+                         SYSDATETIME());
 
-                IF @AccessoryId IS NOT NULL
-                    INSERT INTO dbo.ProductShopCategories(ProductId, ShopCategoryId)
-                    VALUES (@ProductId, @AccessoryId);
+                    SET @ProductId = SCOPE_IDENTITY();
 
-                IF @DogId IS NOT NULL
-                    INSERT INTO dbo.ProductPetCategories(ProductId, PetCategoryId)
-                    VALUES (@ProductId, @DogId);
+                    DECLARE @AccessoryId int =
+                        (SELECT TOP 1 Id FROM dbo.ShopCategories WHERE Name='Accessories');
+                    DECLARE @DogId int =
+                        (SELECT TOP 1 Id FROM dbo.PetCategories WHERE Name='Dog');
+
+                    IF @AccessoryId IS NOT NULL
+                        INSERT INTO dbo.ProductShopCategories(ProductId, ShopCategoryId)
+                        VALUES (@ProductId, @AccessoryId);
+
+                    IF @DogId IS NOT NULL
+                        INSERT INTO dbo.ProductPetCategories(ProductId, PetCategoryId)
+                        VALUES (@ProductId, @DogId);
+                END
               END;"
         };
 
