@@ -1,288 +1,255 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using MySql.Data.MySqlClient;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using System.Text.Json;
 
-namespace ShoppetAPI.Controllers
+namespace ShoppetAPI.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class MessagesController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class MessagesController : ControllerBase
+    private readonly IConfiguration _config;
+    public MessagesController(IConfiguration config) => _config = config;
+
+    private string ConnectionString =>
+        _config.GetConnectionString("SharedSqlServer")
+        ?? throw new InvalidOperationException("SharedSqlServer connection string not found.");
+
+    public class SendMessageRequest
     {
-        private readonly IConfiguration _config;
-        public MessagesController(IConfiguration config)
+        public int SenderId { get; set; }
+        public int ReceiverId { get; set; }
+        public int? ListingId { get; set; }
+        public string Text { get; set; } = "";
+    }
+
+    public class MessageItem
+    {
+        public int SenderId { get; set; }
+        public int ReceiverId { get; set; }
+        public int? ListingId { get; set; }
+        public string Text { get; set; } = "";
+        public DateTime Timestamp { get; set; }
+        public bool IsRead { get; set; }
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> SendMessage([FromBody] SendMessageRequest req)
+    {
+        if (req.SenderId <= 0 || req.ReceiverId <= 0) return BadRequest("Valid sender and receiver IDs are required.");
+        if (req.SenderId == req.ReceiverId) return BadRequest("You cannot message yourself.");
+        if (string.IsNullOrWhiteSpace(req.Text)) return BadRequest("Message text is required.");
+
+        try
         {
-            _config = config;
-        }
+            int u1 = Math.Min(req.SenderId, req.ReceiverId);
+            int u2 = Math.Max(req.SenderId, req.ReceiverId);
+            await using var conn = new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
 
-        public class SendMessageRequest
-        {
-            public int SenderId { get; set; }
-            public int ReceiverId { get; set; }
-            public int? ListingId { get; set; }
-            public string Text { get; set; } = string.Empty;
-        }
-        
-        public class MessageItem
-        {
-            public int SenderId { get; set; }
-            public int ReceiverId { get; set; }
-            public int? ListingId { get; set; }
-            public string Text { get; set; } = string.Empty;
-            public DateTime Timestamp { get; set; }
-            public bool IsRead { get; set; }
-        }
+            await using var select = new SqlCommand(
+                "SELECT Id, MessagesJson, User1UnreadCount, User2UnreadCount FROM Conversations WHERE User1Id=@U1 AND User2Id=@U2",
+                conn);
+            select.Parameters.AddWithValue("@U1", u1);
+            select.Parameters.AddWithValue("@U2", u2);
 
-        [HttpPost]
-        public async Task<IActionResult> SendMessage([FromBody] SendMessageRequest req)
-        {
-            if (req.SenderId <= 0 || req.ReceiverId <= 0)
-                return BadRequest("Valid sender and receiver IDs are required.");
-
-            if (req.SenderId == req.ReceiverId)
-                return BadRequest("You cannot message yourself.");
-
-            if (string.IsNullOrWhiteSpace(req.Text))
-                return BadRequest("Message text is required.");
-
-            try
+            int? id = null;
+            string json = "[]";
+            int unread1 = 0, unread2 = 0;
+            await using (var reader = await select.ExecuteReaderAsync())
             {
-                var msg = new MessageItem
+                if (await reader.ReadAsync())
                 {
-                    SenderId = req.SenderId,
-                    ReceiverId = req.ReceiverId,
-                    ListingId = req.ListingId,
-                    Text = req.Text,
-                    Timestamp = DateTime.UtcNow
-                };
-                
-                string jsonMessage = JsonSerializer.Serialize(msg);
-                int user1 = Math.Min(req.SenderId, req.ReceiverId);
-                int user2 = Math.Max(req.SenderId, req.ReceiverId);
-
-                using var conn = new MySqlConnection(_config.GetConnectionString("DefaultConnection"));
-                await conn.OpenAsync();
-                
-                var query = @"
-                    INSERT INTO conversations (User1Id, User2Id, MessagesJSON, LastUpdated, User1UnreadCount, User2UnreadCount)
-                    VALUES (@User1, @User2, CONCAT('[', @JsonMessage, ']'), NOW(), @InitU1Unread, @InitU2Unread)
-                    ON DUPLICATE KEY UPDATE 
-                        MessagesJSON = JSON_ARRAY_APPEND(MessagesJSON, '$', JSON_EXTRACT(@JsonMessage, '$')),
-                        LastUpdated = NOW(),
-                        User1UnreadCount = User1UnreadCount + @IncU1Unread,
-                        User2UnreadCount = User2UnreadCount + @IncU2Unread";
-                        
-                using var cmd = new MySqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@User1", user1);
-                cmd.Parameters.AddWithValue("@User2", user2);
-                cmd.Parameters.AddWithValue("@JsonMessage", jsonMessage);
-                
-                int initU1 = req.SenderId == user2 ? 1 : 0;
-                int initU2 = req.SenderId == user1 ? 1 : 0;
-                cmd.Parameters.AddWithValue("@InitU1Unread", initU1);
-                cmd.Parameters.AddWithValue("@InitU2Unread", initU2);
-                cmd.Parameters.AddWithValue("@IncU1Unread", initU1);
-                cmd.Parameters.AddWithValue("@IncU2Unread", initU2);
-                
-                await cmd.ExecuteNonQueryAsync();
-                return Ok(new { success = true });
-            }
-            catch (Exception ex) { return StatusCode(500, ex.Message); }
-        }
-
-                [HttpGet("search")]
-        public async Task<IActionResult> SearchUsers([FromQuery] string query, [FromQuery] int currentUserId)
-        {
-            if (string.IsNullOrWhiteSpace(query)) return Ok(new List<object>());
-            try
-            {
-                using var conn = new MySqlConnection(_config.GetConnectionString("DefaultConnection"));
-                await conn.OpenAsync();
-                var sql = "SELECT Id, FullName, Email, ProfilePicture FROM users WHERE FullName LIKE @Query AND Id != @CurrentUserId LIMIT 20";
-                using var cmd = new MySqlCommand(sql, conn);
-                cmd.Parameters.AddWithValue("@Query", $"%{query}%");
-                cmd.Parameters.AddWithValue("@CurrentUserId", currentUserId);
-                using var reader = await cmd.ExecuteReaderAsync();
-                var result = new List<object>();
-                while (await reader.ReadAsync())
-                {
-                    result.Add(new {
-                        UserId = Convert.ToInt32(reader["Id"]),
-                        FullName = reader["FullName"].ToString(),
-                        Email = reader["Email"].ToString(),
-                        ProfilePicture = reader["ProfilePicture"] == DBNull.Value ? string.Empty : reader["ProfilePicture"].ToString()
-                    });
+                    id = reader.GetInt32(0);
+                    json = reader.GetString(1);
+                    unread1 = reader.GetInt32(2);
+                    unread2 = reader.GetInt32(3);
                 }
-                return Ok(result);
             }
-            catch (Exception ex) { return StatusCode(500, ex.Message); }
-        }
 
-        [HttpGet("{userId}")]
-        public async Task<IActionResult> GetConversations(int userId)
-        {
-            if (userId <= 0)
-                return BadRequest("A valid user ID is required.");
-
-            try
+            var messages = JsonSerializer.Deserialize<List<MessageItem>>(json) ?? [];
+            messages.Add(new MessageItem
             {
-                using var conn = new MySqlConnection(_config.GetConnectionString("DefaultConnection"));
-                await conn.OpenAsync();
-                var query = @"
-                    SELECT 
-                        c.Id AS ConversationId,
-                        CASE WHEN c.User1Id = @UserId THEN c.User2Id ELSE c.User1Id END AS ContactId,
-                        u.FullName AS ContactName, u.ProfilePicture,
-                        c.MessagesJSON,
-                        c.LastUpdated,
-                        CASE WHEN c.User1Id = @UserId THEN c.User1UnreadCount ELSE c.User2UnreadCount END AS UnreadCount
-                    FROM conversations c
-                    JOIN users u ON u.Id = (CASE WHEN c.User1Id = @UserId THEN c.User2Id ELSE c.User1Id END)
-                    WHERE c.User1Id = @UserId OR c.User2Id = @UserId
-                    ORDER BY c.LastUpdated DESC";
-                
-                using var cmd = new MySqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@UserId", userId);
-                using var reader = await cmd.ExecuteReaderAsync();
-                var result = new List<object>();
-                while (await reader.ReadAsync())
+                SenderId=req.SenderId,
+                ReceiverId=req.ReceiverId,
+                ListingId=req.ListingId,
+                Text=req.Text.Trim(),
+                Timestamp=DateTime.UtcNow,
+                IsRead=false
+            });
+
+            if (req.ReceiverId == u1) unread1++; else unread2++;
+            string updated = JsonSerializer.Serialize(messages);
+
+            if (id.HasValue)
+            {
+                await using var update = new SqlCommand(@"
+                    UPDATE Conversations
+                    SET MessagesJson=@Json, LastUpdated=SYSUTCDATETIME(),
+                        User1UnreadCount=@U1Unread, User2UnreadCount=@U2Unread
+                    WHERE Id=@Id;", conn);
+                update.Parameters.AddWithValue("@Json", updated);
+                update.Parameters.AddWithValue("@U1Unread", unread1);
+                update.Parameters.AddWithValue("@U2Unread", unread2);
+                update.Parameters.AddWithValue("@Id", id.Value);
+                await update.ExecuteNonQueryAsync();
+            }
+            else
+            {
+                await using var insert = new SqlCommand(@"
+                    INSERT INTO Conversations(User1Id,User2Id,MessagesJson,LastUpdated,User1UnreadCount,User2UnreadCount)
+                    VALUES(@U1,@U2,@Json,SYSUTCDATETIME(),@U1Unread,@U2Unread);", conn);
+                insert.Parameters.AddWithValue("@U1", u1);
+                insert.Parameters.AddWithValue("@U2", u2);
+                insert.Parameters.AddWithValue("@Json", updated);
+                insert.Parameters.AddWithValue("@U1Unread", unread1);
+                insert.Parameters.AddWithValue("@U2Unread", unread2);
+                await insert.ExecuteNonQueryAsync();
+            }
+
+            return Ok(new { success = true });
+        }
+        catch (Exception ex) { return StatusCode(500, ex.Message); }
+    }
+
+    [HttpGet("search")]
+    public async Task<IActionResult> SearchUsers([FromQuery] string query, [FromQuery] int currentUserId)
+    {
+        if (string.IsNullOrWhiteSpace(query)) return Ok(new List<object>());
+        try
+        {
+            var result = new List<object>();
+            await using var conn = new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+            await using var cmd = new SqlCommand(@"
+                SELECT TOP 20 Id, FullName, Email, ProfilePicture
+                FROM UserAccounts
+                WHERE FullName LIKE @Query AND Id<>@CurrentUserId
+                ORDER BY FullName;", conn);
+            cmd.Parameters.AddWithValue("@Query", $"%{query}%");
+            cmd.Parameters.AddWithValue("@CurrentUserId", currentUserId);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                result.Add(new
                 {
-                    var msgsJson = reader["MessagesJSON"].ToString();
-                    List<MessageItem>? msgs = null;
-                    if (!string.IsNullOrEmpty(msgsJson))
-                    {
-                        try { msgs = JsonSerializer.Deserialize<List<MessageItem>>(msgsJson); }
-                        catch { }
-                    }
-                    var last = msgs?.LastOrDefault();
-                    
-                    result.Add(new {
-                        ContactId = Convert.ToInt32(reader["ContactId"]),
-                        ContactName = reader["ContactName"].ToString(),
-                        ProfilePicture = reader["ProfilePicture"] == DBNull.Value ? string.Empty : reader["ProfilePicture"].ToString(),
-                        LastMessage = last?.Text ?? "",
-                        Timestamp = Convert.ToDateTime(reader["LastUpdated"]),
-                        UnreadCount = Convert.ToInt32(reader["UnreadCount"])
-                    });
-                }
-                return Ok(result);
+                    UserId=reader.GetInt32(0),
+                    FullName=reader.GetString(1),
+                    Email=reader.GetString(2),
+                    ProfilePicture=reader.IsDBNull(3) ? "" : reader.GetString(3)
+                });
             }
-            catch (Exception ex) { return StatusCode(500, ex.Message); }
+            return Ok(result);
         }
+        catch (Exception ex) { return StatusCode(500, ex.Message); }
+    }
 
-        [HttpGet("chat/{userId}/{contactId}")]
-        public async Task<IActionResult> GetMessages(int userId, int contactId)
+    [HttpGet("{userId:int}")]
+    public async Task<IActionResult> GetConversations(int userId)
+    {
+        if (userId <= 0) return BadRequest("A valid user ID is required.");
+        try
         {
-            if (userId <= 0 || contactId <= 0)
-                return BadRequest("Valid user IDs are required.");
-
-            try
+            var result = new List<object>();
+            await using var conn = new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+            await using var cmd = new SqlCommand(@"
+                SELECT c.User1Id,c.User2Id,c.MessagesJson,c.LastUpdated,c.User1UnreadCount,c.User2UnreadCount,
+                       u.Id,u.FullName,u.ProfilePicture
+                FROM Conversations c
+                JOIN UserAccounts u
+                  ON u.Id=CASE WHEN c.User1Id=@UserId THEN c.User2Id ELSE c.User1Id END
+                WHERE c.User1Id=@UserId OR c.User2Id=@UserId
+                ORDER BY c.LastUpdated DESC;", conn);
+            cmd.Parameters.AddWithValue("@UserId", userId);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
             {
-                int user1 = Math.Min(userId, contactId);
-                int user2 = Math.Max(userId, contactId);
-                
-                using var conn = new MySqlConnection(_config.GetConnectionString("DefaultConnection"));
-                await conn.OpenAsync();
-                var query = "SELECT MessagesJSON FROM conversations WHERE User1Id = @User1 AND User2Id = @User2";
-                
-                using var cmd = new MySqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@User1", user1);
-                cmd.Parameters.AddWithValue("@User2", user2);
-                var scalar = await cmd.ExecuteScalarAsync();
-                
-                if (scalar == null || scalar == DBNull.Value) return Ok(new List<object>());
-                
-                var msgsJson = scalar.ToString();
-                List<MessageItem>? msgs = null;
-                if (!string.IsNullOrEmpty(msgsJson))
+                int u1=reader.GetInt32(0), u2=reader.GetInt32(1);
+                var msgs=JsonSerializer.Deserialize<List<MessageItem>>(reader.GetString(2)) ?? [];
+                var last=msgs.LastOrDefault();
+                result.Add(new
                 {
-                    try { msgs = JsonSerializer.Deserialize<List<MessageItem>>(msgsJson); }
-                    catch { }
-                }
-                
-                return Ok(msgs ?? new List<MessageItem>());
+                    ContactId=reader.GetInt32(6),
+                    ContactName=reader.GetString(7),
+                    ProfilePicture=reader.IsDBNull(8) ? "" : reader.GetString(8),
+                    LastMessage=last?.Text ?? "",
+                    Timestamp=reader.GetDateTime(3),
+                    UnreadCount=userId==u1 ? reader.GetInt32(4) : reader.GetInt32(5)
+                });
             }
-            catch (Exception ex) { return StatusCode(500, ex.Message); }
+            return Ok(result);
         }
+        catch (Exception ex) { return StatusCode(500, ex.Message); }
+    }
 
-        [HttpGet("unreadCount/{userId}")]
-        public async Task<IActionResult> GetUnreadCount(int userId)
+    [HttpGet("chat/{userId:int}/{contactId:int}")]
+    public async Task<IActionResult> GetMessages(int userId, int contactId)
+    {
+        try
         {
-            if (userId <= 0)
-                return BadRequest("A valid user ID is required.");
-
-            try
-            {
-                using var conn = new MySqlConnection(_config.GetConnectionString("DefaultConnection"));
-                await conn.OpenAsync();
-                var query = "SELECT COALESCE(SUM(CASE WHEN User1Id = @UserId THEN User1UnreadCount ELSE User2UnreadCount END), 0) FROM conversations WHERE User1Id = @UserId OR User2Id = @UserId";
-                using var cmd = new MySqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@UserId", userId);
-                var scalar = await cmd.ExecuteScalarAsync();
-                return Ok(Convert.ToInt32(scalar));
-            }
-            catch (Exception ex) { return StatusCode(500, ex.Message); }
+            int u1=Math.Min(userId,contactId), u2=Math.Max(userId,contactId);
+            await using var conn=new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+            await using var cmd=new SqlCommand("SELECT MessagesJson FROM Conversations WHERE User1Id=@U1 AND User2Id=@U2",conn);
+            cmd.Parameters.AddWithValue("@U1",u1); cmd.Parameters.AddWithValue("@U2",u2);
+            var scalar=await cmd.ExecuteScalarAsync();
+            if (scalar is null || scalar==DBNull.Value) return Ok(new List<MessageItem>());
+            return Ok(JsonSerializer.Deserialize<List<MessageItem>>(Convert.ToString(scalar)!) ?? []);
         }
+        catch(Exception ex){ return StatusCode(500,ex.Message); }
+    }
 
-        [HttpPost("resetUnread/{userId}/{contactId}")]
-        public async Task<IActionResult> ResetUnread(int userId, int contactId)
+    [HttpGet("unreadCount/{userId:int}")]
+    public async Task<IActionResult> GetUnreadCount(int userId)
+    {
+        try
         {
-            try
-            {
-                int user1 = Math.Min(userId, contactId);
-                int user2 = Math.Max(userId, contactId);
-                using var conn = new MySqlConnection(_config.GetConnectionString("DefaultConnection"));
-                await conn.OpenAsync();
-                
-                // First read the existing messages to update IsRead status
-                var selectQuery = "SELECT MessagesJSON FROM conversations WHERE User1Id = @User1 AND User2Id = @User2";
-                using var selectCmd = new MySqlCommand(selectQuery, conn);
-                selectCmd.Parameters.AddWithValue("@User1", user1);
-                selectCmd.Parameters.AddWithValue("@User2", user2);
-                
-                var messagesJson = await selectCmd.ExecuteScalarAsync() as string;
-                if (!string.IsNullOrEmpty(messagesJson))
-                {
-                    var messages = System.Text.Json.JsonSerializer.Deserialize<List<MessageItem>>(messagesJson) ?? new List<MessageItem>();
-                    bool needsUpdate = false;
-                    foreach (var msg in messages)
-                    {
-                        // If it's sent by the other person (contactId) and not read, mark it as read
-                        if (msg.SenderId == contactId && !msg.IsRead)
-                        {
-                            msg.IsRead = true;
-                            needsUpdate = true;
-                        }
-                    }
-                    
-                    if (needsUpdate)
-                    {
-                        var updatedJson = System.Text.Json.JsonSerializer.Serialize(messages);
-                        var updateJsonQuery = "UPDATE conversations SET MessagesJSON = @Messages WHERE User1Id = @User1 AND User2Id = @User2";
-                        using var updateJsonCmd = new MySqlCommand(updateJsonQuery, conn);
-                        updateJsonCmd.Parameters.AddWithValue("@Messages", updatedJson);
-                        updateJsonCmd.Parameters.AddWithValue("@User1", user1);
-                        updateJsonCmd.Parameters.AddWithValue("@User2", user2);
-                        await updateJsonCmd.ExecuteNonQueryAsync();
-                    }
-                }
-
-                // user1=Min(userId,contactId), user2=Max. Check both columns against @UserId
-                var query = @"
-                    UPDATE conversations 
-                    SET 
-                        User1UnreadCount = CASE WHEN @UserId = User1Id THEN 0 ELSE User1UnreadCount END,
-                        User2UnreadCount = CASE WHEN @UserId = User2Id THEN 0 ELSE User2UnreadCount END
-                    WHERE User1Id = @User1 AND User2Id = @User2";
-                using var cmd = new MySqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@UserId", userId);
-                cmd.Parameters.AddWithValue("@User1", user1);
-                cmd.Parameters.AddWithValue("@User2", user2);
-                await cmd.ExecuteNonQueryAsync();
-                return Ok();
-            }
-            catch (Exception ex) { return StatusCode(500, ex.Message); }
+            await using var conn=new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+            await using var cmd=new SqlCommand(@"
+                SELECT COALESCE(SUM(CASE WHEN User1Id=@UserId THEN User1UnreadCount ELSE User2UnreadCount END),0)
+                FROM Conversations
+                WHERE User1Id=@UserId OR User2Id=@UserId;",conn);
+            cmd.Parameters.AddWithValue("@UserId",userId);
+            return Ok(Convert.ToInt32(await cmd.ExecuteScalarAsync()));
         }
+        catch(Exception ex){ return StatusCode(500,ex.Message); }
+    }
+
+    [HttpPost("resetUnread/{userId:int}/{contactId:int}")]
+    public async Task<IActionResult> ResetUnread(int userId,int contactId)
+    {
+        try
+        {
+            int u1=Math.Min(userId,contactId),u2=Math.Max(userId,contactId);
+            await using var conn=new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+
+            await using var sel=new SqlCommand("SELECT Id,MessagesJson FROM Conversations WHERE User1Id=@U1 AND User2Id=@U2",conn);
+            sel.Parameters.AddWithValue("@U1",u1); sel.Parameters.AddWithValue("@U2",u2);
+            int? id=null; string json="[]";
+            await using(var reader=await sel.ExecuteReaderAsync())
+            {
+                if(await reader.ReadAsync()){ id=reader.GetInt32(0); json=reader.GetString(1); }
+            }
+            if(!id.HasValue) return Ok();
+
+            var msgs=JsonSerializer.Deserialize<List<MessageItem>>(json) ?? [];
+            foreach(var m in msgs) if(m.SenderId==contactId) m.IsRead=true;
+
+            await using var cmd=new SqlCommand(@"
+                UPDATE Conversations
+                SET MessagesJson=@Json,
+                    User1UnreadCount=CASE WHEN User1Id=@UserId THEN 0 ELSE User1UnreadCount END,
+                    User2UnreadCount=CASE WHEN User2Id=@UserId THEN 0 ELSE User2UnreadCount END
+                WHERE Id=@Id;",conn);
+            cmd.Parameters.AddWithValue("@Json",JsonSerializer.Serialize(msgs));
+            cmd.Parameters.AddWithValue("@UserId",userId);
+            cmd.Parameters.AddWithValue("@Id",id.Value);
+            await cmd.ExecuteNonQueryAsync();
+            return Ok();
+        }
+        catch(Exception ex){ return StatusCode(500,ex.Message); }
     }
 }
-
-
