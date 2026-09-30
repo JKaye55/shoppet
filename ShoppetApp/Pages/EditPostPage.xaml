@@ -12,11 +12,13 @@
         <!-- Header -->
         <Border Grid.Row="0" BackgroundColor="{StaticResource AppBackground}" StrokeThickness="0" Padding="15,10">
             <HorizontalStackLayout Spacing="10">
-                <Label Text="&#x25C0; Back" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" FontSize="16" VerticalOptions="Center">
-                    <Label.GestureRecognizers>
+                <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                    <HorizontalStackLayout.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding GoBackCommand}" />
-                    </Label.GestureRecognizers>
-                </Label>
+                    </HorizontalStackLayout.GestureRecognizers>
+                    <Path Data="{StaticResource IconBack}" Fill="{StaticResource Primary}" WidthRequest="18" HeightRequest="18" Aspect="Uniform" />
+                    <Label Text="Back" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" FontSize="16" VerticalOptions="Center" />
+                </HorizontalStackLayout>
                 <Label Text="Edit Post" TextColor="{StaticResource SecondaryFg}" FontFamily="NunitoExtraBold" FontSize="18" VerticalOptions="Center" Margin="10,0,0,0"/>
             </HorizontalStackLayout>
         </Border>
@@ -61,6 +63,7 @@
                         PlaceholderColor="#888888" 
                         TextColor="{StaticResource BodyText}" 
                         Text="{Binding Content}" 
+                        MaxLength="2000"
                         BackgroundColor="Transparent"
                         AutoSize="TextChanges" 
                         MinimumHeightRequest="150" />
@@ -85,11 +88,12 @@
                                 <Border BackgroundColor="#DD000000" WidthRequest="24" HeightRequest="24" 
                                         StrokeShape="RoundRectangle 12" StrokeThickness="0"
                                         HorizontalOptions="End" VerticalOptions="Start" Margin="5">
-                                    <Label Text="&#x2715;" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" FontSize="12" FontFamily="NunitoBold">
-                                        <Label.GestureRecognizers>
+                                    <Grid>
+                                        <Grid.GestureRecognizers>
                                             <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:EditPostViewModel}}, Path=RemoveMediaCommand}" CommandParameter="{Binding .}" />
-                                        </Label.GestureRecognizers>
-                                    </Label>
+                                        </Grid.GestureRecognizers>
+                                        <Path Data="{StaticResource IconClose}" Fill="White" WidthRequest="12" HeightRequest="12" HorizontalOptions="Center" VerticalOptions="Center" Aspect="Uniform" />
+                                    </Grid>
                                 </Border>
                             </Grid>
                         </DataTemplate>
@@ -109,7 +113,7 @@
                     CornerRadius="10" 
                     Padding="20,5"
                     HeightRequest="40"
-                    Command="{Binding SaveCommand}" />
+                    Command="{Binding SaveCommand}" IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}" />
         </Grid>
 
         <!-- Modal Overlay -->
