@@ -149,23 +149,26 @@ public class ApiService
 
     public async Task<List<Pet>> GetPetsAsync()
     {
-        try
+        var userId = Microsoft.Maui.Storage.Preferences.Get("LoggedInUserId", 0);
+        using var response = await _http.GetAsync($"pets?userId={userId}");
+        if (!response.IsSuccessStatusCode)
         {
-            var pets = await _http.GetFromJsonAsync<List<Pet>>(
-                $"pets?userId={Microsoft.Maui.Storage.Preferences.Get("LoggedInUserId", 0)}") ?? [];
-#if ANDROID
-            foreach (var pet in pets)
-            {
-                if (!string.IsNullOrWhiteSpace(pet.PhotoUrl))
-                    pet.PhotoUrl = pet.PhotoUrl.Replace(
-                        "http://localhost:5020",
-                        "http://10.0.2.2:5020",
-                        StringComparison.OrdinalIgnoreCase);
-            }
-#endif
-            return pets;
+            var detail = await response.Content.ReadAsStringAsync();
+            throw new HttpRequestException($"Pets API returned {(int)response.StatusCode}: {detail}");
         }
-        catch { return []; }
+
+        var pets = await response.Content.ReadFromJsonAsync<List<Pet>>() ?? [];
+#if ANDROID
+        foreach (var pet in pets)
+        {
+            if (!string.IsNullOrWhiteSpace(pet.PhotoUrl))
+                pet.PhotoUrl = pet.PhotoUrl.Replace(
+                    "http://localhost:5020",
+                    "http://10.0.2.2:5020",
+                    StringComparison.OrdinalIgnoreCase);
+        }
+#endif
+        return pets;
     }
 
     public async Task<Pet?> SavePetAsync(Pet pet)
@@ -215,27 +218,25 @@ public class ApiService
 
     public async Task<List<HealthLog>> GetHealthLogsAsync(int petId)
     {
-        try
+        using var response = await _http.GetAsync($"pets/{petId}/healthlogs");
+        if (!response.IsSuccessStatusCode)
         {
-            var logs = await _http.GetFromJsonAsync<List<HealthLog>>($"pets/{petId}/healthlogs") ?? [];
-            foreach (var log in logs)
-            {
-                if (log.Completed)
-                {
-                    log.Status = "Completed";
-                }
-                else if (DateTime.TryParse(log.DueDate, out var due))
-                {
-                    log.Status = due <= DateTime.Now.AddDays(7) ? "Action Required" : "Pending";
-                }
-                else
-                {
-                    log.Status = "Pending";
-                }
-            }
-            return logs;
+            var detail = await response.Content.ReadAsStringAsync();
+            throw new HttpRequestException($"Health API returned {(int)response.StatusCode}: {detail}");
         }
-        catch { return []; }
+
+        var logs = await response.Content.ReadFromJsonAsync<List<HealthLog>>() ?? [];
+        foreach (var log in logs)
+        {
+            if (log.Completed)
+                log.Status = "Completed";
+            else if (DateTime.TryParse(log.DueDate, out var due))
+                log.Status = due <= DateTime.Now.AddDays(7) ? "Action Required" : "Pending";
+            else
+                log.Status = "Pending";
+        }
+
+        return logs;
     }
 
     public async Task<HealthLog?> SaveHealthLogAsync(int petId, HealthLog log)
@@ -298,8 +299,14 @@ public class ApiService
 
     public async Task<List<FoodLog>> GetFoodLogsAsync(int petId)
     {
-        try { return await _http.GetFromJsonAsync<List<FoodLog>>($"pets/{petId}/foodlogs") ?? []; }
-        catch { return []; }
+        using var response = await _http.GetAsync($"pets/{petId}/foodlogs");
+        if (!response.IsSuccessStatusCode)
+        {
+            var detail = await response.Content.ReadAsStringAsync();
+            throw new HttpRequestException($"Food API returned {(int)response.StatusCode}: {detail}");
+        }
+
+        return await response.Content.ReadFromJsonAsync<List<FoodLog>>() ?? [];
     }
 
     public async Task<FoodLog?> SaveFoodLogAsync(int petId, FoodLog log)
