@@ -66,7 +66,8 @@ public class HealthLogsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateHealthLog(int petId, [FromBody] HealthLogRequest request)
     {
-        if (petId <= 0) return BadRequest("A valid pet ID is required.");
+        var validationError = ValidateRequest(petId, request);
+        if (validationError is not null) return BadRequest(validationError);
 
         try
         {
@@ -97,6 +98,9 @@ public class HealthLogsController : ControllerBase
     [HttpPut("{id:int}")]
     public async Task<IActionResult> UpdateHealthLog(int petId, int id, [FromBody] HealthLogRequest request)
     {
+        var validationError = ValidateRequest(petId, request);
+        if (validationError is not null) return BadRequest(validationError);
+
         try
         {
             await using var connection = new SqlConnection(ConnectionString);
@@ -168,6 +172,40 @@ public class HealthLogsController : ControllerBase
             return await cmd.ExecuteNonQueryAsync() > 0 ? Ok() : NotFound("Health record not found.");
         }
         catch (Exception ex) { return StatusCode(500, $"Error completing health log: {ex.Message}"); }
+    }
+
+    private static string? ValidateRequest(int petId, HealthLogRequest request)
+    {
+        var type = (request.Type ?? string.Empty).Trim().ToLowerInvariant();
+        var name = (request.Name ?? string.Empty).Trim();
+
+        if (petId <= 0) return "A valid pet ID is required.";
+        if (!new[] { "vaccine", "medication", "vital" }.Contains(type)) return "Health record type is not valid.";
+        if (name.Length < 2 || name.Length > 80) return "Record name must be between 2 and 80 characters.";
+
+        if (type == "vaccine")
+        {
+            if (request.ValidityInterval < 1 || request.ValidityInterval > 120)
+                return "Validity interval must be between 1 and 120.";
+        }
+
+        if (type == "medication")
+        {
+            if (request.MedicationIntervalHours <= 0 || request.MedicationIntervalHours > 168)
+                return "Medication interval must be greater than 0 and no more than 168 hours.";
+            if (request.DosageTotal < 1 || request.DosageTotal > 1000)
+                return "Total dosage must be between 1 and 1,000.";
+            if (request.DosageRemaining < 0 || request.DosageRemaining > request.DosageTotal)
+                return "Remaining dosage must be between 0 and total dosage.";
+        }
+
+        if (!new[] { "Days", "Weeks", "Months", "Years" }.Contains(request.ValidityUnit ?? string.Empty))
+            return "Validity unit is not valid.";
+
+        if (!string.IsNullOrWhiteSpace(request.DocumentPaths) && request.DocumentPaths.Length > 10000)
+            return "Attachment data is too large.";
+
+        return null;
     }
 
     private static void AddParameters(SqlCommand cmd, int petId, HealthLogRequest request)
