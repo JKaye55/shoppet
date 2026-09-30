@@ -191,7 +191,7 @@ public partial class ShopPage : ContentPage
         }
 
         DetailModal.IsVisible = false;
-        await ApplyCartAsync(cart);
+        await RefreshCartAsync();
         CartModal.IsVisible = true;
     }
 
@@ -234,7 +234,7 @@ public partial class ShopPage : ContentPage
 
         var cart = await _api.RemoveFromCartAsync(item.Id);
         if (cart != null)
-            await ApplyCartAsync(cart);
+            await RefreshCartAsync();
     }
 
     private async void OnCheckoutClicked(object sender, EventArgs e)
