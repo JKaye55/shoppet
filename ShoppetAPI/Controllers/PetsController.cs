@@ -186,18 +186,53 @@ public class PetsController : ControllerBase
         {
             await using var connection = new SqlConnection(ConnectionString);
             await connection.OpenAsync();
+            await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync();
 
-            var sql = userId > 0
+            if (userId > 0)
+            {
+                await using var ownerCheck = new SqlCommand(
+                    "SELECT COUNT(1) FROM PetProfiles WHERE Id=@Id AND UserId=@UserId",
+                    connection,
+                    transaction);
+                ownerCheck.Parameters.AddWithValue("@Id", id);
+                ownerCheck.Parameters.AddWithValue("@UserId", userId);
+
+                if (Convert.ToInt32(await ownerCheck.ExecuteScalarAsync()) == 0)
+                    return NotFound("Pet not found.");
+            }
+
+            var cleanupSql = new[]
+            {
+                "DELETE FROM PetHealthRecords WHERE PetId=@Id",
+                "DELETE FROM FoodLogs WHERE PetId=@Id",
+                "UPDATE CommunityPosts SET PetId=NULL WHERE PetId=@Id"
+            };
+
+            foreach (var sql in cleanupSql)
+            {
+                await using var cleanup = new SqlCommand(sql, connection, transaction);
+                cleanup.Parameters.AddWithValue("@Id", id);
+                await cleanup.ExecuteNonQueryAsync();
+            }
+
+            var deleteSql = userId > 0
                 ? "DELETE FROM PetProfiles WHERE Id=@Id AND UserId=@UserId"
                 : "DELETE FROM PetProfiles WHERE Id=@Id";
 
-            await using var cmd = new SqlCommand(sql, connection);
+            await using var cmd = new SqlCommand(deleteSql, connection, transaction);
             cmd.Parameters.AddWithValue("@Id", id);
             if (userId > 0)
                 cmd.Parameters.AddWithValue("@UserId", userId);
 
             var rows = await cmd.ExecuteNonQueryAsync();
-            return rows == 0 ? NotFound("Pet not found.") : Ok(new { message = "Pet deleted successfully" });
+            if (rows == 0)
+            {
+                await transaction.RollbackAsync();
+                return NotFound("Pet not found.");
+            }
+
+            await transaction.CommitAsync();
+            return Ok(new { message = "Pet deleted successfully" });
         }
         catch (Exception ex)
         {
