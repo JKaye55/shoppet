@@ -129,7 +129,8 @@ public class CommunityController : ControllerBase
             await using var stream = System.IO.File.Create(diskPath);
             await file.CopyToAsync(stream);
 
-            urls.Add($"{Request.Scheme}://{Request.Host}/uploads/community/{safeName}");
+            var publicBaseUrl = (_configuration["PublicBaseUrl"] ?? $"{Request.Scheme}://{Request.Host}").TrimEnd('/');
+            urls.Add($"{publicBaseUrl}/uploads/community/{safeName}");
         }
 
         return Ok(urls);
