@@ -220,7 +220,7 @@
                                         <Label Text="{Binding ItemTitle}"
                                                FontFamily="NunitoBold"
                                                FontSize="13" />
-                                        <Label Text="{Binding SellerName, StringFormat='Seller: {0}'}"
+                                        <Label Text="{Binding SellerName, StringFormat='Listed by {0}'}"
                                                FontSize="11"
                                                TextColor="{StaticResource Secondary}" />
                                         <Label Text="{Binding DateDisplay}"
