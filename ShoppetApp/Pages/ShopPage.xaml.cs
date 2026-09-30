@@ -195,6 +195,14 @@ public partial class ShopPage : ContentPage
         BtnMessageSeller.IsVisible = !isOwnListing;
         BtnAddToCart.IsVisible = !isOwnListing && listing.IsAvailable;
 
+        BtnSellerFacebook.IsVisible = !string.IsNullOrWhiteSpace(listing.FacebookUrl);
+        BtnSellerInstagram.IsVisible = !string.IsNullOrWhiteSpace(listing.InstagramUrl);
+        BtnSellerOther.IsVisible = !string.IsNullOrWhiteSpace(listing.OtherSocialUrl);
+        SellerSocialLinksRow.IsVisible =
+            BtnSellerFacebook.IsVisible ||
+            BtnSellerInstagram.IsVisible ||
+            BtnSellerOther.IsVisible;
+
         DetailModal.IsVisible = true;
     }
 
@@ -290,6 +298,32 @@ public partial class ShopPage : ContentPage
     }
 
     private void OnDismissModal(object sender, EventArgs e) => DetailModal.IsVisible = false;
+
+    private async void OnSellerSocialClicked(object sender, EventArgs e)
+    {
+        if (_currentListing == null || sender is not Button button)
+            return;
+
+        var target = button.CommandParameter?.ToString() switch
+        {
+            "facebook" => _currentListing.FacebookUrl,
+            "instagram" => _currentListing.InstagramUrl,
+            "other" => _currentListing.OtherSocialUrl,
+            _ => string.Empty
+        };
+
+        if (string.IsNullOrWhiteSpace(target))
+            return;
+
+        if (!Uri.TryCreate(target, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            await DisplayAlertAsync("Invalid link", "The seller's saved social link is not a valid web address.", "OK");
+            return;
+        }
+
+        await Launcher.Default.OpenAsync(uri);
+    }
 
     private async void OnMessageSellerClicked(object sender, EventArgs e)
     {
