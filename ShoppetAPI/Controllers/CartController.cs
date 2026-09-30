@@ -256,6 +256,18 @@ public class CartController : ControllerBase
                 await payment.ExecuteNonQueryAsync();
             }
 
+            await using(var notify=new SqlCommand("""
+                INSERT INTO Notifications(UserId,Title,Body,Link,Icon,IsRead,CreatedAt)
+                VALUES(@UserId,'Purchase confirmed',
+                       CONCAT('Mock order #',@OrderId,' was completed successfully.'),
+                       'orders','',0,SYSDATETIME());
+                """,conn,tx))
+            {
+                notify.Parameters.AddWithValue("@UserId",userId);
+                notify.Parameters.AddWithValue("@OrderId",orderId);
+                await notify.ExecuteNonQueryAsync();
+            }
+
             await using(var clear=new SqlCommand("DELETE FROM MarketplaceCartItems WHERE CartId=@CartId",conn,tx))
             {
                 clear.Parameters.AddWithValue("@CartId",cartId.Value);
@@ -280,23 +292,59 @@ public class CartController : ControllerBase
     {
         try
         {
-            var orders=new List<object>();
+            var orders=new List<OrderResponse>();
             await using var conn=new SqlConnection(ConnectionString);
             await conn.OpenAsync();
-            await using var cmd=new SqlCommand("""
+
+            await using(var cmd=new SqlCommand("""
                 SELECT Id,UserId,TotalAmount,Status,OrderedAt
                 FROM MarketplaceOrders
                 WHERE UserId=@UserId
                 ORDER BY OrderedAt DESC;
-                """,conn);
-            cmd.Parameters.AddWithValue("@UserId",userId);
-            await using var r=await cmd.ExecuteReaderAsync();
-            while(await r.ReadAsync())
-                orders.Add(new{
-                    Id=r.GetInt32(0),UserId=r.GetInt32(1),TotalAmount=r.GetDecimal(2),
-                    Status=r.GetString(3),OrderedAt=r.GetDateTime(4),
-                    Items=Array.Empty<object>()
-                });
+                """,conn))
+            {
+                cmd.Parameters.AddWithValue("@UserId",userId);
+                await using var r=await cmd.ExecuteReaderAsync();
+                while(await r.ReadAsync())
+                {
+                    orders.Add(new OrderResponse
+                    {
+                        Id=r.GetInt32(0),
+                        UserId=r.GetInt32(1),
+                        TotalAmount=r.GetDecimal(2),
+                        Status=r.GetString(3),
+                        OrderedAt=r.GetDateTime(4)
+                    });
+                }
+            }
+
+            foreach(var order in orders)
+            {
+                await using var items=new SqlCommand("""
+                    SELECT oi.MarketplaceListingId,ISNULL(m.Title,'Marketplace item'),
+                           oi.Quantity,oi.UnitPrice
+                    FROM MarketplaceOrderItems oi
+                    LEFT JOIN MarketplaceListings m ON m.Id=oi.MarketplaceListingId
+                    WHERE oi.OrderId=@OrderId
+                    ORDER BY oi.Id;
+                    """,conn);
+                items.Parameters.AddWithValue("@OrderId",order.Id);
+                await using var r=await items.ExecuteReaderAsync();
+                while(await r.ReadAsync())
+                {
+                    var qty=r.GetInt32(2);
+                    var price=r.GetDecimal(3);
+                    order.Items.Add(new OrderItemResponse
+                    {
+                        ProductId=r.GetInt32(0),
+                        ProductName=r.GetString(1),
+                        Quantity=qty,
+                        UnitPrice=price,
+                        LineTotal=qty*price
+                    });
+                }
+            }
+
             return Ok(orders);
         }
         catch(Exception ex){return StatusCode(500,$"Orders error: {ex.Message}");}
@@ -317,6 +365,24 @@ public class CartController : ControllerBase
         create.Parameters.AddWithValue("@UserId",userId);
         return Convert.ToInt32(await create.ExecuteScalarAsync());
     }
+}
+
+public class OrderResponse
+{
+    public int Id{get;set;}
+    public int UserId{get;set;}
+    public decimal TotalAmount{get;set;}
+    public string Status{get;set;}=string.Empty;
+    public DateTime OrderedAt{get;set;}
+    public List<OrderItemResponse> Items{get;set;}=new();
+}
+public class OrderItemResponse
+{
+    public int ProductId{get;set;}
+    public string ProductName{get;set;}=string.Empty;
+    public int Quantity{get;set;}
+    public decimal UnitPrice{get;set;}
+    public decimal LineTotal{get;set;}
 }
 
 public class AddToCartRequest
