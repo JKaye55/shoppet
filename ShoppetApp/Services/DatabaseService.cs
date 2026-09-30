@@ -1,4 +1,3 @@
-using MySqlConnector;
 using ShoppetApp.Models;
 using SQLite;
 using AppContact = ShoppetApp.Models.Contact;
@@ -13,8 +12,6 @@ namespace ShoppetApp.Services
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "shoppet.db"
         );
-
-        private readonly string _mysqlConnectionString = "Server=localhost;Database=shoppetdb;Uid=root;Pwd=;";
 
         public User? CurrentUser { get; set; }
         public ApiService? ApiService { get; set; }
@@ -85,299 +82,75 @@ namespace ShoppetApp.Services
         public void Logout() => CurrentUser = null;
 
         // =====================================================
-        // --- Community Posts (MySQL Real-time) ---
+        // --- Community Posts (shared ShoppetAPI / SQL Server) ---
         // =====================================================
-
-        /// <summary>
-        /// Loads all posts with like/comment counts and whether the viewer liked each one.
-        /// </summary>
         public async Task<List<CommunityPost>> GetCommunityPostsAsync(int viewerUserId = 0)
         {
-            var posts = new List<CommunityPost>();
-            try
-            {
-                using var connection = new MySqlConnection(_mysqlConnectionString);
-                await connection.OpenAsync();
-
-                string query = @"
-                    SELECT 
-                        p.Id, p.AuthorName, p.PetName, p.Content, p.ImageUrl,
-                        p.Timestamp, p.IsEdited, p.UserId, p.PetId,
-                        (SELECT COUNT(*) FROM communitylikes l WHERE l.PostId = p.Id) AS LikeCount,
-                        (SELECT COUNT(*) FROM communitycomments c WHERE c.PostId = p.Id) AS CommentCount,
-                        (SELECT COUNT(*) FROM communitylikes l2 
-                         WHERE l2.PostId = p.Id AND l2.UserId = @ViewerUserId) AS IsLikedByMe
-                    FROM communityposts p
-                    ORDER BY p.Timestamp DESC;";
-
-                using var command = new MySqlCommand(query, connection);
-                command.Parameters.AddWithValue("@ViewerUserId", viewerUserId);
-
-                using var reader = await command.ExecuteReaderAsync();
-
-                while (await reader.ReadAsync())
-                {
-                    posts.Add(new CommunityPost
-                    {
-                        Id = reader.GetInt32("Id"),
-                        AuthorName = reader.GetString("AuthorName"),
-                        PetName = reader.GetString("PetName"),
-                        Content = reader.GetString("Content"),
-                        ImageUrls = reader.IsDBNull(reader.GetOrdinal("ImageUrl"))
-                            ? null : reader.GetString("ImageUrl"),
-                        Timestamp = reader.GetDateTime("Timestamp"),
-                        IsEdited = reader.GetBoolean("IsEdited"),
-                        UserId = reader.GetInt32("UserId"),
-                        PetId = reader.IsDBNull(reader.GetOrdinal("PetId"))
-                            ? null : reader.GetInt32("PetId"),
-                        LikeCount = reader.GetInt32("LikeCount"),
-                        CommentCount = reader.GetInt32("CommentCount"),
-                        IsLikedByMe = reader.GetInt32("IsLikedByMe") > 0
-                    });
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Database Error (GetPosts): {ex.Message}");
-            }
-            return posts;
+            if (ApiService is null) return new List<CommunityPost>();
+            try { return await ApiService.GetCommunityPostsAsync(viewerUserId); }
+            catch { return new List<CommunityPost>(); }
         }
 
         public async Task<int> SaveCommunityPostAsync(CommunityPost post)
         {
-            try
+            if (ApiService is null) return 0;
+            var ok = await ApiService.CreateCommunityPostAsync(new
             {
-                using var connection = new MySqlConnection(_mysqlConnectionString);
-                await connection.OpenAsync();
-
-                string query = @"
-                    INSERT INTO communityposts 
-                        (AuthorName, PetName, Content, ImageUrl, Timestamp, IsEdited, UserId, PetId) 
-                    VALUES 
-                        (@AuthorName, @PetName, @Content, @ImageUrl, @Timestamp, @IsEdited, @UserId, @PetId);
-                    SELECT LAST_INSERT_ID();";
-
-                using var command = new MySqlCommand(query, connection);
-                command.Parameters.AddWithValue("@AuthorName", post.AuthorName);
-                command.Parameters.AddWithValue("@PetName", post.PetName);
-                command.Parameters.AddWithValue("@Content", post.Content);
-                command.Parameters.AddWithValue("@ImageUrl", (object?)post.ImageUrls ?? DBNull.Value);
-                command.Parameters.AddWithValue("@Timestamp", post.Timestamp);
-                command.Parameters.AddWithValue("@IsEdited", post.IsEdited);
-                command.Parameters.AddWithValue("@UserId", post.UserId);
-                command.Parameters.AddWithValue("@PetId", (object?)post.PetId ?? DBNull.Value);
-
-                var result = await command.ExecuteScalarAsync();
-                return Convert.ToInt32(result);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Database Error (SavePost): {ex.Message}");
-                return 0;
-            }
+                post.UserId,
+                post.PetId,
+                post.AuthorName,
+                post.PetName,
+                post.Content,
+                post.ImageUrls
+            });
+            return ok ? 1 : 0;
         }
 
         public async Task<bool> UpdateCommunityPostAsync(CommunityPost post)
         {
-            try
-            {
-                using var connection = new MySqlConnection(_mysqlConnectionString);
-                await connection.OpenAsync();
-
-                string query = @"
-                    UPDATE communityposts 
-                    SET Content = @Content, 
-                        ImageUrl = @ImageUrl, 
-                        PetName = @PetName,
-                        IsEdited = @IsEdited 
-                    WHERE Id = @Id;";
-
-                using var command = new MySqlCommand(query, connection);
-                command.Parameters.AddWithValue("@Content", post.Content);
-                command.Parameters.AddWithValue("@ImageUrl", (object?)post.ImageUrls ?? DBNull.Value);
-                command.Parameters.AddWithValue("@PetName", post.PetName);
-                command.Parameters.AddWithValue("@IsEdited", post.IsEdited);
-                command.Parameters.AddWithValue("@Id", post.Id);
-
-                int rows = await command.ExecuteNonQueryAsync();
-                return rows > 0;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Database Error (UpdatePost): {ex.Message}");
-                return false;
-            }
+            if (ApiService is null) return false;
+            return await ApiService.EditPostAsync(
+                post.Id,
+                post.Content,
+                post.ImageUrls ?? string.Empty,
+                post.PetId,
+                post.PetName);
         }
 
         public async Task<bool> DeleteCommunityPostAsync(CommunityPost post)
         {
-            try
-            {
-                using var connection = new MySqlConnection(_mysqlConnectionString);
-                await connection.OpenAsync();
-
-                // Delete child rows first
-                using (var delLikes = new MySqlCommand(
-                    "DELETE FROM communitylikes WHERE PostId = @Id;", connection))
-                {
-                    delLikes.Parameters.AddWithValue("@Id", post.Id);
-                    await delLikes.ExecuteNonQueryAsync();
-                }
-
-                using (var delComments = new MySqlCommand(
-                    "DELETE FROM communitycomments WHERE PostId = @Id;", connection))
-                {
-                    delComments.Parameters.AddWithValue("@Id", post.Id);
-                    await delComments.ExecuteNonQueryAsync();
-                }
-
-                using (var delPost = new MySqlCommand(
-                    "DELETE FROM communityposts WHERE Id = @Id;", connection))
-                {
-                    delPost.Parameters.AddWithValue("@Id", post.Id);
-                    var rows = await delPost.ExecuteNonQueryAsync();
-                    return rows > 0;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Database Error (DeletePost): {ex.Message}");
-                return false;
-            }
+            if (ApiService is null) return false;
+            return await ApiService.DeletePostAsync(post.Id);
         }
-        /// <summary>
-        /// Toggles a like on a post for a user. Returns the new total like count.
-        /// </summary>
+
         public async Task<int> ToggleLikeAsync(int postId, int userId)
         {
+            if (ApiService is null) return 0;
+            await ApiService.ToggleLikeAsync(postId, userId);
             try
             {
-                using var connection = new MySqlConnection(_mysqlConnectionString);
-                await connection.OpenAsync();
-
-                using (var check = new MySqlCommand(
-                    "SELECT COUNT(*) FROM communitylikes WHERE PostId = @PostId AND UserId = @UserId;",
-                    connection))
-                {
-                    check.Parameters.AddWithValue("@PostId", postId);
-                    check.Parameters.AddWithValue("@UserId", userId);
-
-                    var existing = Convert.ToInt32(await check.ExecuteScalarAsync());
-
-                    if (existing > 0)
-                    {
-                        using var del = new MySqlCommand(
-                            "DELETE FROM communitylikes WHERE PostId = @PostId AND UserId = @UserId;",
-                            connection);
-                        del.Parameters.AddWithValue("@PostId", postId);
-                        del.Parameters.AddWithValue("@UserId", userId);
-                        await del.ExecuteNonQueryAsync();
-                    }
-                    else
-                    {
-                        using var ins = new MySqlCommand(
-                            "INSERT INTO communitylikes (PostId, UserId, CreatedAt) VALUES (@PostId, @UserId, @CreatedAt);",
-                            connection);
-                        ins.Parameters.AddWithValue("@PostId", postId);
-                        ins.Parameters.AddWithValue("@UserId", userId);
-                        ins.Parameters.AddWithValue("@CreatedAt", DateTime.Now);
-                        await ins.ExecuteNonQueryAsync();
-                    }
-
-                    using var countCmd = new MySqlCommand(
-                        "SELECT COUNT(*) FROM communitylikes WHERE PostId = @PostId;",
-                        connection);
-                    countCmd.Parameters.AddWithValue("@PostId", postId);
-                    return Convert.ToInt32(await countCmd.ExecuteScalarAsync());
-                }
+                var post = (await ApiService.GetCommunityPostsAsync(userId))
+                    .FirstOrDefault(p => p.Id == postId);
+                return post?.LikesCount ?? 0;
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Database Error (ToggleLike): {ex.Message}");
-                return 0;
-            }
+            catch { return 0; }
         }
 
-        /// <summary>
-        /// Loads all comments for a post, joined with the user's name and role.
-        /// </summary>
         public async Task<List<CommunityComment>> GetCommentsAsync(int postId)
         {
-            var comments = new List<CommunityComment>();
-            try
-            {
-                using var connection = new MySqlConnection(_mysqlConnectionString);
-                await connection.OpenAsync();
-
-                string query = @"
-                    SELECT 
-                        c.Id, c.PostId, c.UserId, c.ParentCommentId, c.Content, c.CreatedAt,
-                        u.FullName AS AuthorName, u.Role AS AuthorRole
-                    FROM communitycomments c
-                    LEFT JOIN users u ON u.Id = c.UserId
-                    WHERE c.PostId = @PostId
-                    ORDER BY c.CreatedAt ASC;";
-
-                using var command = new MySqlCommand(query, connection);
-                command.Parameters.AddWithValue("@PostId", postId);
-
-                using var reader = await command.ExecuteReaderAsync();
-
-                while (await reader.ReadAsync())
-                {
-                    comments.Add(new CommunityComment
-                    {
-                        Id = reader.GetInt32("Id"),
-                        PostId = reader.GetInt32("PostId"),
-                        UserId = reader.GetInt32("UserId"),
-                        ParentCommentId = reader.IsDBNull(reader.GetOrdinal("ParentCommentId"))
-                            ? null : reader.GetInt32("ParentCommentId"),
-                        Content = reader.GetString("Content"),
-                        CreatedAt = reader.GetDateTime("CreatedAt"),
-                        AuthorName = reader.IsDBNull(reader.GetOrdinal("AuthorName"))
-                            ? "Unknown" : reader.GetString("AuthorName"),
-                        AuthorRole = reader.IsDBNull(reader.GetOrdinal("AuthorRole"))
-                            ? "PetOwner" : reader.GetString("AuthorRole")
-                    });
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Database Error (GetComments): {ex.Message}");
-            }
-            return comments;
+            if (ApiService is null) return new List<CommunityComment>();
+            return await ApiService.GetCommentsAsync(postId);
         }
 
-        /// <summary>
-        /// Adds a new comment and returns the new comment ID (0 on failure).
-        /// </summary>
         public async Task<int> AddCommentAsync(CommunityComment comment)
         {
-            try
-            {
-                using var connection = new MySqlConnection(_mysqlConnectionString);
-                await connection.OpenAsync();
-
-                string query = @"
-                    INSERT INTO communitycomments (PostId, UserId, ParentCommentId, Content, CreatedAt)
-                    VALUES (@PostId, @UserId, @ParentCommentId, @Content, @CreatedAt);
-                    SELECT LAST_INSERT_ID();";
-
-                using var command = new MySqlCommand(query, connection);
-                command.Parameters.AddWithValue("@PostId", comment.PostId);
-                command.Parameters.AddWithValue("@UserId", comment.UserId);
-                command.Parameters.AddWithValue("@ParentCommentId", (object?)comment.ParentCommentId ?? DBNull.Value);
-                command.Parameters.AddWithValue("@Content", comment.Content);
-                command.Parameters.AddWithValue("@CreatedAt", comment.CreatedAt);
-
-                var result = await command.ExecuteScalarAsync();
-                return Convert.ToInt32(result);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Database Error (AddComment): {ex.Message}");
-                return 0;
-            }
+            if (ApiService is null) return 0;
+            var ok = await ApiService.AddCommentAsync(
+                comment.PostId,
+                comment.UserId,
+                comment.Content,
+                comment.ParentCommentId);
+            return ok ? 1 : 0;
         }
 
         // =====================================================
