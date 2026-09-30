@@ -17,6 +17,7 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty] private string _name = string.Empty;
     [ObservableProperty] private string _breed = string.Empty;
     [ObservableProperty] private string _photoUrl = string.Empty;
+    [ObservableProperty] private string _diet = string.Empty;
     [ObservableProperty] private bool _isEditMode;
 
     [ObservableProperty]
@@ -118,6 +119,7 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
         Breed = pet.Breed;
         Weight = pet.Weight;
         PhotoUrl = pet.PhotoUrl;
+        Diet = pet.Diet;
         AgeYearsText = pet.AgeYears.ToString();
         OnPropertyChanged(nameof(Title));
         OnPropertyChanged(nameof(CanDelete));
@@ -198,6 +200,7 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
             Breed = string.IsNullOrEmpty(Breed) ? "Mixed" : Breed.Trim(),
             Weight = Weight.Trim(),
             PhotoUrl = sharedPhotoUrl,
+            Diet = Diet.Trim(),
             AgeYears = age
         };
 
