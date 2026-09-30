@@ -218,8 +218,18 @@ public static class CommunitySchemaInitializer
                 WHERE name = 'UX_CommunityLikes_Post_User'
                   AND object_id = OBJECT_ID('dbo.CommunityLikes')
             )
+            BEGIN
+                ;WITH d AS
+                (
+                    SELECT Id,
+                           ROW_NUMBER() OVER(PARTITION BY PostId,UserId ORDER BY Id) AS rn
+                    FROM dbo.CommunityLikes
+                )
+                DELETE FROM d WHERE rn > 1;
+
                 CREATE UNIQUE INDEX UX_CommunityLikes_Post_User
                 ON dbo.CommunityLikes(PostId, UserId);
+            END;
 
             IF OBJECT_ID(N'dbo.CommunityComments', N'U') IS NULL
             BEGIN
@@ -288,8 +298,18 @@ public static class CommunitySchemaInitializer
                 WHERE name = 'UX_CommunityCommentLikes_Comment_User'
                   AND object_id = OBJECT_ID('dbo.CommunityCommentLikes')
             )
+            BEGIN
+                ;WITH d AS
+                (
+                    SELECT Id,
+                           ROW_NUMBER() OVER(PARTITION BY CommentId,UserId ORDER BY Id) AS rn
+                    FROM dbo.CommunityCommentLikes
+                )
+                DELETE FROM d WHERE rn > 1;
+
                 CREATE UNIQUE INDEX UX_CommunityCommentLikes_Comment_User
                 ON dbo.CommunityCommentLikes(CommentId, UserId);
+            END;
             """;
 
         await using var connection = new SqlConnection(connectionString);
