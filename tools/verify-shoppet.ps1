@@ -1,5 +1,5 @@
 param(
-    [switch]$IncludeCheckout,
+    [switch]$SkipCheckout,
     [switch]$SkipAndroidBuild
 )
 
@@ -32,7 +32,7 @@ function Wait-ForApi {
 try {
     Write-Host ""
     Write-Host "============================================================"
-    Write-Host " ShoppetCare full verification"
+    Write-Host " ShoppetCare shared SQL Server full verification"
     Write-Host "============================================================"
     Write-Host ""
 
@@ -89,11 +89,11 @@ try {
     Write-Host ""
     Write-Host "[4/4] Running CRUD smoke test..."
 
-    if ($IncludeCheckout) {
-        & $smokeScript -BaseUrl "$apiBase/api" -IncludeCheckout
+    if ($SkipCheckout) {
+        & $smokeScript -BaseUrl "$apiBase/api"
     }
     else {
-        & $smokeScript -BaseUrl "$apiBase/api"
+        & $smokeScript -BaseUrl "$apiBase/api" -IncludeCheckout
     }
 
     if ($LASTEXITCODE -ne 0) {
