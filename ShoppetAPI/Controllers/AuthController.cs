@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using ShoppetAPI.Services;
 
 namespace ShoppetAPI.Controllers;
 
@@ -100,11 +101,16 @@ public class AuthController : ControllerBase
             var fullName = reader.IsDBNull(1) ? string.Empty : reader.GetString(1);
             var email = reader.IsDBNull(2) ? string.Empty : reader.GetString(2);
             var storedPassword = reader.IsDBNull(3) ? string.Empty : reader.GetString(3);
-            var role = reader.IsDBNull(4) ? "Pet Owner" : reader.GetString(4);
+            var storedRole = reader.IsDBNull(4) ? "Pet Owner" : reader.GetString(4);
 
             var valid = VerifyPassword(request.Password, storedPassword);
             if (!valid)
                 return Unauthorized("Invalid email or password.");
+
+            var role = RbacService.NormalizeRole(storedRole);
+            if (string.IsNullOrWhiteSpace(role))
+                return StatusCode(403,
+                    "This legacy account role is no longer part of the active ShoppetCare flow.");
 
             return Ok(new AuthResponse
             {
