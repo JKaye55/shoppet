@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using ShoppetAPI.Services;
 
 namespace ShoppetAPI.Controllers;
 
@@ -15,7 +16,7 @@ public class ContactsController : ControllerBase
         ?? throw new InvalidOperationException("SharedSqlServer connection is missing.");
 
     [HttpGet]
-    public async Task<IActionResult> GetContacts([FromQuery] int? userId=null)
+    public async Task<IActionResult> GetContacts([FromQuery] int userId)
     {
         try
         {
@@ -23,16 +24,19 @@ public class ContactsController : ControllerBase
             await using var conn=new SqlConnection(ConnectionString);
             await conn.OpenAsync();
 
+            if(!await RbacService.IsPetOwnerAsync(conn,userId))
+                return Forbid();
+
             var sql="""
                 SELECT Id,UserId,Name,ISNULL(Role,''),ISNULL(Address,''),
                        ISNULL(Phone,''),IsEmergency
                 FROM EmergencyContacts
+                WHERE UserId=@UserId
+                ORDER BY IsEmergency DESC, Name;
                 """;
-            if(userId.HasValue) sql+=" WHERE UserId=@UserId";
-            sql+=" ORDER BY IsEmergency DESC, Name;";
 
             await using var cmd=new SqlCommand(sql,conn);
-            if(userId.HasValue) cmd.Parameters.AddWithValue("@UserId",userId.Value);
+            cmd.Parameters.AddWithValue("@UserId",userId);
 
             await using var r=await cmd.ExecuteReaderAsync();
             while(await r.ReadAsync())
@@ -57,6 +61,10 @@ public class ContactsController : ControllerBase
         {
             await using var conn=new SqlConnection(ConnectionString);
             await conn.OpenAsync();
+
+            if(!await RbacService.IsPetOwnerAsync(conn,x.UserId))
+                return Forbid();
+
             await using var cmd=new SqlCommand("""
                 INSERT INTO EmergencyContacts(UserId,Name,Role,Address,Phone,IsEmergency)
                 OUTPUT INSERTED.Id
@@ -76,6 +84,10 @@ public class ContactsController : ControllerBase
         {
             await using var conn=new SqlConnection(ConnectionString);
             await conn.OpenAsync();
+
+            if(!await RbacService.IsPetOwnerAsync(conn,x.UserId))
+                return Forbid();
+
             await using var cmd=new SqlCommand("""
                 UPDATE EmergencyContacts
                 SET Name=@Name,Role=@Role,Address=@Address,Phone=@Phone,IsEmergency=@IsEmergency
@@ -89,18 +101,19 @@ public class ContactsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id,[FromQuery] int userId=0)
+    public async Task<IActionResult> Delete(int id,[FromQuery] int userId)
     {
         try
         {
             await using var conn=new SqlConnection(ConnectionString);
             await conn.OpenAsync();
-            var sql=userId>0
-                ?"DELETE FROM EmergencyContacts WHERE Id=@Id AND UserId=@UserId"
-                :"DELETE FROM EmergencyContacts WHERE Id=@Id";
+            if(!await RbacService.IsPetOwnerAsync(conn,userId))
+                return Forbid();
+
+            const string sql="DELETE FROM EmergencyContacts WHERE Id=@Id AND UserId=@UserId";
             await using var cmd=new SqlCommand(sql,conn);
             cmd.Parameters.AddWithValue("@Id",id);
-            if(userId>0)cmd.Parameters.AddWithValue("@UserId",userId);
+            cmd.Parameters.AddWithValue("@UserId",userId);
             return await cmd.ExecuteNonQueryAsync()==0?NotFound():Ok(new{success=true});
         }
         catch(Exception ex){return StatusCode(500,$"Contact delete error: {ex.Message}");}
