@@ -50,7 +50,7 @@
                 </Border.GestureRecognizers>
                 <VerticalStackLayout Spacing="2" VerticalOptions="Center" HorizontalOptions="Center">
                     <Path x:Name="ShopIcon" Aspect="Uniform" HeightRequest="22" WidthRequest="22" HorizontalOptions="Center" Fill="{StaticResource Secondary}" Data="M16 6V4C16 1.79 14.21 0 12 0C9.79 0 8 1.79 8 4V6H2V20C2 21.1 2.9 22 4 22H20C21.1 22 22 21.1 22 20V6H16ZM10 4C10 2.9 10.9 2 12 2C13.1 2 14 2.9 14 4V6H10V4ZM20 20H4V8H20V20Z" />
-                    <Label x:Name="ShopLabel" Text="Shop" FontFamily="NunitoBold" FontSize="11" HorizontalTextAlignment="Center" />
+                    <Label x:Name="ShopLabel" Text="Marketplace" FontFamily="NunitoBold" FontSize="9" HorizontalTextAlignment="Center" />
                 </VerticalStackLayout>
             </Border>
 
