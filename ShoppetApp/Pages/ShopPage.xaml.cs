@@ -156,6 +156,7 @@ public partial class ShopPage : ContentPage
         // Hide "Message" button if the listing belongs to the current logged-in user
         var currentUserId = Preferences.Get("LoggedInUserId", 0);
         BtnMessageSeller.IsVisible = listing.UserId != currentUserId;
+        BtnAddToCart.IsVisible = listing.UserId != currentUserId && listing.IsAvailable;
 
         BtnFacebook.IsVisible = listing.HasFacebook;
         BtnInstagram.IsVisible = listing.HasInstagram;
@@ -166,6 +167,31 @@ public partial class ShopPage : ContentPage
     }
 
     private void OnDismissModal(object? sender, EventArgs e) => DetailModal.IsVisible = false;
+
+    private async void OnCartTapped(object? sender, TappedEventArgs e)
+    {
+        await Shell.Current.GoToAsync("marketplacecart");
+    }
+
+    private async void OnAddToCartTapped(object? sender, TappedEventArgs e)
+    {
+        if (_currentListing is null || _db.CurrentUser is null) return;
+
+        if (_currentListing.UserId == _db.CurrentUser.Id)
+        {
+            await DisplayAlertAsync("Your listing", "You cannot add your own listing to your cart.", "OK");
+            return;
+        }
+
+        var cart = await _api.AddMarketplaceToCartAsync(_currentListing.Id);
+        if (cart is null)
+        {
+            await DisplayAlertAsync("Could not add", "This item may no longer be available. Refresh Marketplace and try again.", "OK");
+            return;
+        }
+
+        await DisplayAlertAsync("Added to cart", "The item was added to your marketplace cart. Items are not reserved until checkout succeeds.", "OK");
+    }
 
     private async Task MessageCurrentSellerAsync()
     {
