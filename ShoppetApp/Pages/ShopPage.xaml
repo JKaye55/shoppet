@@ -18,7 +18,7 @@
                 <VerticalStackLayout Spacing="12">
                     <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="14">
                         <Label Grid.Column="0"
-                               Text="Marketplace"
+                               Text="Preloved Marketplace"
                                FontFamily="NunitoExtraBold"
                                FontSize="26"
                                TextColor="{StaticResource BodyText}"
@@ -56,11 +56,11 @@
                     </Grid>
 
                     <!-- Filter Tabs -->
-                    <Label Text="One Pet Owner account can both buy and sell. Browse items or manage your own listings."
+                    <Label Text="Use one Pet Owner account to shop or sell. There is no separate seller account."
                            FontSize="12" TextColor="{StaticResource Secondary}" />
                     <HorizontalStackLayout Spacing="0">
-                        <Button x:Name="BtnSell" Text="My Listings" BackgroundColor="Transparent" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" FontSize="15" Clicked="OnSellTabClicked" Padding="0,6,20,6"/>
-                        <Button x:Name="BtnExplore" Text="Browse" BackgroundColor="{StaticResource Primary}" TextColor="White" FontFamily="NunitoBold" FontSize="15" CornerRadius="20" Clicked="OnExploreTabClicked" Padding="16,6"/>
+                        <Button x:Name="BtnSell" Text="Sell & Manage" BackgroundColor="Transparent" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" FontSize="15" Clicked="OnSellTabClicked" Padding="0,6,20,6"/>
+                        <Button x:Name="BtnExplore" Text="Shop" BackgroundColor="{StaticResource Primary}" TextColor="White" FontFamily="NunitoBold" FontSize="15" CornerRadius="20" Clicked="OnExploreTabClicked" Padding="16,6"/>
                     </HorizontalStackLayout>
                 </VerticalStackLayout>
             </Border>
@@ -68,7 +68,7 @@
             <!-- Search bar (hidden by default) -->
             <Border x:Name="SearchPanel" Grid.Row="2" BackgroundColor="{StaticResource CardBg}" StrokeThickness="0" Padding="16,8" IsVisible="False">
                 <Border BackgroundColor="{StaticResource AppBackground}" StrokeThickness="1" Stroke="{StaticResource Secondary30}" StrokeShape="RoundRectangle 12" Padding="12,8">
-                    <Entry x:Name="SearchEntry" Placeholder="Search listings..." TextColor="{StaticResource BodyText}" PlaceholderColor="#888" BackgroundColor="Transparent" TextChanged="OnSearchTextChanged"/>
+                    <Entry x:Name="SearchEntry" Placeholder="Search preloved pet items..." TextColor="{StaticResource BodyText}" PlaceholderColor="#888" BackgroundColor="Transparent" TextChanged="OnSearchTextChanged"/>
                 </Border>
             </Border>
 
@@ -92,8 +92,8 @@
                     <!-- Explore Grid -->
                     <ScrollView Grid.Row="1">
                         <VerticalStackLayout Padding="8,0,8,100">
-                            <Label Text="New for you" FontFamily="NunitoBold" FontSize="16" TextColor="{StaticResource BodyText}" Margin="8,8,8,8"/>
-                            <Label x:Name="ExploreEmptyLabel" Text="No listings yet. Be the first to post!" TextColor="#888" HorizontalOptions="Center" Margin="0,40" IsVisible="False"/>
+                            <Label Text="Available Items" FontFamily="NunitoBold" FontSize="16" TextColor="{StaticResource BodyText}" Margin="8,8,8,8"/>
+                            <Label x:Name="ExploreEmptyLabel" Text="No available items yet." TextColor="#888" HorizontalOptions="Center" Margin="0,40" IsVisible="False"/>
                             <CollectionView x:Name="ExploreGrid"
                                             ItemsLayout="VerticalGrid, 2"
                                             SelectionMode="Single"
@@ -113,7 +113,7 @@
                                                     <!-- Info -->
                                                     <VerticalStackLayout Padding="8,6" Spacing="2">
                                                         <Label Text="{Binding Title}" TextColor="{StaticResource BodyText}" FontFamily="NunitoBold" FontSize="13" LineBreakMode="TailTruncation" MaxLines="2"/>
-                                                        <Label Text="{Binding SellerName}" TextColor="#888" FontSize="11"/>
+                                                        <Label Text="{Binding SellerName, StringFormat='Listed by {0}'}" TextColor="#888" FontSize="11"/>
                                                         <Label Text="{Binding TimeAgo}" TextColor="#aaa" FontSize="10"/>
                                                     </VerticalStackLayout>
                                                 </VerticalStackLayout>
@@ -130,14 +130,14 @@
                 <Grid x:Name="SellPanel" IsVisible="False" RowDefinitions="Auto,*">
                     <!-- Post button -->
                     <Border Grid.Row="0" BackgroundColor="{StaticResource CardBg}" StrokeThickness="0" Padding="16,10">
-                        <Button Text="List an Item" BackgroundColor="{StaticResource Primary}" TextColor="White" FontFamily="NunitoBold" FontSize="15" CornerRadius="12" HeightRequest="48" Clicked="OnPostItemClicked"/>
+                        <Button Text="Sell an Item" BackgroundColor="{StaticResource Primary}" TextColor="White" FontFamily="NunitoBold" FontSize="15" CornerRadius="12" HeightRequest="48" Clicked="OnPostItemClicked"/>
                     </Border>
 
                     <!-- My Listings -->
                     <ScrollView Grid.Row="1">
                         <VerticalStackLayout Padding="16,8,16,100" Spacing="12">
-                            <Label Text="Your Listings" FontFamily="NunitoBold" FontSize="16" TextColor="{StaticResource BodyText}"/>
-                            <Label x:Name="SellEmptyLabel" Text="You have no listings yet. Tap 'List an Item' to sell a preloved pet item." TextColor="#888" HorizontalOptions="Center" IsVisible="False" HorizontalTextAlignment="Center" Margin="0,30"/>
+                            <Label Text="My Listings" FontFamily="NunitoBold" FontSize="16" TextColor="{StaticResource BodyText}"/>
+                            <Label x:Name="SellEmptyLabel" Text="You have no listings yet. Tap 'Sell an Item' to sell a preloved pet item." TextColor="#888" HorizontalOptions="Center" IsVisible="False" HorizontalTextAlignment="Center" Margin="0,30"/>
                             <VerticalStackLayout x:Name="MyListingsContainer" Spacing="12" BindableLayout.ItemsSource="{Binding MyListings}">
                                 <BindableLayout.ItemTemplate>
                                     <DataTemplate x:DataType="models:MarketplaceListing">
@@ -211,14 +211,14 @@
                                     <Grid><Label x:Name="DetailSellerInitial" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" FontFamily="NunitoBold" FontSize="16"/><Image x:Name="DetailSellerImage" Aspect="AspectFill"/></Grid>
                                 </Border>
                                 <VerticalStackLayout VerticalOptions="Center">
-                                    <Label x:Name="DetailSellerName" TextColor="{StaticResource BodyText}" FontFamily="NunitoBold" FontSize="14"/>
+                                    <VerticalStackLayout Spacing="0"><Label Text="Listed by" TextColor="{StaticResource Secondary}" FontSize="10"/><Label x:Name="DetailSellerName" TextColor="{StaticResource BodyText}" FontFamily="NunitoBold" FontSize="14"/></VerticalStackLayout>
                                     <Label x:Name="DetailLocation" TextColor="#888" FontSize="12"/>
                                 </VerticalStackLayout>
                             </HorizontalStackLayout>
                             <Label x:Name="DetailTime" TextColor="#aaa" FontSize="11"/>
 
                             <VerticalStackLayout x:Name="SellerSocialPanel" Spacing="6" IsVisible="False">
-                                <Label Text="Seller links" FontFamily="NunitoSemiBold" FontSize="12" TextColor="{StaticResource Secondary}"/>
+                                <Label Text="Optional contact links" FontFamily="NunitoSemiBold" FontSize="12" TextColor="{StaticResource Secondary}"/>
                                 <FlexLayout Direction="Row" Wrap="Wrap" JustifyContent="Start" AlignItems="Center">
                                     <Button x:Name="BtnFacebook"
                                             Text="Facebook"
@@ -248,7 +248,7 @@
                                             Padding="12,6"
                                             Clicked="OnOtherSocialClicked"/>
                                 </FlexLayout>
-                                <Label Text="These links are shown only because the seller enabled marketplace visibility."
+                                <Label Text="These optional links are visible only because this Pet Owner enabled Marketplace sharing."
                                        FontSize="10" TextColor="{StaticResource Secondary}"/>
                             </VerticalStackLayout>
 
@@ -280,7 +280,7 @@
                                         </Border.GestureRecognizers>
                                         <HorizontalStackLayout HorizontalOptions="Center" Spacing="8">
                                             <Path Data="{StaticResource IconMessage}" Fill="{StaticResource Primary}" WidthRequest="18" HeightRequest="18" Aspect="Uniform" />
-                                            <Label Text="Message" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" VerticalOptions="Center"/>
+                                            <Label Text="Message Owner" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" VerticalOptions="Center"/>
                                         </HorizontalStackLayout>
                                     </Border>
                                 </Grid>
@@ -306,11 +306,11 @@
                     Margin="16,80" VerticalOptions="Center" HorizontalOptions="Fill">
                 <ScrollView MaximumHeightRequest="580">
                     <VerticalStackLayout Padding="20" Spacing="14">
-                        <Label x:Name="PostModalTitle" Text="List a Pet Item" FontFamily="NunitoBold" FontSize="20" TextColor="{StaticResource BodyText}"/>
+                        <Label x:Name="PostModalTitle" Text="Sell a Pet Item" FontFamily="NunitoBold" FontSize="20" TextColor="{StaticResource BodyText}"/>
 
-                        <Label Text="Title *" TextColor="{StaticResource BodyText}" FontSize="13" FontFamily="NunitoSemiBold"/>
+                        <Label Text="Item Title *" TextColor="{StaticResource BodyText}" FontSize="13" FontFamily="NunitoSemiBold"/>
                         <Border BackgroundColor="{StaticResource AppBackground}" Stroke="{StaticResource Secondary30}" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="12,8">
-                            <Entry x:Name="EntryTitle" Placeholder="e.g. Dog carrier - gently used" MaxLength="80" TextColor="{StaticResource BodyText}" BackgroundColor="Transparent"/>
+                            <Entry x:Name="EntryTitle" Placeholder="e.g. Dog carrier, gently used" MaxLength="80" TextColor="{StaticResource BodyText}" BackgroundColor="Transparent"/>
                         </Border>
                         <Label Text="2–80 characters" TextColor="{StaticResource Secondary}" FontSize="11"/>
 
@@ -347,7 +347,7 @@
                             </Picker>
                         </Border>
 
-                        <Label Text="Meetup Area *" TextColor="{StaticResource BodyText}" FontSize="13" FontFamily="NunitoSemiBold"/>
+                        <Label Text="General Meetup Area *" TextColor="{StaticResource BodyText}" FontSize="13" FontFamily="NunitoSemiBold"/>
                         <Border BackgroundColor="{StaticResource AppBackground}" Stroke="{StaticResource Secondary30}" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="4,0">
                             <Picker x:Name="PickerLocation"
                                     Title="Select meetup area"
@@ -363,12 +363,12 @@
                                 </Picker.Items>
                             </Picker>
                         </Border>
-                        <Label Text="For privacy, share only a city or general meetup area. Do not post your exact home address."
+                        <Label Text="Privacy: choose only a city or general meetup area. Never enter your home address."
                                TextColor="{StaticResource Secondary}" FontSize="11"/>
 
                         <Label Text="Description *" TextColor="{StaticResource BodyText}" FontSize="13" FontFamily="NunitoSemiBold"/>
                         <Border BackgroundColor="{StaticResource AppBackground}" Stroke="{StaticResource Secondary30}" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="12,8">
-                            <Editor x:Name="EditorDescription" Placeholder="Describe the item, size, inclusions, and any defects." MaxLength="500" TextColor="{StaticResource BodyText}" BackgroundColor="Transparent" HeightRequest="90" AutoSize="TextChanges"/>
+                            <Editor x:Name="EditorDescription" Placeholder="Describe condition, size, inclusions, defects, expiry details if applicable, and what the buyer should know." MaxLength="500" TextColor="{StaticResource BodyText}" BackgroundColor="Transparent" HeightRequest="90" AutoSize="TextChanges"/>
                         </Border>
 
                         <Label Text="Photos *" TextColor="{StaticResource BodyText}" FontSize="13" FontFamily="NunitoSemiBold"/>
@@ -406,14 +406,14 @@
                         <Border BackgroundColor="{StaticResource Secondary10}" StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="12">
                             <HorizontalStackLayout Spacing="8">
                                 <Path Data="{StaticResource IconShield}" Fill="{StaticResource Primary}" WidthRequest="18" HeightRequest="18" Aspect="Uniform"/>
-                                <Label Text="Your full name is shown as the seller name. Social links are only shown if you enable them in your profile."
+                                <Label Text="Your account name is shown as the listing owner. Your mobile number stays private. Optional social links appear only when you enable Marketplace sharing in Profile."
                                        FontSize="11" TextColor="{StaticResource BodyText}" LineBreakMode="WordWrap"/>
                             </HorizontalStackLayout>
                         </Border>
 
                         <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                             <Button Grid.Column="0" Text="Cancel" BackgroundColor="{StaticResource CardBg}" TextColor="{StaticResource BodyText}" BorderColor="{StaticResource Secondary30}" BorderWidth="1" CornerRadius="10" FontFamily="NunitoBold" Clicked="OnCancelPostClicked"/>
-                            <Button Grid.Column="1" Text="Post" BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="10" FontFamily="NunitoBold" Clicked="OnSaveListingClicked"/>
+                            <Button Grid.Column="1" Text="Publish Listing" BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="10" FontFamily="NunitoBold" Clicked="OnSaveListingClicked"/>
                         </Grid>
                     </VerticalStackLayout>
                 </ScrollView>
