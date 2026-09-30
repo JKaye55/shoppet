@@ -16,6 +16,7 @@ public partial class ShopPage : ContentPage
     private string _currentCategory = "";
     private string _currentSearch = "";
     private List<string> _pickedPhotoPaths = new();
+    private readonly ObservableCollection<CartItemDto> _cartItems = new();
 
     public ShopPage(ApiService api, DatabaseService db)
     {
@@ -23,6 +24,7 @@ public partial class ShopPage : ContentPage
         _api = api;
         _db = db;
         MyListingsContainer.SetValue(BindableLayout.ItemsSourceProperty, MyListings);
+        CartItemsView.ItemsSource = _cartItems;
     }
 
     protected override async void OnAppearing()
@@ -61,6 +63,13 @@ public partial class ShopPage : ContentPage
     }
 
     private void OnSearchTapped(object sender, TappedEventArgs e)
+    {
+        ToggleSearchPanel();
+    }
+
+    private void OnSearchButtonClicked(object sender, EventArgs e) => ToggleSearchPanel();
+
+    private void ToggleSearchPanel()
     {
         SearchPanel.IsVisible = !SearchPanel.IsVisible;
         if (!SearchPanel.IsVisible)
@@ -156,9 +165,102 @@ public partial class ShopPage : ContentPage
 
         // Hide "Message" button if the listing belongs to the current logged-in user
         var currentUserId = Preferences.Get("LoggedInUserId", 0);
-        BtnMessageSeller.IsVisible = listing.UserId != currentUserId;
+        var isOwnListing = listing.UserId == currentUserId;
+        BtnMessageSeller.IsVisible = !isOwnListing;
+        BtnAddToCart.IsVisible = !isOwnListing && listing.IsAvailable;
 
         DetailModal.IsVisible = true;
+    }
+
+    private async void OnAddToCartClicked(object sender, EventArgs e)
+    {
+        if (_currentListing == null) return;
+
+        var userId = Preferences.Get("LoggedInUserId", 0);
+        if (userId <= 0)
+        {
+            await DisplayAlert("Sign in required", "Please sign in before adding items to your cart.", "OK");
+            return;
+        }
+
+        var cart = await _api.AddToCartAsync(new AddToCartRequest(_currentListing.Id, 1));
+        if (cart == null)
+        {
+            await DisplayAlert("Cart", "The item could not be added. Please try again.", "OK");
+            return;
+        }
+
+        DetailModal.IsVisible = false;
+        await ApplyCartAsync(cart);
+        CartModal.IsVisible = true;
+    }
+
+    private async void OnCartClicked(object sender, EventArgs e)
+    {
+        await RefreshCartAsync();
+        CartModal.IsVisible = true;
+    }
+
+    private void OnCloseCartClicked(object sender, EventArgs e) => CartModal.IsVisible = false;
+
+    private async Task RefreshCartAsync()
+    {
+        var cart = await _api.GetCartAsync();
+        if (cart != null)
+            await ApplyCartAsync(cart);
+        else
+        {
+            _cartItems.Clear();
+            CartTotalLabel.Text = "₱0";
+            CheckoutButton.IsEnabled = false;
+        }
+    }
+
+    private Task ApplyCartAsync(CartDto cart)
+    {
+        _cartItems.Clear();
+        foreach (var item in cart.Items)
+            _cartItems.Add(item);
+
+        CartTotalLabel.Text = $"₱{cart.TotalAmount:N0}";
+        CheckoutButton.IsEnabled = cart.Items.Count > 0;
+        return Task.CompletedTask;
+    }
+
+    private async void OnRemoveCartItemClicked(object sender, EventArgs e)
+    {
+        if (sender is not Button button || button.CommandParameter is not CartItemDto item)
+            return;
+
+        var cart = await _api.RemoveFromCartAsync(item.Id);
+        if (cart != null)
+            await ApplyCartAsync(cart);
+    }
+
+    private async void OnCheckoutClicked(object sender, EventArgs e)
+    {
+        CheckoutButton.IsEnabled = false;
+        try
+        {
+            var order = await _api.CheckoutAsync();
+            if (order == null)
+            {
+                await DisplayAlert("Checkout", "Mock checkout could not be completed.", "OK");
+                return;
+            }
+
+            await DisplayAlert(
+                "Order Confirmed",
+                $"Mock payment completed. Order #{order.Id} • ₱{order.TotalAmount:N0}",
+                "OK");
+
+            CartModal.IsVisible = false;
+            await LoadExploreListingsAsync();
+        }
+        finally
+        {
+            CheckoutButton.IsEnabled = true;
+        }
     }
 
     private void OnDismissModal(object sender, EventArgs e) => DetailModal.IsVisible = false;
