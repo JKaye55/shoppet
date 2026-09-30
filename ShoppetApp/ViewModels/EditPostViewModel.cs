@@ -90,8 +90,28 @@ namespace ShoppetApp.ViewModels
             IsBusy = true;
             try
             {
-                // Serialize attached media
-                string imageUrls = string.Join(",", AttachedMedia.Select(m => m.FilePath));
+                var existingUrls = AttachedMedia
+                    .Select(m => m.FilePath)
+                    .Where(p => p.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                             || p.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                var localPaths = AttachedMedia
+                    .Select(m => m.FilePath)
+                    .Where(File.Exists)
+                    .ToList();
+
+                var uploadedUrls = localPaths.Count > 0
+                    ? await _api.UploadCommunityMediaAsync(localPaths)
+                    : new List<string>();
+
+                if (localPaths.Count > 0 && uploadedUrls.Count != localPaths.Count)
+                {
+                    await Shell.Current.DisplayAlert("Upload failed", "One or more photos could not be uploaded.", "OK");
+                    return;
+                }
+
+                string imageUrls = string.Join("|", existingUrls.Concat(uploadedUrls));
                 
                 // Determine PetId and PetName
                 int? petId = null;
