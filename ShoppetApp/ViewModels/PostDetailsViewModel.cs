@@ -109,7 +109,9 @@ namespace ShoppetApp.ViewModels
                     }
                     else
                     {
-                        root.VisibleDescendantsCount = 0;
+                        // Existing replies are part of the conversation and should not
+                        // appear to be missing. Show the first five by default.
+                        root.VisibleDescendantsCount = Math.Min(5, root.TotalDescendantsCount);
                     }
                     
                     Comments.Add(root);
