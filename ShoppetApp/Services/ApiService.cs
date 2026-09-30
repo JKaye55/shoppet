@@ -403,15 +403,15 @@ public class ApiService
 
     public async Task<List<CommunityPost>> GetCommunityPostsAsync(int userId)
     {
-        try
+        using var response = await _http.GetAsync($"community?userId={userId}");
+        if (!response.IsSuccessStatusCode)
         {
-            return await _http.GetFromJsonAsync<List<CommunityPost>>($"community?userId={userId}") ?? new List<CommunityPost>();
+            var detail = await response.Content.ReadAsStringAsync();
+            throw new HttpRequestException($"Community API returned {(int)response.StatusCode}: {detail}");
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error fetching posts: {ex.Message}");
-            return new List<CommunityPost>();
-        }
+
+        return await response.Content.ReadFromJsonAsync<List<CommunityPost>>()
+               ?? new List<CommunityPost>();
     }
 
     public async Task<bool> CreateCommunityPostAsync(object request)
