@@ -70,7 +70,7 @@ namespace ShoppetApp.ViewModels
                 var data = await _api.GetCommentsAsync(Post.Id);
                 
                 var dict = data.ToDictionary(c => c.Id);
-                int currentUserId = _db.CurrentUser?.Id ?? 0;
+                int currentUserId = _db.CurrentUser?.Id ?? Preferences.Get("LoggedInUserId", 0);
                 bool isPostOwner = Post.UserId == currentUserId;
                 foreach(var c in data) c.CanDelete = isPostOwner || c.UserId == currentUserId;
                 var roots = new List<CommunityComment>();
@@ -232,12 +232,18 @@ namespace ShoppetApp.ViewModels
         [RelayCommand]
         private async Task ToggleLikeAsync()
         {
-            if (Post == null || _db.CurrentUser == null) return;
+            if (Post == null) return;
+
+            int userId = _db.CurrentUser?.Id ?? Preferences.Get("LoggedInUserId", 0);
+            if (userId <= 0)
+            {
+                await Shell.Current.DisplayAlert("Sign in required", "Please sign in to like posts.", "OK");
+                return;
+            }
 
             Post.IsLikedByMe = !Post.IsLikedByMe;
             Post.LikesCount += Post.IsLikedByMe ? 1 : -1;
 
-            int userId = _db.CurrentUser.Id;
             var newStatus = await _api.ToggleLikeAsync(Post.Id, userId);
 
             if (newStatus != Post.IsLikedByMe)
@@ -250,13 +256,20 @@ namespace ShoppetApp.ViewModels
         [RelayCommand]
         private async Task ToggleCommentLikeAsync(CommunityComment comment)
         {
-            if (comment == null || _db.CurrentUser == null) return;
+            if (comment == null) return;
+
+            int userId = _db.CurrentUser?.Id ?? Preferences.Get("LoggedInUserId", 0);
+            if (userId <= 0)
+            {
+                await Shell.Current.DisplayAlert("Sign in required", "Please sign in to like comments.", "OK");
+                return;
+            }
 
             // Optimistic update
             comment.IsLikedByMe = !comment.IsLikedByMe;
             comment.LikeCount += comment.IsLikedByMe ? 1 : -1;
 
-            var newStatus = await _api.ToggleCommentLikeAsync(comment.Id, _db.CurrentUser.Id);
+            var newStatus = await _api.ToggleCommentLikeAsync(comment.Id, userId);
 
             if (newStatus != comment.IsLikedByMe)
             {
@@ -286,10 +299,17 @@ namespace ShoppetApp.ViewModels
         [RelayCommand]
         private async Task SendCommentAsync()
         {
-            if (string.IsNullOrWhiteSpace(NewCommentText) || Post == null || _db.CurrentUser == null) return;
+            if (string.IsNullOrWhiteSpace(NewCommentText) || Post == null) return;
+
+            int userId = _db.CurrentUser?.Id ?? Preferences.Get("LoggedInUserId", 0);
+            if (userId <= 0)
+            {
+                await Shell.Current.DisplayAlert("Sign in required", "Please sign in to comment.", "OK");
+                return;
+            }
 
             int? parentId = ReplyingToComment?.Id;
-            var success = await _api.AddCommentAsync(Post.Id, _db.CurrentUser.Id, NewCommentText, parentId);
+            var success = await _api.AddCommentAsync(Post.Id, userId, NewCommentText.Trim(), parentId);
             if (success)
             {
                 NewCommentText = string.Empty;
