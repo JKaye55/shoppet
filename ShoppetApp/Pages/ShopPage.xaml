@@ -59,7 +59,7 @@
                     <Label Text="Use one Pet Owner account to shop or sell. There is no separate seller account."
                            FontSize="12" TextColor="{StaticResource Secondary}" />
                     <HorizontalStackLayout Spacing="0">
-                        <Button x:Name="BtnSell" Text="Sell &amp; Manage" BackgroundColor="Transparent" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" FontSize="15" Clicked="OnSellTabClicked" Padding="0,6,20,6"/>
+                        <Button x:Name="BtnSell" Text="Sell / Manage" BackgroundColor="Transparent" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" FontSize="15" Clicked="OnSellTabClicked" Padding="0,6,20,6"/>
                         <Button x:Name="BtnExplore" Text="Shop" BackgroundColor="{StaticResource Primary}" TextColor="White" FontFamily="NunitoBold" FontSize="15" CornerRadius="20" Clicked="OnExploreTabClicked" Padding="16,6"/>
                     </HorizontalStackLayout>
                 </VerticalStackLayout>
