@@ -33,6 +33,12 @@ namespace ShoppetApp.ViewModels
         private bool _showSocialLinksOnMarketplace = true;
 
         [ObservableProperty]
+        private string _mobileNumber = string.Empty;
+
+        [ObservableProperty]
+        private bool _showMobileOnPublicPetId;
+
+        [ObservableProperty]
         private ImageSource? _profileImageSource;
 
         [ObservableProperty]
@@ -55,6 +61,8 @@ namespace ShoppetApp.ViewModels
                     InstagramUrl = profile.InstagramUrl;
                     OtherSocialUrl = profile.OtherSocialUrl;
                     ShowSocialLinksOnMarketplace = profile.ShowSocialLinksOnMarketplace;
+                    MobileNumber = profile.MobileNumber;
+                    ShowMobileOnPublicPetId = profile.ShowMobileOnPublicPetId;
                     
                     if (!string.IsNullOrEmpty(ProfilePictureBase64))
                     {
@@ -116,7 +124,9 @@ namespace ShoppetApp.ViewModels
                     FacebookUrl.Trim(),
                     InstagramUrl.Trim(),
                     OtherSocialUrl.Trim(),
-                    ShowSocialLinksOnMarketplace);
+                    ShowSocialLinksOnMarketplace,
+                    MobileNumber.Trim(),
+                    ShowMobileOnPublicPetId);
                 if (success)
                 {
                     Preferences.Set("LoggedInUserName", FullName);
