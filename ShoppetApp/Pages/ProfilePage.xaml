@@ -1,4 +1,153 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:controls="clr-namespace:ShoppetApp.Controls"
+             xmlns:models="clr-namespace:ShoppetApp.Models"
+             xmlns:vm="clr-namespace:ShoppetApp.ViewModels"
+             x:Class="ShoppetApp.Pages.ProfilePage"
+             x:DataType="vm:ProfileViewModel"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="{StaticResource AppBackground}">
+    <Grid>
+        <Grid RowDefinitions="Auto,*">
+            <controls:HeaderView Grid.Row="0" />
 
+            <ScrollView Grid.Row="1">
+                <VerticalStackLayout Spacing="16" Padding="20,8,20,108">
+
+                                        <!-- User Avatar & Name -->
+                    <VerticalStackLayout Spacing="8" HorizontalOptions="Center" Margin="0,8,0,16">
+                        <Border WidthRequest="80"
+                                HeightRequest="80"
+                                BackgroundColor="{StaticResource Primary10}"
+                                Stroke="{StaticResource Secondary}"
+                                StrokeThickness="2">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="40" />
+                            </Border.StrokeShape>
+                            <Grid>
+                                <Path Data="{StaticResource IconUser}" Fill="{StaticResource Primary}" WidthRequest="28" HeightRequest="28" Aspect="Uniform" HorizontalOptions="Center" VerticalOptions="Center" />
+                                <Image Source="{Binding ProfileImageSource}" Aspect="AspectFill" />
+                            </Grid>
+                        </Border>
+                        
+                        <HorizontalStackLayout HorizontalOptions="Center" Spacing="10">
+                            <Label Text="{Binding FullName}"
+                                   FontFamily="NunitoExtraBold"
+                                   FontSize="20"
+                                   TextColor="{StaticResource SecondaryFg}"
+                                   VerticalOptions="Center" />
+                            
+                        </HorizontalStackLayout>
+                        <Button Text="Edit Profile" Command="{Binding EditProfileCommand}" BackgroundColor="Transparent" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" Padding="0" HeightRequest="30" HorizontalOptions="Center"/>
+                    </VerticalStackLayout>
+
+                    <!-- Emergency Contacts Section (Your Existing Code) -->
+                    <Border BackgroundColor="{StaticResource CardBg}"
+                            StrokeThickness="0"
+                            Padding="16">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="24" />
+                        </Border.StrokeShape>
+                        <Border.Shadow>
+                            <Shadow Brush="{StaticResource Black60}" Offset="0,2" Radius="10" Opacity="0.12" />
+                        </Border.Shadow>
+                        <VerticalStackLayout Spacing="12">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="Emergency Contacts"
+                                       FontFamily="NunitoBold"
+                                       FontSize="16"
+                                       TextColor="{StaticResource SecondaryFg}"
+                                       VerticalOptions="Center" />
+                                <Button Grid.Column="1"
+                                        Text="Add"
+                                        FontFamily="NunitoBold"
+                                        FontSize="13"
+                                        HeightRequest="36"
+                                        Padding="16,0"
+                                        CornerRadius="20"
+                                        BackgroundColor="{StaticResource Primary10}"
+                                        TextColor="{StaticResource Primary}"
+                                        Command="{Binding AddContactCommand}" />
+                            </Grid>
+                            <CollectionView ItemsSource="{Binding Contacts}" SelectionMode="None" MaximumHeightRequest="230">
+                                <CollectionView.ItemsLayout>
+                                    <LinearItemsLayout Orientation="Vertical" ItemSpacing="8" />
+                                </CollectionView.ItemsLayout>
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate x:DataType="models:Contact">
+                                        <Border Margin="0"
+                                                Padding="12"
+                                                BackgroundColor="{Binding IsEmergency, Converter={StaticResource EmergencyBgConverter}}"
+                                                StrokeThickness="0">
+                                            <Border.StrokeShape>
+                                                <RoundRectangle CornerRadius="16" />
+                                            </Border.StrokeShape>
+                                            <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+                                                <VerticalStackLayout Grid.Column="0" Spacing="2" VerticalOptions="Center" BackgroundColor="Transparent" HorizontalOptions="Fill">
+                                                    <VerticalStackLayout.GestureRecognizers>
+                                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ProfileViewModel}}, Path=ViewContactCommand}" CommandParameter="{Binding .}" />
+                                                    </VerticalStackLayout.GestureRecognizers>
+                                                    <Label Text="{Binding Name}"
+                                                           FontFamily="NunitoBold"
+                                                           FontSize="14"
+                                                           TextColor="{Binding IsEmergency, Converter={StaticResource EmergencyTextConverter}}" />
+                                                    <Label Text="{Binding Role}"
+                                                           FontFamily="Nunito"
+                                                           FontSize="12"
+                                                           TextColor="{StaticResource Secondary}" />
+                                                </VerticalStackLayout>
+                                                <Border Grid.Column="1" WidthRequest="40" HeightRequest="40" BackgroundColor="{StaticResource Primary10}" StrokeThickness="0">
+                                                    <Border.StrokeShape>
+                                                        <RoundRectangle CornerRadius="20" />
+                                                    </Border.StrokeShape>
+                                                    <Border.GestureRecognizers>
+                                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ProfileViewModel}}, Path=EditContactCommand}" CommandParameter="{Binding .}" />
+                                                    </Border.GestureRecognizers>
+                                                    <Path Data="{StaticResource IconEdit}" Fill="{StaticResource Primary}" WidthRequest="18" HeightRequest="18" Aspect="Uniform" HorizontalOptions="Center" VerticalOptions="Center" />
+                                                </Border>
+                                                <Border Grid.Column="2" WidthRequest="40" HeightRequest="40" BackgroundColor="#1AFF3B30" StrokeThickness="0">
+                                                    <Border.StrokeShape>
+                                                        <RoundRectangle CornerRadius="20" />
+                                                    </Border.StrokeShape>
+                                                    <Border.GestureRecognizers>
+                                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ProfileViewModel}}, Path=DeleteContactCommand}" CommandParameter="{Binding .}" />
+                                                    </Border.GestureRecognizers>
+                                                    <Path Data="{StaticResource IconDelete}" Fill="{StaticResource StatusOverdue}" WidthRequest="18" HeightRequest="18" Aspect="Uniform" HorizontalOptions="Center" VerticalOptions="Center" />
+                                                </Border>
+                                                <Border Grid.Column="3" WidthRequest="40" HeightRequest="40" BackgroundColor="{Binding IsEmergency, Converter={StaticResource EmergencyPhoneBgConverter}}" StrokeThickness="0">
+                                                    <Border.StrokeShape>
+                                                        <RoundRectangle CornerRadius="20" />
+                                                    </Border.StrokeShape>
+                                                    <Border.GestureRecognizers>
+                                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ProfileViewModel}}, Path=CallContactCommand}" CommandParameter="{Binding .}" />
+                                                    </Border.GestureRecognizers>
+                                                    <Path Data="{StaticResource IconPhone}" Fill="{StaticResource Primary}" WidthRequest="18" HeightRequest="18" Aspect="Uniform" HorizontalOptions="Center" VerticalOptions="Center" />
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- Settings & Local Shops Section -->
+                    <Border BackgroundColor="{StaticResource CardBg}"
+                            StrokeThickness="0"
+                            Padding="16">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="24" />
+                        </Border.StrokeShape>
+                        <Border.Shadow>
+                            <Shadow Brush="{StaticResource Black60}" Offset="0,2" Radius="10" Opacity="0.12" />
+                        </Border.Shadow>
+                        <VerticalStackLayout Spacing="0">
+                            <Label Text="Settings &amp; Directory"
+                                   FontFamily="NunitoBold"
+                                   FontSize="16"
+                                   TextColor="{StaticResource SecondaryFg}"
+                                   Margin="0,0,0,8" />
 
                             <Grid ColumnDefinitions="*,Auto" Padding="0,12">
                                 <Label Text="Post Settings (Edit/Delete Posts)" FontFamily="Nunito" VerticalOptions="Center" />
@@ -78,7 +227,7 @@
                         <Grid x:Name="ModalAddressRow" ColumnDefinitions="Auto,*" ColumnSpacing="14">
                             <Border Grid.Column="0" WidthRequest="44" HeightRequest="44" BackgroundColor="{StaticResource Primary10}" StrokeThickness="0">
                                 <Border.StrokeShape><RoundRectangle CornerRadius="22" /></Border.StrokeShape>
-                                <Label Text="Address" FontFamily="NunitoBold" FontSize="10" TextColor="{StaticResource Primary}" HorizontalOptions="Center" VerticalOptions="Center" />
+                                <Label Text="&#x1F4CD;" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center" />
                             </Border>
                             <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
                                 <Label Text="Address" FontFamily="NunitoBold" FontSize="12" TextColor="{StaticResource Secondary}" />
