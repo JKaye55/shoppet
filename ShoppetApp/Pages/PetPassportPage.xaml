@@ -22,26 +22,28 @@
                 </BoxView.Background>
             </BoxView>
             <Grid Padding="16,48,16,16" ColumnDefinitions="Auto,*,Auto">
-                <Button Grid.Column="0"
-                        Text="‹"
-                        FontSize="22"
+                <Border Grid.Column="0"
                         WidthRequest="36"
                         HeightRequest="36"
-                        CornerRadius="18"
-                        Padding="0"
                         BackgroundColor="{StaticResource White20}"
-                        TextColor="White"
-                        Command="{Binding GoBackCommand}" />
-                <Button Grid.Column="2"
-                        Text="✎"
-                        FontSize="16"
+                        StrokeThickness="0"
+                        StrokeShape="RoundRectangle 18">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding GoBackCommand}" />
+                    </Border.GestureRecognizers>
+                    <Path Data="{StaticResource IconBack}" Fill="White" WidthRequest="19" HeightRequest="19" HorizontalOptions="Center" VerticalOptions="Center" Aspect="Uniform" />
+                </Border>
+                <Border Grid.Column="2"
                         WidthRequest="36"
                         HeightRequest="36"
-                        CornerRadius="18"
-                        Padding="0"
                         BackgroundColor="{StaticResource White20}"
-                        TextColor="White"
-                        Command="{Binding EditPetCommand}" />
+                        StrokeThickness="0"
+                        StrokeShape="RoundRectangle 18">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding EditPetCommand}" />
+                    </Border.GestureRecognizers>
+                    <Path Data="{StaticResource IconEdit}" Fill="White" WidthRequest="18" HeightRequest="18" HorizontalOptions="Center" VerticalOptions="Center" Aspect="Uniform" />
+                </Border>
             </Grid>
             <VerticalStackLayout VerticalOptions="End" Padding="16,0,16,16" Spacing="4">
                 <Label Text="{Binding Pet.Name}"
@@ -152,13 +154,18 @@
                                             </Border>
                                             
                                             <!-- Edit button -->
-                                            <Button Grid.Column="2" Text="✎" FontSize="13" WidthRequest="34" HeightRequest="34" CornerRadius="17" Padding="0" BackgroundColor="{StaticResource Secondary10}" TextColor="{StaticResource Primary}" VerticalOptions="Start" Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PetPassportViewModel}}, Path=EditLogCommand}" CommandParameter="{Binding .}" />
+                                            <Border Grid.Column="2" WidthRequest="34" HeightRequest="34" BackgroundColor="{StaticResource Secondary10}" StrokeThickness="0" StrokeShape="RoundRectangle 17" VerticalOptions="Start">
+                                                <Border.GestureRecognizers>
+                                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PetPassportViewModel}}, Path=EditLogCommand}" CommandParameter="{Binding .}" />
+                                                </Border.GestureRecognizers>
+                                                <Path Data="{StaticResource IconEdit}" Fill="{StaticResource Primary}" WidthRequest="16" HeightRequest="16" HorizontalOptions="Center" VerticalOptions="Center" Aspect="Uniform" />
+                                            </Border>
                                         </Grid>
 
                                         <!-- Row 2: Schedule info -->
                                         <!-- Row 2: Schedule info -->
                                         <HorizontalStackLayout Spacing="6" IsVisible="{Binding BaseDateDisplay, Converter={StaticResource IsNotNullOrEmptyConverter}}">
-                                            <Label Text="🕐" FontSize="11" VerticalOptions="Center" />
+                                            <Path Data="{StaticResource IconClock}" Fill="{StaticResource Secondary}" WidthRequest="14" HeightRequest="14" VerticalOptions="Center" Aspect="Uniform" />
                                             <Label Text="{Binding ., Converter={StaticResource HealthScheduleLabelConverter}}"
                                                    FontFamily="Nunito" FontSize="12"
                                                    TextColor="{StaticResource Secondary}" VerticalOptions="Center" />
@@ -181,7 +188,10 @@
                                                 </HorizontalStackLayout>
                                                 
                                                 <!-- Completed Label -->
-                                                <Label Text="✓ COMPLETED" FontFamily="NunitoBold" FontSize="12" TextColor="{StaticResource StatusHealthy}" IsVisible="{Binding Completed}" />
+                                                <HorizontalStackLayout Spacing="5" IsVisible="{Binding Completed}">
+                                                    <Path Data="{StaticResource IconCheck}" Fill="{StaticResource StatusHealthy}" WidthRequest="14" HeightRequest="14" Aspect="Uniform" />
+                                                    <Label Text="COMPLETED" FontFamily="NunitoBold" FontSize="12" TextColor="{StaticResource StatusHealthy}" />
+                                                </HorizontalStackLayout>
                                             </VerticalStackLayout>
 
                                             <!-- Completed Label (Visible when Completed = true) -->
@@ -189,7 +199,7 @@
                                             <!-- Action buttons -->
                                             <HorizontalStackLayout Grid.Column="1" Spacing="6" IsVisible="{Binding Completed, Converter={StaticResource InverseBoolConverter}}">
                                                 <Button Text="Complete" FontFamily="NunitoBold" FontSize="12" HeightRequest="36" Padding="12,0" CornerRadius="18" BackgroundColor="Transparent" TextColor="{StaticResource StatusOverdue}" VerticalOptions="Center" Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PetPassportViewModel}}, Path=MarkCompletedCommand}" CommandParameter="{Binding .}" />
-                                                <Button Text="✓ Done" FontFamily="NunitoBold" FontSize="12" HeightRequest="36" Padding="12,0" CornerRadius="18" BackgroundColor="{StaticResource Primary}" TextColor="{StaticResource PrimaryFg}" VerticalOptions="Center" Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PetPassportViewModel}}, Path=MarkDoneCommand}" CommandParameter="{Binding .}" />
+                                                <Button Text="Done" FontFamily="NunitoBold" FontSize="12" HeightRequest="36" Padding="12,0" CornerRadius="18" BackgroundColor="{StaticResource Primary}" TextColor="{StaticResource PrimaryFg}" VerticalOptions="Center" Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PetPassportViewModel}}, Path=MarkDoneCommand}" CommandParameter="{Binding .}" />
                                             </HorizontalStackLayout>
                                         </Grid>
                                     </VerticalStackLayout>
@@ -257,22 +267,24 @@
                                                        TextColor="{StaticResource Primary}" />
                                             </Border>
                                             <!-- Edit button -->
-                                            <Button Grid.Column="2"
-                                                    Text="✎"
-                                                    FontSize="13"
-                                                    WidthRequest="34" HeightRequest="34"
-                                                    CornerRadius="17" Padding="0"
+                                            <Border Grid.Column="2"
+                                                    WidthRequest="34"
+                                                    HeightRequest="34"
                                                     BackgroundColor="{StaticResource Secondary10}"
-                                                    TextColor="{StaticResource Primary}"
-                                                    VerticalOptions="Start"
-                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PetPassportViewModel}}, Path=EditFoodLogCommand}"
-                                                    CommandParameter="{Binding .}" />
+                                                    StrokeThickness="0"
+                                                    StrokeShape="RoundRectangle 17"
+                                                    VerticalOptions="Start">
+                                                <Border.GestureRecognizers>
+                                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PetPassportViewModel}}, Path=EditFoodLogCommand}" CommandParameter="{Binding .}" />
+                                                </Border.GestureRecognizers>
+                                                <Path Data="{StaticResource IconEdit}" Fill="{StaticResource Primary}" WidthRequest="16" HeightRequest="16" HorizontalOptions="Center" VerticalOptions="Center" Aspect="Uniform" />
+                                            </Border>
                                         </Grid>
 
                                         <!-- Row 2: Schedule info -->
                                         <!-- Row 2: Schedule info -->
                                         <HorizontalStackLayout Spacing="6">
-                                            <Label Text="🕐" FontSize="11" VerticalOptions="Center" />
+                                            <Path Data="{StaticResource IconClock}" Fill="{StaticResource Secondary}" WidthRequest="14" HeightRequest="14" VerticalOptions="Center" Aspect="Uniform" />
                                             <Label Text="{Binding ., Converter={StaticResource LastFedLabelConverter}}"
                                                    FontFamily="Nunito" FontSize="12"
                                                    TextColor="{StaticResource Secondary}"
