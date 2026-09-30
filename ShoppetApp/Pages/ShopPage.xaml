@@ -16,20 +16,44 @@
             <!-- Header -->
             <Border Grid.Row="1" BackgroundColor="{StaticResource CardBg}" StrokeThickness="0" Padding="16,12,16,0">
                 <VerticalStackLayout Spacing="12">
-                    <HorizontalStackLayout>
-                        <Label Text="Marketplace" FontFamily="NunitoExtraBold" FontSize="26" TextColor="{StaticResource BodyText}" VerticalOptions="Center" HorizontalOptions="Fill"/>
-                        <Path Data="{StaticResource IconSearch}"
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="14">
+                        <Label Grid.Column="0"
+                               Text="Marketplace"
+                               FontFamily="NunitoExtraBold"
+                               FontSize="26"
+                               TextColor="{StaticResource BodyText}"
+                               VerticalOptions="Center" />
+
+                        <Path Grid.Column="1"
+                              Data="{StaticResource IconSearch}"
                               Fill="{StaticResource BodyText}"
                               WidthRequest="22"
                               HeightRequest="22"
                               Aspect="Uniform"
-                              VerticalOptions="Center"
-                              Margin="0,0,10,0">
+                              VerticalOptions="Center">
                             <Path.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="OnSearchTapped"/>
                             </Path.GestureRecognizers>
                         </Path>
-                    </HorizontalStackLayout>
+
+                        <Border Grid.Column="2"
+                                WidthRequest="40"
+                                HeightRequest="40"
+                                BackgroundColor="{StaticResource Secondary10}"
+                                StrokeThickness="0"
+                                StrokeShape="RoundRectangle 20">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnCartTapped"/>
+                            </Border.GestureRecognizers>
+                            <Path Data="{StaticResource IconCart}"
+                                  Fill="{StaticResource Primary}"
+                                  WidthRequest="20"
+                                  HeightRequest="20"
+                                  HorizontalOptions="Center"
+                                  VerticalOptions="Center"
+                                  Aspect="Uniform"/>
+                        </Border>
+                    </Grid>
 
                     <!-- Filter Tabs -->
                     <Label Text="One Pet Owner account can both buy and sell. Browse items or manage your own listings."
@@ -228,23 +252,40 @@
                                        FontSize="10" TextColor="{StaticResource Secondary}"/>
                             </VerticalStackLayout>
 
-                            <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Margin="0,8,0,0">
-                                <Border x:Name="BtnMessageSeller"
-                                        Grid.Column="0"
-                                        BackgroundColor="{StaticResource Primary}"
-                                        StrokeThickness="0"
-                                        StrokeShape="RoundRectangle 10"
-                                        Padding="12,10">
-                                    <Border.GestureRecognizers>
-                                        <TapGestureRecognizer Tapped="OnMessageSellerTapped"/>
-                                    </Border.GestureRecognizers>
-                                    <HorizontalStackLayout HorizontalOptions="Center" Spacing="8">
-                                        <Path Data="{StaticResource IconMessage}" Fill="White" WidthRequest="18" HeightRequest="18" Aspect="Uniform" />
-                                        <Label Text="Message" TextColor="White" FontFamily="NunitoBold" VerticalOptions="Center"/>
-                                    </HorizontalStackLayout>
-                                </Border>
-                                <Button Grid.Column="1"
-                                        Text="Close"
+                            <VerticalStackLayout Spacing="8" Margin="0,8,0,0">
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                    <Border x:Name="BtnAddToCart"
+                                            Grid.Column="0"
+                                            BackgroundColor="{StaticResource Primary}"
+                                            StrokeThickness="0"
+                                            StrokeShape="RoundRectangle 10"
+                                            Padding="12,10">
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnAddToCartTapped"/>
+                                        </Border.GestureRecognizers>
+                                        <HorizontalStackLayout HorizontalOptions="Center" Spacing="8">
+                                            <Path Data="{StaticResource IconCart}" Fill="White" WidthRequest="18" HeightRequest="18" Aspect="Uniform" />
+                                            <Label Text="Add to Cart" TextColor="White" FontFamily="NunitoBold" VerticalOptions="Center"/>
+                                        </HorizontalStackLayout>
+                                    </Border>
+
+                                    <Border x:Name="BtnMessageSeller"
+                                            Grid.Column="1"
+                                            BackgroundColor="{StaticResource Secondary10}"
+                                            StrokeThickness="0"
+                                            StrokeShape="RoundRectangle 10"
+                                            Padding="12,10">
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnMessageSellerTapped"/>
+                                        </Border.GestureRecognizers>
+                                        <HorizontalStackLayout HorizontalOptions="Center" Spacing="8">
+                                            <Path Data="{StaticResource IconMessage}" Fill="{StaticResource Primary}" WidthRequest="18" HeightRequest="18" Aspect="Uniform" />
+                                            <Label Text="Message" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" VerticalOptions="Center"/>
+                                        </HorizontalStackLayout>
+                                    </Border>
+                                </Grid>
+
+                                <Button Text="Close"
                                         BackgroundColor="{StaticResource CardBg}"
                                         TextColor="{StaticResource BodyText}"
                                         BorderColor="{StaticResource Secondary30}"
@@ -252,7 +293,7 @@
                                         CornerRadius="10"
                                         FontFamily="NunitoBold"
                                         Clicked="OnDismissModal"/>
-                            </Grid>
+                            </VerticalStackLayout>
                         </VerticalStackLayout>
                     </VerticalStackLayout>
                 </ScrollView>
