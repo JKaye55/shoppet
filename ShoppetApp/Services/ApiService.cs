@@ -347,7 +347,12 @@ public class ApiService
 
     public async Task<bool> DeleteContactAsync(int contactId)
     {
-        try { return (await _http.DeleteAsync($"contacts/{contactId}")).IsSuccessStatusCode; }
+        try
+        {
+            int userId = Preferences.Get("LoggedInUserId", 0);
+            if (userId <= 0 || contactId <= 0) return false;
+            return (await _http.DeleteAsync($"contacts/{contactId}?userId={userId}")).IsSuccessStatusCode;
+        }
         catch { return false; }
     }
 
