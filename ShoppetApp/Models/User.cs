@@ -14,8 +14,8 @@ namespace ShoppetApp.Models
 
         public string Password { get; set; } = string.Empty;
 
-        // RBAC Role: "Admin", "BusinessOwner", or "PetOwner"
-        public string Role { get; set; } = "PetOwner";
+        // Active roles: "Admin" or "Pet Owner". A Pet Owner may both buy and sell.
+        public string Role { get; set; } = "Pet Owner";
         public string ProfilePicture { get; set; } = string.Empty;
     }
 }
