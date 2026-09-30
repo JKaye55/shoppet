@@ -8,6 +8,9 @@ namespace ShoppetApp.Models
         public int UserId { get; set; }
         public string SellerName { get; set; } = string.Empty;
         public string SellerProfilePic { get; set; } = string.Empty;
+        public string FacebookUrl { get; set; } = string.Empty;
+        public string InstagramUrl { get; set; } = string.Empty;
+        public string OtherSocialUrl { get; set; } = string.Empty;
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public decimal Price { get; set; }
@@ -30,6 +33,10 @@ namespace ShoppetApp.Models
 
         public string PriceDisplay => $"₱{Price:N0}";
         public string Initials => string.IsNullOrWhiteSpace(SellerName) ? "U" : SellerName.Substring(0, 1).ToUpper();
+        public bool HasFacebook => !string.IsNullOrWhiteSpace(FacebookUrl);
+        public bool HasInstagram => !string.IsNullOrWhiteSpace(InstagramUrl);
+        public bool HasOtherSocial => !string.IsNullOrWhiteSpace(OtherSocialUrl);
+        public bool HasAnySocial => HasFacebook || HasInstagram || HasOtherSocial;
 
         public string TimeAgo
         {
