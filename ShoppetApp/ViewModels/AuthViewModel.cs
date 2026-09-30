@@ -82,14 +82,33 @@ public partial class AuthViewModel : ObservableObject
         ClearErrors();
         bool hasError = false;
 
-        if (string.IsNullOrWhiteSpace(Email))
+        var cleanEmail = (Email ?? string.Empty).Trim().ToLowerInvariant();
+
+        if (string.IsNullOrWhiteSpace(cleanEmail))
         {
             EmailError = "Email is required.";
             hasError = true;
         }
+        else if (cleanEmail.Length > 254 ||
+                 !System.Net.Mail.MailAddress.TryCreate(cleanEmail, out _))
+        {
+            EmailError = "Enter a valid email address.";
+            hasError = true;
+        }
+
         if (string.IsNullOrWhiteSpace(Password))
         {
             PasswordError = "Password is required.";
+            hasError = true;
+        }
+        else if (!IsLogin &&
+                 (Password.Length < 8 ||
+                  Password.Length > 128 ||
+                  !Password.Any(char.IsUpper) ||
+                  !Password.Any(char.IsLower) ||
+                  !Password.Any(char.IsDigit)))
+        {
+            PasswordError = "Use 8–128 characters with uppercase, lowercase, and a number.";
             hasError = true;
         }
 
@@ -101,7 +120,7 @@ public partial class AuthViewModel : ObservableObject
             if (IsLogin)
             {
                 // ── LOGIN via API ──────────────────────────────────────────────
-                var result = await _apiService.LoginAsync(Email, Password);
+                var result = await _apiService.LoginAsync(cleanEmail, Password);
                 if (result.Success && result.Data is not null)
                 {
                     _apiService.SetToken(result.Data.Token);
@@ -136,9 +155,9 @@ public partial class AuthViewModel : ObservableObject
                     FullNameError = "Full Name is required.";
                     hasError = true;
                 }
-                else if (FullName.Trim().Length < 4)
+                else if (FullName.Trim().Length < 2 || FullName.Trim().Length > 80)
                 {
-                    FullNameError = "Full Name must be at least 4 characters.";
+                    FullNameError = "Full Name must be between 2 and 80 characters.";
                     hasError = true;
                 }
 
@@ -151,7 +170,7 @@ public partial class AuthViewModel : ObservableObject
                 if (hasError) return;
 
                 // ── REGISTER via API ───────────────────────────────────────────
-                var result = await _apiService.RegisterAsync(FullName.Trim(), Email.Trim(), Password);
+                var result = await _apiService.RegisterAsync(FullName.Trim(), cleanEmail, Password);
                 if (result.Success && result.Data is not null)
                 {
                     _apiService.SetToken(result.Data.Token);
