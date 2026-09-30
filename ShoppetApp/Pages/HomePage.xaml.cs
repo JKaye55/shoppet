@@ -44,8 +44,8 @@ public partial class HomePage : ContentPage
 
         // Animate the tapped card out horizontally
         await Task.WhenAll(
-            tappedCard.TranslateTo(300 * swipeDirection, 0, 250, Easing.CubicIn),
-            tappedCard.RotateTo(15 * swipeDirection, 250, Easing.CubicIn)
+            tappedCard.TranslateToAsync(300 * swipeDirection, 0, 250, Easing.CubicIn),
+            tappedCard.RotateToAsync(15 * swipeDirection, 250, Easing.CubicIn)
         );
 
         // Reassign ZIndexes to push the tapped card to the back
@@ -70,10 +70,10 @@ public partial class HomePage : ContentPage
                 if (storyCard == tappedStory)
                 {
                     // Animate the swiped card back into the center (at the back)
-                    animationTasks.Add(cardView.TranslateTo(randomRotation * 0.5, 12, 350, Easing.CubicOut));
-                    animationTasks.Add(cardView.RotateTo(randomRotation, 350, Easing.CubicOut));
-                    animationTasks.Add(cardView.ScaleTo(0.9, 350, Easing.CubicOut));
-                    animationTasks.Add(cardView.FadeTo(0.8, 350));
+                    animationTasks.Add(cardView.TranslateToAsync(randomRotation * 0.5, 12, 350, Easing.CubicOut));
+                    animationTasks.Add(cardView.RotateToAsync(randomRotation, 350, Easing.CubicOut));
+                    animationTasks.Add(cardView.ScaleToAsync(0.9, 350, Easing.CubicOut));
+                    animationTasks.Add(cardView.FadeToAsync(0.8, 350));
                     storyCard.Rotation = randomRotation; // Sync model
                 }
                 else
@@ -85,10 +85,10 @@ public partial class HomePage : ContentPage
                     double targetOpacity = 1.0 - ((2 - z) * 0.1);
                     double targetRot = z == 2 ? 0 : storyCard.Rotation;
 
-                    animationTasks.Add(cardView.TranslateTo(0, targetTransY, 350, Easing.SpringOut));
-                    animationTasks.Add(cardView.ScaleTo(targetScale, 350, Easing.SpringOut));
-                    animationTasks.Add(cardView.RotateTo(targetRot, 350, Easing.SpringOut));
-                    animationTasks.Add(cardView.FadeTo(targetOpacity, 350));
+                    animationTasks.Add(cardView.TranslateToAsync(0, targetTransY, 350, Easing.SpringOut));
+                    animationTasks.Add(cardView.ScaleToAsync(targetScale, 350, Easing.SpringOut));
+                    animationTasks.Add(cardView.RotateToAsync(targetRot, 350, Easing.SpringOut));
+                    animationTasks.Add(cardView.FadeToAsync(targetOpacity, 350));
                     storyCard.Rotation = targetRot; // Sync model
                 }
             }
