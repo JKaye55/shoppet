@@ -115,7 +115,7 @@ public class MarketplaceController : ControllerBase
             await using var cmd=new SqlCommand("""
                 UPDATE MarketplaceListings
                 SET Title=@Title,Description=@Description,Price=@Price,Category=@Category,
-                    ItemCondition=@Condition,Location=@Location
+                    ItemCondition=@Condition,Location=@Location,ImageUrl=@ImageUrl
                 WHERE Id=@Id AND SellerUserId=@UserId;
                 """,conn);
             cmd.Parameters.AddWithValue("@Id",id);
@@ -126,6 +126,7 @@ public class MarketplaceController : ControllerBase
             cmd.Parameters.AddWithValue("@Category",x.Category??"General");
             cmd.Parameters.AddWithValue("@Condition",x.Condition??"Used");
             cmd.Parameters.AddWithValue("@Location",x.Location??string.Empty);
+            cmd.Parameters.AddWithValue("@ImageUrl",x.ImageUrls??string.Empty);
             return await cmd.ExecuteNonQueryAsync()==0?NotFound():Ok(new{success=true});
         }
         catch(Exception ex){return StatusCode(500,$"Listing update error: {ex.Message}");}
@@ -188,4 +189,5 @@ public class EditListingRequest
     public string? Category{get;set;}
     public string? Condition{get;set;}
     public string? Location{get;set;}
+    public string? ImageUrls{get;set;}
 }
