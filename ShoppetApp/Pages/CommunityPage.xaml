@@ -59,6 +59,30 @@
                             </Grid>
                         </Border>
 
+                        <Border IsVisible="{Binding HasLoadError}"
+                                BackgroundColor="{StaticResource Secondary10}"
+                                StrokeThickness="0"
+                                StrokeShape="RoundRectangle 16"
+                                Padding="14">
+                            <Label Text="{Binding LoadError}"
+                                   TextColor="{StaticResource BodyText}"
+                                   FontSize="13" />
+                        </Border>
+
+                        <VerticalStackLayout IsVisible="{Binding HasPosts, Converter={StaticResource InverseBoolConverter}}"
+                                             Spacing="5"
+                                             Padding="8,24">
+                            <Label Text="No community posts to show."
+                                   HorizontalOptions="Center"
+                                   FontFamily="NunitoBold"
+                                   TextColor="{StaticResource BodyText}" />
+                            <Label Text="Pull down to refresh, or start a new conversation."
+                                   HorizontalOptions="Center"
+                                   HorizontalTextAlignment="Center"
+                                   FontSize="12"
+                                   TextColor="{StaticResource Secondary}" />
+                        </VerticalStackLayout>
+
                         <!-- Feed List -->
                         <CollectionView ItemsSource="{Binding Posts}">
                             <CollectionView.ItemsLayout>
