@@ -1,580 +1,338 @@
 using Microsoft.AspNetCore.Mvc;
-using MySql.Data.MySqlClient;
-using System.Data;
+using Microsoft.Data.SqlClient;
 
-namespace ShoppetAPI.Controllers
+namespace ShoppetAPI.Controllers;
+
+[Route("api/[controller]")]
+[ApiController]
+public class CartController : ControllerBase
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class CartController : ControllerBase
+    private readonly IConfiguration _configuration;
+    public CartController(IConfiguration configuration)=>_configuration=configuration;
+
+    private string ConnectionString =>
+        _configuration.GetConnectionString("SharedSqlServer")
+        ?? throw new InvalidOperationException("SharedSqlServer connection string not found.");
+
+    [HttpGet]
+    public async Task<IActionResult> GetCart([FromQuery]int userId)
     {
-        private readonly IConfiguration _configuration;
-
-        public CartController(IConfiguration configuration)
+        if(userId<=0) return BadRequest("A valid user ID is required.");
+        try
         {
-            _configuration = configuration;
+            await using var conn=new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+            return Ok(await BuildCartAsync(conn,userId,true));
         }
+        catch(Exception ex){ return StatusCode(500,$"Error fetching cart: {ex.Message}"); }
+    }
 
-        private string ConnectionString =>
-            _configuration.GetConnectionString("DefaultConnection")!;
-
-        [HttpGet]
-        public async Task<IActionResult> GetCart([FromQuery] int userId)
+    [HttpPost("items")]
+    public async Task<IActionResult> AddToCart([FromBody]AddToCartRequest request)
+    {
+        if(request.UserId<=0||request.ProductId<=0||request.Quantity<=0)
+            return BadRequest("Valid user, product, and quantity are required.");
+        try
         {
-            if (userId <= 0)
-                return BadRequest("A valid user ID is required.");
+            await using var conn=new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
 
-            try
+            int stock; bool available;
+            await using(var pcmd=new SqlCommand("SELECT StockQuantity,IsAvailable FROM ShopProducts WHERE Id=@Id",conn))
             {
-                using var connection = new MySqlConnection(ConnectionString);
-                await connection.OpenAsync();
-                var cart = await BuildCartAsync(connection, userId, createIfMissing: true);
-                return Ok(cart);
+                pcmd.Parameters.AddWithValue("@Id",request.ProductId);
+                await using var r=await pcmd.ExecuteReaderAsync();
+                if(!await r.ReadAsync()) return NotFound("Product not found.");
+                stock=r.GetInt32(0); available=r.GetBoolean(1);
             }
-            catch (Exception ex)
+            if(!available||stock<=0) return BadRequest("Product is not available.");
+
+            int cartId=await GetOrCreateCartIdAsync(conn,request.UserId);
+            int? itemId=null; int existing=0;
+            await using(var ecmd=new SqlCommand("SELECT Id,Quantity FROM CartItems WHERE CartId=@CartId AND ProductId=@ProductId",conn))
             {
-                return StatusCode(500, $"Error fetching cart: {ex.Message}");
+                ecmd.Parameters.AddWithValue("@CartId",cartId);
+                ecmd.Parameters.AddWithValue("@ProductId",request.ProductId);
+                await using var r=await ecmd.ExecuteReaderAsync();
+                if(await r.ReadAsync()){ itemId=r.GetInt32(0); existing=r.GetInt32(1); }
             }
-        }
 
-        [HttpPost("items")]
-        public async Task<IActionResult> AddToCart([FromBody] AddToCartRequest request)
-        {
-            if (request.UserId <= 0 || request.ProductId <= 0 || request.Quantity <= 0)
-                return BadRequest("Valid user, product, and quantity are required.");
+            int newQty=existing+request.Quantity;
+            if(newQty>stock) return BadRequest($"Only {stock} item(s) are available.");
 
-            try
+            if(itemId.HasValue)
             {
-                using var connection = new MySqlConnection(ConnectionString);
-                await connection.OpenAsync();
-
-                var productCmd = new MySqlCommand(
-                    "SELECT StockQuantity, IsAvailable FROM products WHERE Id = @ProductId",
-                    connection);
-                productCmd.Parameters.AddWithValue("@ProductId", request.ProductId);
-
-                using (var reader = await productCmd.ExecuteReaderAsync())
-                {
-                    if (!await reader.ReadAsync())
-                        return NotFound("Product not found.");
-
-                    int stock = reader.GetInt32("StockQuantity");
-                    bool available = reader.GetBoolean("IsAvailable");
-                    if (!available || stock <= 0)
-                        return BadRequest("Product is not available.");
-                }
-
-                int cartId = await GetOrCreateCartIdAsync(connection, request.UserId);
-
-                var existingCmd = new MySqlCommand(
-                    "SELECT Id, Quantity FROM cartitems WHERE CartId = @CartId AND ProductId = @ProductId",
-                    connection);
-                existingCmd.Parameters.AddWithValue("@CartId", cartId);
-                existingCmd.Parameters.AddWithValue("@ProductId", request.ProductId);
-
-                int? itemId = null;
-                int existingQuantity = 0;
-                using (var reader = await existingCmd.ExecuteReaderAsync())
-                {
-                    if (await reader.ReadAsync())
-                    {
-                        itemId = reader.GetInt32("Id");
-                        existingQuantity = reader.GetInt32("Quantity");
-                    }
-                }
-
-                var stockCmd = new MySqlCommand(
-                    "SELECT StockQuantity FROM products WHERE Id = @ProductId",
-                    connection);
-                stockCmd.Parameters.AddWithValue("@ProductId", request.ProductId);
-                int stockQuantity = Convert.ToInt32(await stockCmd.ExecuteScalarAsync());
-
-                int newQuantity = existingQuantity + request.Quantity;
-                if (newQuantity > stockQuantity)
-                    return BadRequest($"Only {stockQuantity} item(s) are available.");
-
-                if (itemId.HasValue)
-                {
-                    var updateCmd = new MySqlCommand(
-                        "UPDATE cartitems SET Quantity = @Quantity WHERE Id = @Id",
-                        connection);
-                    updateCmd.Parameters.AddWithValue("@Quantity", newQuantity);
-                    updateCmd.Parameters.AddWithValue("@Id", itemId.Value);
-                    await updateCmd.ExecuteNonQueryAsync();
-                }
-                else
-                {
-                    var insertCmd = new MySqlCommand(
-                        "INSERT INTO cartitems (CartId, ProductId, Quantity) VALUES (@CartId, @ProductId, @Quantity)",
-                        connection);
-                    insertCmd.Parameters.AddWithValue("@CartId", cartId);
-                    insertCmd.Parameters.AddWithValue("@ProductId", request.ProductId);
-                    insertCmd.Parameters.AddWithValue("@Quantity", request.Quantity);
-                    await insertCmd.ExecuteNonQueryAsync();
-                }
-
-                await TouchCartAsync(connection, cartId);
-                return Ok(await BuildCartAsync(connection, request.UserId, createIfMissing: false));
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Error adding to cart: {ex.Message}");
-            }
-        }
-
-        [HttpPut("items/{itemId}")]
-        public async Task<IActionResult> UpdateCartItem(
-            int itemId,
-            [FromQuery] int userId,
-            [FromBody] UpdateCartItemRequest request)
-        {
-            if (userId <= 0 || itemId <= 0 || request.Quantity <= 0)
-                return BadRequest("Valid user, item, and quantity are required.");
-
-            try
-            {
-                using var connection = new MySqlConnection(ConnectionString);
-                await connection.OpenAsync();
-
-                var infoCmd = new MySqlCommand(@"
-                    SELECT ci.CartId, ci.ProductId, p.StockQuantity
-                    FROM cartitems ci
-                    JOIN shoppingcarts c ON c.Id = ci.CartId
-                    JOIN products p ON p.Id = ci.ProductId
-                    WHERE ci.Id = @ItemId AND c.UserId = @UserId", connection);
-                infoCmd.Parameters.AddWithValue("@ItemId", itemId);
-                infoCmd.Parameters.AddWithValue("@UserId", userId);
-
-                int cartId;
-                int stock;
-                using (var reader = await infoCmd.ExecuteReaderAsync())
-                {
-                    if (!await reader.ReadAsync())
-                        return NotFound("Cart item not found.");
-
-                    cartId = reader.GetInt32("CartId");
-                    stock = reader.GetInt32("StockQuantity");
-                }
-
-                if (request.Quantity > stock)
-                    return BadRequest($"Only {stock} item(s) are available.");
-
-                var cmd = new MySqlCommand(
-                    "UPDATE cartitems SET Quantity = @Quantity WHERE Id = @ItemId",
-                    connection);
-                cmd.Parameters.AddWithValue("@Quantity", request.Quantity);
-                cmd.Parameters.AddWithValue("@ItemId", itemId);
+                await using var cmd=new SqlCommand("UPDATE CartItems SET Quantity=@Qty WHERE Id=@Id",conn);
+                cmd.Parameters.AddWithValue("@Qty",newQty); cmd.Parameters.AddWithValue("@Id",itemId.Value);
                 await cmd.ExecuteNonQueryAsync();
-
-                await TouchCartAsync(connection, cartId);
-                return Ok(await BuildCartAsync(connection, userId, createIfMissing: false));
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Error updating cart item: {ex.Message}");
-            }
-        }
-
-        [HttpDelete("items/{itemId}")]
-        public async Task<IActionResult> RemoveCartItem(
-            int itemId,
-            [FromQuery] int userId)
-        {
-            if (userId <= 0 || itemId <= 0)
-                return BadRequest("Valid user and item IDs are required.");
-
-            try
-            {
-                using var connection = new MySqlConnection(ConnectionString);
-                await connection.OpenAsync();
-
-                var cartIdCmd = new MySqlCommand(@"
-                    SELECT ci.CartId
-                    FROM cartitems ci
-                    JOIN shoppingcarts c ON c.Id = ci.CartId
-                    WHERE ci.Id = @ItemId AND c.UserId = @UserId", connection);
-                cartIdCmd.Parameters.AddWithValue("@ItemId", itemId);
-                cartIdCmd.Parameters.AddWithValue("@UserId", userId);
-
-                var cartIdResult = await cartIdCmd.ExecuteScalarAsync();
-                if (cartIdResult is null)
-                    return NotFound("Cart item not found.");
-
-                int cartId = Convert.ToInt32(cartIdResult);
-
-                var deleteCmd = new MySqlCommand(
-                    "DELETE FROM cartitems WHERE Id = @ItemId AND CartId = @CartId",
-                    connection);
-                deleteCmd.Parameters.AddWithValue("@ItemId", itemId);
-                deleteCmd.Parameters.AddWithValue("@CartId", cartId);
-                await deleteCmd.ExecuteNonQueryAsync();
-
-                await TouchCartAsync(connection, cartId);
-                return Ok(await BuildCartAsync(connection, userId, createIfMissing: false));
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Error removing cart item: {ex.Message}");
-            }
-        }
-
-        [HttpDelete]
-        public async Task<IActionResult> ClearCart([FromQuery] int userId)
-        {
-            if (userId <= 0)
-                return BadRequest("A valid user ID is required.");
-
-            try
-            {
-                using var connection = new MySqlConnection(ConnectionString);
-                await connection.OpenAsync();
-
-                int cartId = await GetOrCreateCartIdAsync(connection, userId);
-                var cmd = new MySqlCommand(
-                    "DELETE FROM cartitems WHERE CartId = @CartId",
-                    connection);
-                cmd.Parameters.AddWithValue("@CartId", cartId);
-                await cmd.ExecuteNonQueryAsync();
-
-                await TouchCartAsync(connection, cartId);
-                return Ok(await BuildCartAsync(connection, userId, createIfMissing: false));
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Error clearing cart: {ex.Message}");
-            }
-        }
-
-        [HttpPost("checkout")]
-        public async Task<IActionResult> Checkout([FromQuery] int userId)
-        {
-            if (userId <= 0)
-                return BadRequest("A valid user ID is required.");
-
-            try
-            {
-                using var connection = new MySqlConnection(ConnectionString);
-                await connection.OpenAsync();
-                using var transaction = await connection.BeginTransactionAsync();
-
-                var cartCmd = new MySqlCommand(
-                    "SELECT Id FROM shoppingcarts WHERE UserId = @UserId",
-                    connection, transaction);
-                cartCmd.Parameters.AddWithValue("@UserId", userId);
-                var cartIdResult = await cartCmd.ExecuteScalarAsync();
-
-                if (cartIdResult is null)
-                    return BadRequest("Cart is empty.");
-
-                int cartId = Convert.ToInt32(cartIdResult);
-                var cartItems = new List<(int ProductId, string Name, int Quantity, decimal Price, int Stock)>();
-                decimal totalAmount = 0;
-
-                var itemsCmd = new MySqlCommand(@"
-                    SELECT ci.ProductId, ci.Quantity, p.Name, p.Price, p.StockQuantity, p.IsAvailable
-                    FROM cartitems ci
-                    JOIN products p ON p.Id = ci.ProductId
-                    WHERE ci.CartId = @CartId
-                    FOR UPDATE", connection, transaction);
-                itemsCmd.Parameters.AddWithValue("@CartId", cartId);
-
-                string? stockError = null;
-                using (var reader = await itemsCmd.ExecuteReaderAsync())
-                {
-                    while (await reader.ReadAsync())
-                    {
-                        int quantity = reader.GetInt32("Quantity");
-                        int stock = reader.GetInt32("StockQuantity");
-                        bool available = reader.GetBoolean("IsAvailable");
-                        string productName = reader.GetString("Name");
-
-                        if (!available || quantity > stock)
-                        {
-                            stockError = $"{productName} no longer has enough stock.";
-                            break;
-                        }
-
-                        decimal price = reader.GetDecimal("Price");
-                        totalAmount += quantity * price;
-                        cartItems.Add((
-                            reader.GetInt32("ProductId"),
-                            productName,
-                            quantity,
-                            price,
-                            stock));
-                    }
-                }
-
-                if (stockError is not null)
-                {
-                    await transaction.RollbackAsync();
-                    return BadRequest(stockError);
-                }
-
-                if (cartItems.Count == 0)
-                {
-                    await transaction.RollbackAsync();
-                    return BadRequest("Cart is empty.");
-                }
-
-                var orderCmd = new MySqlCommand(@"
-                    INSERT INTO orders (UserId, TotalAmount, Status, OrderedAt)
-                    VALUES (@UserId, @TotalAmount, 'Confirmed', @OrderedAt)",
-                    connection, transaction);
-                orderCmd.Parameters.AddWithValue("@UserId", userId);
-                orderCmd.Parameters.AddWithValue("@TotalAmount", totalAmount);
-                orderCmd.Parameters.AddWithValue("@OrderedAt", DateTime.UtcNow);
-                await orderCmd.ExecuteNonQueryAsync();
-                int orderId = Convert.ToInt32(orderCmd.LastInsertedId);
-
-                foreach (var item in cartItems)
-                {
-                    var orderItemCmd = new MySqlCommand(@"
-                        INSERT INTO orderitems (OrderId, ProductId, Quantity, UnitPrice)
-                        VALUES (@OrderId, @ProductId, @Quantity, @UnitPrice)",
-                        connection, transaction);
-                    orderItemCmd.Parameters.AddWithValue("@OrderId", orderId);
-                    orderItemCmd.Parameters.AddWithValue("@ProductId", item.ProductId);
-                    orderItemCmd.Parameters.AddWithValue("@Quantity", item.Quantity);
-                    orderItemCmd.Parameters.AddWithValue("@UnitPrice", item.Price);
-                    await orderItemCmd.ExecuteNonQueryAsync();
-
-                    int remainingStock = item.Stock - item.Quantity;
-                    var stockCmd = new MySqlCommand(@"
-                        UPDATE products
-                        SET StockQuantity = @RemainingStock,
-                            IsAvailable = @IsAvailable
-                        WHERE Id = @ProductId", connection, transaction);
-                    stockCmd.Parameters.AddWithValue("@RemainingStock", remainingStock);
-                    stockCmd.Parameters.AddWithValue("@IsAvailable", remainingStock > 0);
-                    stockCmd.Parameters.AddWithValue("@ProductId", item.ProductId);
-                    await stockCmd.ExecuteNonQueryAsync();
-                }
-
-                var clearCmd = new MySqlCommand(
-                    "DELETE FROM cartitems WHERE CartId = @CartId",
-                    connection, transaction);
-                clearCmd.Parameters.AddWithValue("@CartId", cartId);
-                await clearCmd.ExecuteNonQueryAsync();
-
-                var touchCmd = new MySqlCommand(
-                    "UPDATE shoppingcarts SET UpdatedAt = @UpdatedAt WHERE Id = @CartId",
-                    connection, transaction);
-                touchCmd.Parameters.AddWithValue("@UpdatedAt", DateTime.UtcNow);
-                touchCmd.Parameters.AddWithValue("@CartId", cartId);
-                await touchCmd.ExecuteNonQueryAsync();
-
-                await transaction.CommitAsync();
-
-                return Ok(new
-                {
-                    Id = orderId,
-                    UserId = userId,
-                    TotalAmount = totalAmount,
-                    Status = "Confirmed",
-                    OrderedAt = DateTime.UtcNow,
-                    Items = cartItems.Select(item => new
-                    {
-                        item.ProductId,
-                        ProductName = item.Name,
-                        item.Quantity,
-                        UnitPrice = item.Price,
-                        LineTotal = item.Price * item.Quantity
-                    }).ToList()
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Checkout failed: {ex.Message}");
-            }
-        }
-
-        [HttpGet("orders")]
-        public async Task<IActionResult> GetOrders([FromQuery] int userId)
-        {
-            if (userId <= 0)
-                return BadRequest("A valid user ID is required.");
-
-            try
-            {
-                using var connection = new MySqlConnection(ConnectionString);
-                await connection.OpenAsync();
-
-                var orders = new List<object>();
-                var orderCmd = new MySqlCommand(@"
-                    SELECT Id, UserId, TotalAmount, Status, OrderedAt
-                    FROM orders
-                    WHERE UserId = @UserId
-                    ORDER BY OrderedAt DESC", connection);
-                orderCmd.Parameters.AddWithValue("@UserId", userId);
-
-                var orderRows = new List<(int Id, int UserId, decimal Total, string Status, DateTime OrderedAt)>();
-                using (var reader = await orderCmd.ExecuteReaderAsync())
-                {
-                    while (await reader.ReadAsync())
-                    {
-                        orderRows.Add((
-                            reader.GetInt32("Id"),
-                            reader.GetInt32("UserId"),
-                            reader.GetDecimal("TotalAmount"),
-                            reader.GetString("Status"),
-                            reader.GetDateTime("OrderedAt")));
-                    }
-                }
-
-                foreach (var order in orderRows)
-                {
-                    var items = new List<object>();
-                    var itemsCmd = new MySqlCommand(@"
-                        SELECT oi.ProductId, p.Name, oi.Quantity, oi.UnitPrice
-                        FROM orderitems oi
-                        JOIN products p ON p.Id = oi.ProductId
-                        WHERE oi.OrderId = @OrderId", connection);
-                    itemsCmd.Parameters.AddWithValue("@OrderId", order.Id);
-
-                    using var reader = await itemsCmd.ExecuteReaderAsync();
-                    while (await reader.ReadAsync())
-                    {
-                        decimal unitPrice = reader.GetDecimal("UnitPrice");
-                        int quantity = reader.GetInt32("Quantity");
-                        items.Add(new
-                        {
-                            ProductId = reader.GetInt32("ProductId"),
-                            ProductName = reader.GetString("Name"),
-                            Quantity = quantity,
-                            UnitPrice = unitPrice,
-                            LineTotal = unitPrice * quantity
-                        });
-                    }
-
-                    orders.Add(new
-                    {
-                        order.Id,
-                        order.UserId,
-                        TotalAmount = order.Total,
-                        order.Status,
-                        order.OrderedAt,
-                        Items = items
-                    });
-                }
-
-                return Ok(orders);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Error fetching orders: {ex.Message}");
-            }
-        }
-
-        private async Task<int> GetOrCreateCartIdAsync(
-            MySqlConnection connection,
-            int userId)
-        {
-            var cartCmd = new MySqlCommand(
-                "SELECT Id FROM shoppingcarts WHERE UserId = @UserId",
-                connection);
-            cartCmd.Parameters.AddWithValue("@UserId", userId);
-            var result = await cartCmd.ExecuteScalarAsync();
-
-            if (result is not null)
-                return Convert.ToInt32(result);
-
-            var createCmd = new MySqlCommand(@"
-                INSERT INTO shoppingcarts (UserId, UpdatedAt)
-                VALUES (@UserId, @UpdatedAt)", connection);
-            createCmd.Parameters.AddWithValue("@UserId", userId);
-            createCmd.Parameters.AddWithValue("@UpdatedAt", DateTime.UtcNow);
-            await createCmd.ExecuteNonQueryAsync();
-            return Convert.ToInt32(createCmd.LastInsertedId);
-        }
-
-        private static async Task TouchCartAsync(
-            MySqlConnection connection,
-            int cartId)
-        {
-            var cmd = new MySqlCommand(
-                "UPDATE shoppingcarts SET UpdatedAt = @UpdatedAt WHERE Id = @CartId",
-                connection);
-            cmd.Parameters.AddWithValue("@UpdatedAt", DateTime.UtcNow);
-            cmd.Parameters.AddWithValue("@CartId", cartId);
-            await cmd.ExecuteNonQueryAsync();
-        }
-
-        private async Task<object> BuildCartAsync(
-            MySqlConnection connection,
-            int userId,
-            bool createIfMissing)
-        {
-            int cartId;
-            if (createIfMissing)
-            {
-                cartId = await GetOrCreateCartIdAsync(connection, userId);
             }
             else
             {
-                var cartCmd = new MySqlCommand(
-                    "SELECT Id FROM shoppingcarts WHERE UserId = @UserId",
-                    connection);
-                cartCmd.Parameters.AddWithValue("@UserId", userId);
-                var result = await cartCmd.ExecuteScalarAsync();
-                cartId = result is null ? 0 : Convert.ToInt32(result);
+                await using var cmd=new SqlCommand("INSERT INTO CartItems(CartId,ProductId,Quantity) VALUES(@CartId,@ProductId,@Qty)",conn);
+                cmd.Parameters.AddWithValue("@CartId",cartId); cmd.Parameters.AddWithValue("@ProductId",request.ProductId); cmd.Parameters.AddWithValue("@Qty",request.Quantity);
+                await cmd.ExecuteNonQueryAsync();
             }
 
-            var items = new List<object>();
-            decimal totalAmount = 0;
+            await TouchCartAsync(conn,cartId);
+            return Ok(await BuildCartAsync(conn,request.UserId,false));
+        }
+        catch(Exception ex){ return StatusCode(500,$"Error adding to cart: {ex.Message}"); }
+    }
 
-            if (cartId > 0)
+    [HttpPut("items/{itemId:int}")]
+    public async Task<IActionResult> UpdateCartItem(int itemId,[FromQuery]int userId,[FromBody]UpdateCartItemRequest request)
+    {
+        if(userId<=0||itemId<=0||request.Quantity<=0) return BadRequest("Valid user, item, and quantity are required.");
+        try
+        {
+            await using var conn=new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+
+            int cartId,stock;
+            await using(var cmd=new SqlCommand(@"
+                SELECT ci.CartId,p.StockQuantity
+                FROM CartItems ci
+                JOIN ShoppingCarts c ON c.Id=ci.CartId
+                JOIN ShopProducts p ON p.Id=ci.ProductId
+                WHERE ci.Id=@ItemId AND c.UserId=@UserId;",conn))
             {
-                var cmd = new MySqlCommand(@"
-                    SELECT ci.Id, ci.ProductId, ci.Quantity, p.Name, p.Price, p.ImageUrl
-                    FROM cartitems ci
-                    JOIN products p ON p.Id = ci.ProductId
-                    WHERE ci.CartId = @CartId
-                    ORDER BY ci.Id", connection);
-                cmd.Parameters.AddWithValue("@CartId", cartId);
+                cmd.Parameters.AddWithValue("@ItemId",itemId); cmd.Parameters.AddWithValue("@UserId",userId);
+                await using var r=await cmd.ExecuteReaderAsync();
+                if(!await r.ReadAsync()) return NotFound("Cart item not found.");
+                cartId=r.GetInt32(0); stock=r.GetInt32(1);
+            }
 
-                using var reader = await cmd.ExecuteReaderAsync();
-                while (await reader.ReadAsync())
+            if(request.Quantity>stock) return BadRequest($"Only {stock} item(s) are available.");
+            await using(var cmd=new SqlCommand("UPDATE CartItems SET Quantity=@Qty WHERE Id=@Id",conn))
+            {
+                cmd.Parameters.AddWithValue("@Qty",request.Quantity); cmd.Parameters.AddWithValue("@Id",itemId);
+                await cmd.ExecuteNonQueryAsync();
+            }
+            await TouchCartAsync(conn,cartId);
+            return Ok(await BuildCartAsync(conn,userId,false));
+        }
+        catch(Exception ex){ return StatusCode(500,$"Error updating cart item: {ex.Message}"); }
+    }
+
+    [HttpDelete("items/{itemId:int}")]
+    public async Task<IActionResult> RemoveCartItem(int itemId,[FromQuery]int userId)
+    {
+        try
+        {
+            await using var conn=new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+            int? cartId=null;
+            await using(var cmd=new SqlCommand(@"
+                SELECT ci.CartId
+                FROM CartItems ci JOIN ShoppingCarts c ON c.Id=ci.CartId
+                WHERE ci.Id=@ItemId AND c.UserId=@UserId;",conn))
+            {
+                cmd.Parameters.AddWithValue("@ItemId",itemId); cmd.Parameters.AddWithValue("@UserId",userId);
+                var val=await cmd.ExecuteScalarAsync();
+                if(val is null) return NotFound("Cart item not found.");
+                cartId=Convert.ToInt32(val);
+            }
+            await using(var del=new SqlCommand("DELETE FROM CartItems WHERE Id=@Id AND CartId=@CartId",conn))
+            {
+                del.Parameters.AddWithValue("@Id",itemId); del.Parameters.AddWithValue("@CartId",cartId.Value);
+                await del.ExecuteNonQueryAsync();
+            }
+            await TouchCartAsync(conn,cartId.Value);
+            return Ok(await BuildCartAsync(conn,userId,false));
+        }
+        catch(Exception ex){ return StatusCode(500,$"Error removing cart item: {ex.Message}"); }
+    }
+
+    [HttpDelete]
+    public async Task<IActionResult> ClearCart([FromQuery]int userId)
+    {
+        try
+        {
+            await using var conn=new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+            int cartId=await GetOrCreateCartIdAsync(conn,userId);
+            await using(var cmd=new SqlCommand("DELETE FROM CartItems WHERE CartId=@CartId",conn))
+            {
+                cmd.Parameters.AddWithValue("@CartId",cartId);
+                await cmd.ExecuteNonQueryAsync();
+            }
+            await TouchCartAsync(conn,cartId);
+            return Ok(await BuildCartAsync(conn,userId,false));
+        }
+        catch(Exception ex){ return StatusCode(500,$"Error clearing cart: {ex.Message}"); }
+    }
+
+    [HttpPost("checkout")]
+    public async Task<IActionResult> Checkout([FromQuery]int userId)
+    {
+        if(userId<=0) return BadRequest("A valid user ID is required.");
+        try
+        {
+            await using var conn=new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+            await using var tx=(SqlTransaction)await conn.BeginTransactionAsync();
+
+            int? cartId=null;
+            await using(var cmd=new SqlCommand("SELECT Id FROM ShoppingCarts WHERE UserId=@UserId",conn,tx))
+            {
+                cmd.Parameters.AddWithValue("@UserId",userId);
+                var val=await cmd.ExecuteScalarAsync();
+                if(val is not null) cartId=Convert.ToInt32(val);
+            }
+            if(!cartId.HasValue){ await tx.RollbackAsync(); return BadRequest("Cart is empty."); }
+
+            var items=new List<(int ProductId,string Name,int Qty,decimal Price,int Stock)>();
+            await using(var cmd=new SqlCommand(@"
+                SELECT ci.ProductId,ci.Quantity,p.Name,p.Price,p.StockQuantity,p.IsAvailable
+                FROM CartItems ci
+                JOIN ShopProducts p ON p.Id=ci.ProductId
+                WHERE ci.CartId=@CartId;",conn,tx))
+            {
+                cmd.Parameters.AddWithValue("@CartId",cartId.Value);
+                await using var r=await cmd.ExecuteReaderAsync();
+                while(await r.ReadAsync())
                 {
-                    int quantity = reader.GetInt32("Quantity");
-                    decimal unitPrice = reader.GetDecimal("Price");
-                    decimal lineTotal = unitPrice * quantity;
-                    totalAmount += lineTotal;
+                    int qty=r.GetInt32(1),stock=r.GetInt32(4); bool available=r.GetBoolean(5);
+                    if(!available||qty>stock){ await r.DisposeAsync(); await tx.RollbackAsync(); return BadRequest($"{r.GetString(2)} no longer has enough stock."); }
+                    items.Add((r.GetInt32(0),r.GetString(2),qty,r.GetDecimal(3),stock));
+                }
+            }
+            if(items.Count==0){ await tx.RollbackAsync(); return BadRequest("Cart is empty."); }
 
-                    items.Add(new
-                    {
-                        Id = reader.GetInt32("Id"),
-                        ProductId = reader.GetInt32("ProductId"),
-                        ProductName = reader.GetString("Name"),
-                        UnitPrice = unitPrice,
-                        Quantity = quantity,
-                        LineTotal = lineTotal,
-                        ImageUrl = reader.IsDBNull(reader.GetOrdinal("ImageUrl"))
-                            ? string.Empty
-                            : reader.GetString("ImageUrl")
-                    });
+            decimal total=items.Sum(i=>i.Qty*i.Price);
+            int orderId;
+            await using(var cmd=new SqlCommand(@"
+                INSERT INTO ShopOrders(UserId,TotalAmount,Status,OrderedAt)
+                OUTPUT INSERTED.Id
+                VALUES(@UserId,@Total,'Confirmed',SYSUTCDATETIME());",conn,tx))
+            {
+                cmd.Parameters.AddWithValue("@UserId",userId); cmd.Parameters.AddWithValue("@Total",total);
+                orderId=Convert.ToInt32(await cmd.ExecuteScalarAsync());
+            }
+
+            foreach(var item in items)
+            {
+                await using(var cmd=new SqlCommand("INSERT INTO ShopOrderItems(OrderId,ProductId,Quantity,UnitPrice) VALUES(@OrderId,@ProductId,@Qty,@Price)",conn,tx))
+                {
+                    cmd.Parameters.AddWithValue("@OrderId",orderId); cmd.Parameters.AddWithValue("@ProductId",item.ProductId); cmd.Parameters.AddWithValue("@Qty",item.Qty); cmd.Parameters.AddWithValue("@Price",item.Price);
+                    await cmd.ExecuteNonQueryAsync();
+                }
+                int remaining=item.Stock-item.Qty;
+                await using(var cmd=new SqlCommand("UPDATE ShopProducts SET StockQuantity=@Stock,IsAvailable=@Available WHERE Id=@Id",conn,tx))
+                {
+                    cmd.Parameters.AddWithValue("@Stock",remaining); cmd.Parameters.AddWithValue("@Available",remaining>0); cmd.Parameters.AddWithValue("@Id",item.ProductId);
+                    await cmd.ExecuteNonQueryAsync();
                 }
             }
 
-            return new
+            await using(var clear=new SqlCommand("DELETE FROM CartItems WHERE CartId=@CartId",conn,tx))
+            { clear.Parameters.AddWithValue("@CartId",cartId.Value); await clear.ExecuteNonQueryAsync(); }
+
+            await tx.CommitAsync();
+            return Ok(new{
+                Id=orderId,UserId=userId,TotalAmount=total,Status="Confirmed",OrderedAt=DateTime.UtcNow,
+                Items=items.Select(i=>new{i.ProductId,ProductName=i.Name,Quantity=i.Qty,UnitPrice=i.Price,LineTotal=i.Qty*i.Price}).ToList()
+            });
+        }
+        catch(Exception ex){ return StatusCode(500,$"Checkout failed: {ex.Message}"); }
+    }
+
+    [HttpGet("orders")]
+    public async Task<IActionResult> GetOrders([FromQuery]int userId)
+    {
+        try
+        {
+            var orders=new List<object>();
+            await using var conn=new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+            var rows=new List<(int Id,int UserId,decimal Total,string Status,DateTime OrderedAt)>();
+            await using(var cmd=new SqlCommand("SELECT Id,UserId,TotalAmount,Status,OrderedAt FROM ShopOrders WHERE UserId=@UserId ORDER BY OrderedAt DESC",conn))
             {
-                CartId = cartId,
-                UserId = userId,
-                Items = items,
-                TotalAmount = totalAmount
-            };
+                cmd.Parameters.AddWithValue("@UserId",userId);
+                await using var r=await cmd.ExecuteReaderAsync();
+                while(await r.ReadAsync()) rows.Add((r.GetInt32(0),r.GetInt32(1),r.GetDecimal(2),r.GetString(3),r.GetDateTime(4)));
+            }
+            foreach(var row in rows)
+            {
+                var items=new List<object>();
+                await using var cmd=new SqlCommand(@"
+                    SELECT oi.ProductId,p.Name,oi.Quantity,oi.UnitPrice
+                    FROM ShopOrderItems oi JOIN ShopProducts p ON p.Id=oi.ProductId
+                    WHERE oi.OrderId=@OrderId;",conn);
+                cmd.Parameters.AddWithValue("@OrderId",row.Id);
+                await using var r=await cmd.ExecuteReaderAsync();
+                while(await r.ReadAsync())
+                {
+                    int q=r.GetInt32(2); decimal price=r.GetDecimal(3);
+                    items.Add(new{ProductId=r.GetInt32(0),ProductName=r.GetString(1),Quantity=q,UnitPrice=price,LineTotal=q*price});
+                }
+                orders.Add(new{row.Id,row.UserId,TotalAmount=row.Total,row.Status,row.OrderedAt,Items=items});
+            }
+            return Ok(orders);
+        }
+        catch(Exception ex){ return StatusCode(500,$"Error fetching orders: {ex.Message}"); }
+    }
+
+    private async Task<int> GetOrCreateCartIdAsync(SqlConnection conn,int userId)
+    {
+        await using(var cmd=new SqlCommand("SELECT Id FROM ShoppingCarts WHERE UserId=@UserId",conn))
+        {
+            cmd.Parameters.AddWithValue("@UserId",userId);
+            var val=await cmd.ExecuteScalarAsync();
+            if(val is not null) return Convert.ToInt32(val);
+        }
+        await using(var cmd=new SqlCommand("INSERT INTO ShoppingCarts(UserId,UpdatedAt) OUTPUT INSERTED.Id VALUES(@UserId,SYSUTCDATETIME())",conn))
+        {
+            cmd.Parameters.AddWithValue("@UserId",userId);
+            return Convert.ToInt32(await cmd.ExecuteScalarAsync());
         }
     }
 
-    public class AddToCartRequest
+    private static async Task TouchCartAsync(SqlConnection conn,int cartId)
     {
-        public int UserId { get; set; }
-        public int ProductId { get; set; }
-        public int Quantity { get; set; }
+        await using var cmd=new SqlCommand("UPDATE ShoppingCarts SET UpdatedAt=SYSUTCDATETIME() WHERE Id=@Id",conn);
+        cmd.Parameters.AddWithValue("@Id",cartId);
+        await cmd.ExecuteNonQueryAsync();
     }
 
-    public class UpdateCartItemRequest
+    private async Task<object> BuildCartAsync(SqlConnection conn,int userId,bool create)
     {
-        public int Quantity { get; set; }
+        int cartId=0;
+        if(create) cartId=await GetOrCreateCartIdAsync(conn,userId);
+        else
+        {
+            await using var c=new SqlCommand("SELECT Id FROM ShoppingCarts WHERE UserId=@UserId",conn);
+            c.Parameters.AddWithValue("@UserId",userId);
+            var v=await c.ExecuteScalarAsync();
+            if(v is not null) cartId=Convert.ToInt32(v);
+        }
+
+        var items=new List<object>(); decimal total=0;
+        if(cartId>0)
+        {
+            await using var cmd=new SqlCommand(@"
+                SELECT ci.Id,ci.ProductId,ci.Quantity,p.Name,p.Price,p.ImageUrl
+                FROM CartItems ci JOIN ShopProducts p ON p.Id=ci.ProductId
+                WHERE ci.CartId=@CartId ORDER BY ci.Id;",conn);
+            cmd.Parameters.AddWithValue("@CartId",cartId);
+            await using var r=await cmd.ExecuteReaderAsync();
+            while(await r.ReadAsync())
+            {
+                int q=r.GetInt32(2); decimal price=r.GetDecimal(4); decimal line=q*price; total+=line;
+                items.Add(new{Id=r.GetInt32(0),ProductId=r.GetInt32(1),ProductName=r.GetString(3),UnitPrice=price,Quantity=q,LineTotal=line,ImageUrl=r.IsDBNull(5)?"":r.GetString(5)});
+            }
+        }
+        return new{CartId=cartId,UserId=userId,Items=items,TotalAmount=total};
     }
+}
+
+public class AddToCartRequest
+{
+    public int UserId{get;set;}
+    public int ProductId{get;set;}
+    public int Quantity{get;set;}
+}
+public class UpdateCartItemRequest
+{
+    public int Quantity{get;set;}
 }
