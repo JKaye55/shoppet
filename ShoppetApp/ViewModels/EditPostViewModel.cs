@@ -87,6 +87,26 @@ namespace ShoppetApp.ViewModels
         private async Task SaveAsync()
         {
             if (IsBusy) return;
+
+            var cleanContent = (Content ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(cleanContent) && AttachedMedia.Count == 0)
+            {
+                await Shell.Current.DisplayAlertAsync("Add something", "A post needs text or at least one photo.", "OK");
+                return;
+            }
+
+            if (cleanContent.Length > 2000)
+            {
+                await Shell.Current.DisplayAlertAsync("Post too long", "Community posts can contain up to 2,000 characters.", "OK");
+                return;
+            }
+
+            if (_db.CurrentUser == null || PostToEdit.UserId != _db.CurrentUser.Id)
+            {
+                await Shell.Current.DisplayAlertAsync("Not allowed", "Only the post owner can edit this post.", "OK");
+                return;
+            }
+
             IsBusy = true;
             try
             {
@@ -103,10 +123,10 @@ namespace ShoppetApp.ViewModels
                     petName = selectedPet.Name;
                 }
                 
-                bool success = await _api.EditPostAsync(PostToEdit.Id, Content, imageUrls, petId, petName);
+                bool success = await _api.EditPostAsync(PostToEdit.Id, cleanContent, imageUrls, petId, petName);
                 if (success)
                 {
-                    PostToEdit.Content = Content;
+                    PostToEdit.Content = cleanContent;
                     PostToEdit.PetId = petId;
                     PostToEdit.PetName = petName;
                     PostToEdit.ImageUrls = imageUrls;
