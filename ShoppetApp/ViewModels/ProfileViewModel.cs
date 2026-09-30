@@ -16,7 +16,6 @@ namespace ShoppetApp.ViewModels
         [ObservableProperty] private bool _isBusy;
                         [ObservableProperty] private string _fullName = string.Empty;
         [ObservableProperty] private bool _isAdmin;
-        [ObservableProperty] private bool _isBusinessOwner;
         [ObservableProperty] private ImageSource? _profileImageSource;
         private readonly ShoppetApp.Services.ApiService _api;
 
@@ -55,7 +54,6 @@ namespace ShoppetApp.ViewModels
                 IsAdmin = role.Equals("Admin", StringComparison.OrdinalIgnoreCase)
                        || role.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase)
                        || role.Equals("Super Admin", StringComparison.OrdinalIgnoreCase);
-                IsBusinessOwner = role.Equals("BusinessOwner", StringComparison.OrdinalIgnoreCase);
 
                 if (userId > 0)
                 {
@@ -130,10 +128,6 @@ namespace ShoppetApp.ViewModels
         [RelayCommand]
         private async Task OpenAdminPanelAsync() =>
             await Shell.Current.DisplayAlertAsync("Admin", "Opening Platform Admin Console...", "OK");
-
-        [RelayCommand]
-        private async Task OpenBusinessPanelAsync() =>
-            await Shell.Current.DisplayAlertAsync("Business Owner", "Opening Clinic Counter & Inventory Desk...", "OK");
 
         [RelayCommand]
         private async Task OpenLocalShopsAsync() =>
