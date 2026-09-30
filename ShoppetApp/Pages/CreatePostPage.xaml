@@ -11,11 +11,18 @@
     <Grid RowDefinitions="Auto, *, Auto" BackgroundColor="{StaticResource AppBackground}">
         <!-- Header -->
         <Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto" Padding="15,20,15,15">
-            <Label Grid.Column="0" Text="X" FontSize="20" FontFamily="NunitoBold" TextColor="{StaticResource BodyText}" VerticalOptions="Center">
-                <Label.GestureRecognizers>
+            <Border Grid.Column="0" WidthRequest="40" HeightRequest="40" BackgroundColor="Transparent" StrokeThickness="0">
+                <Border.GestureRecognizers>
                     <TapGestureRecognizer Command="{Binding CloseCommand}" />
-                </Label.GestureRecognizers>
-            </Label>
+                </Border.GestureRecognizers>
+                <Path Data="{StaticResource IconClose}"
+                      Fill="{StaticResource BodyText}"
+                      WidthRequest="20"
+                      HeightRequest="20"
+                      HorizontalOptions="Center"
+                      VerticalOptions="Center"
+                      Aspect="Uniform" />
+            </Border>
             <Label Grid.Column="1" Text="New post" FontSize="18" FontFamily="NunitoBold" TextColor="{StaticResource BodyText}" HorizontalOptions="Center" VerticalOptions="Center" />
             <Label Grid.Column="2" WidthRequest="20" />
         </Grid>
@@ -134,11 +141,18 @@
                                 <Border BackgroundColor="#DD000000" WidthRequest="24" HeightRequest="24" 
                                         StrokeShape="RoundRectangle 12" StrokeThickness="0"
                                         HorizontalOptions="End" VerticalOptions="Start" Margin="5">
-                                    <Label Text="&#x2715;" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" FontSize="12" FontFamily="NunitoBold">
-                                        <Label.GestureRecognizers>
+                                    <Grid>
+                                        <Grid.GestureRecognizers>
                                             <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:CreatePostViewModel}}, Path=RemoveMediaCommand}" CommandParameter="{Binding .}" />
-                                        </Label.GestureRecognizers>
-                                    </Label>
+                                        </Grid.GestureRecognizers>
+                                        <Path Data="{StaticResource IconClose}"
+                                              Fill="White"
+                                              WidthRequest="12"
+                                              HeightRequest="12"
+                                              HorizontalOptions="Center"
+                                              VerticalOptions="Center"
+                                              Aspect="Uniform" />
+                                    </Grid>
                                 </Border>
                             </Grid>
                         </DataTemplate>
