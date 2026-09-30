@@ -70,7 +70,7 @@ namespace ShoppetApp.ViewModels
         {
             if (post == null) return;
             post.IsOptionsVisible = false;
-            bool confirm = await Shell.Current.DisplayAlert("Delete Post", "Are you sure you want to delete this post?", "Yes", "No");
+            bool confirm = await Shell.Current.DisplayAlertAsync("Delete Post", "Are you sure you want to delete this post?", "Yes", "No");
             if (!confirm) return;
 
             bool success = await _api.DeletePostAsync(post.Id);
@@ -80,7 +80,7 @@ namespace ShoppetApp.ViewModels
             }
             else
             {
-                await Shell.Current.DisplayAlert("Error", "Failed to delete post.", "OK");
+                await Shell.Current.DisplayAlertAsync("Error", "Failed to delete post.", "OK");
             }
         }
         
