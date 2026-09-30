@@ -23,9 +23,16 @@ public class FoodLogsController : ControllerBase
             await using var conn = new SqlConnection(ConnectionString);
             await conn.OpenAsync();
             const string sql = """
-                SELECT Id, PetId, FoodName, ISNULL(AmountGrams,0),
+                SELECT Id, PetId, FoodName,
+                       CASE
+                           WHEN ISNULL(AmountGrams,0) > 0 THEN AmountGrams
+                           ELSE TRY_CONVERT(float,
+                               REPLACE(REPLACE(REPLACE(ISNULL(PortionSize,''),'grams',''),'g',''),' ',''))
+                       END AS AmountGrams,
                        ISNULL(IntervalHours,0), ISNULL(IntervalMinutes,0),
-                       StartTimestamp, LastFedTimestamp, FedDate,
+                       COALESCE(StartTimestamp,FedAt,CreatedAt) AS StartTimestamp,
+                       COALESCE(LastFedTimestamp,FedAt) AS LastFedTimestamp,
+                       COALESCE(FedDate,FedAt) AS FedDate,
                        ISNULL(Notes,''), ISNULL(IsCompleted,0), CompletedAt
                 FROM FoodLogs
                 WHERE PetId=@PetId
