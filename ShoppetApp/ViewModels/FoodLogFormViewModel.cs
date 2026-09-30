@@ -15,6 +15,12 @@ public partial class FoodLogFormViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty] public partial int PetId { get; set; }
     [ObservableProperty] public partial int LogId { get; set; }
     [ObservableProperty] public partial string FoodName { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsCustomFood))]
+    public partial string SelectedFoodOption { get; set; } = "Dry Kibble";
+
+    [ObservableProperty] public partial string CustomFoodName { get; set; } = string.Empty;
     [ObservableProperty] public partial DateTime FedDate { get; set; } = DateTime.Today;
     [ObservableProperty] public partial TimeSpan StartTime { get; set; } = DateTime.Now.TimeOfDay;
     [ObservableProperty] public partial bool IsEditMode { get; set; }
@@ -29,6 +35,19 @@ public partial class FoodLogFormViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty] public partial double CustomIntervalHours { get; set; } = 8;
     [ObservableProperty] public partial double CustomIntervalMinutes { get; set; }
 
+    public IList<string> FoodOptions { get; } =
+    [
+        "Dry Kibble",
+        "Wet / Canned Food",
+        "Prescription Diet",
+        "Puppy / Kitten Food",
+        "Homemade Meal",
+        "Raw Food",
+        "Treats / Snacks",
+        "Milk / Formula",
+        "Other / Custom"
+    ];
+
     public IList<string> FeedingIntervalOptions { get; } =
     [
         "Every 4 hours",
@@ -39,6 +58,7 @@ public partial class FoodLogFormViewModel : ObservableObject, IQueryAttributable
         "Custom"
     ];
 
+    public bool IsCustomFood => SelectedFoodOption == "Other / Custom";
     public bool IsCustomInterval => FeedingIntervalPreset == "Custom";
     public string Title => IsEditMode ? "Edit Food Log" : "Add Food Log";
     public bool CanDelete => IsEditMode;
@@ -83,6 +103,17 @@ public partial class FoodLogFormViewModel : ObservableObject, IQueryAttributable
         IsEditMode = true;
         PetId = log.PetId;
         FoodName = log.FoodName ?? string.Empty;
+        if (FoodOptions.Contains(FoodName))
+        {
+            SelectedFoodOption = FoodName;
+            CustomFoodName = string.Empty;
+        }
+        else
+        {
+            SelectedFoodOption = "Other / Custom";
+            CustomFoodName = FoodName;
+        }
+
         AmountGramsValue = Math.Clamp(log.AmountGrams > 0 ? log.AmountGrams : 100, 1, 5000);
         CustomIntervalHours = Math.Clamp((double)log.IntervalHours, 0, 24);
         CustomIntervalMinutes = Math.Clamp((double)log.IntervalMinutes, 0, 59);
@@ -116,7 +147,11 @@ public partial class FoodLogFormViewModel : ObservableObject, IQueryAttributable
     {
         if (IsBusy) return;
 
-        var cleanName = (FoodName ?? string.Empty).Trim();
+        var cleanName = IsCustomFood
+            ? (CustomFoodName ?? string.Empty).Trim()
+            : (SelectedFoodOption ?? string.Empty).Trim();
+
+        FoodName = cleanName;
         var cleanNotes = (Notes ?? string.Empty).Trim();
 
         if (cleanName.Length < 2 || cleanName.Length > 80)
