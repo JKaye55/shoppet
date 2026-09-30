@@ -18,11 +18,17 @@
                 <VerticalStackLayout Spacing="12">
                     <HorizontalStackLayout>
                         <Label Text="Marketplace" FontFamily="NunitoExtraBold" FontSize="26" TextColor="{StaticResource BodyText}" VerticalOptions="Center" HorizontalOptions="Fill"/>
-                        <Label Text="&#x2315;" FontSize="22" TextColor="{StaticResource BodyText}" VerticalOptions="Center" Margin="0,0,10,0">
-                            <Label.GestureRecognizers>
+                        <Path Data="{StaticResource IconSearch}"
+                              Fill="{StaticResource BodyText}"
+                              WidthRequest="22"
+                              HeightRequest="22"
+                              Aspect="Uniform"
+                              VerticalOptions="Center"
+                              Margin="0,0,10,0">
+                            <Path.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="OnSearchTapped"/>
-                            </Label.GestureRecognizers>
-                        </Label>
+                            </Path.GestureRecognizers>
+                        </Path>
                     </HorizontalStackLayout>
 
                     <!-- Filter Tabs -->
