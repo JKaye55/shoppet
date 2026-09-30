@@ -60,7 +60,6 @@ public class ContactsController : ControllerBase
     public async Task<IActionResult> CreateContact([FromBody] ContactRequest request)
     {
         if (!this.IsAuthenticatedUser(request.UserId)) return Forbid();
-        if (!this.IsAuthenticatedUser(request.UserId)) return Forbid();
         var validationError = ValidateRequest(request);
         if (validationError is not null) return BadRequest(validationError);
 
@@ -83,6 +82,7 @@ public class ContactsController : ControllerBase
     [HttpPut("{id:int}")]
     public async Task<IActionResult> UpdateContact(int id, [FromBody] ContactRequest request)
     {
+        if (!this.IsAuthenticatedUser(request.UserId)) return Forbid();
         var validationError = ValidateRequest(request);
         if (validationError is not null) return BadRequest(validationError);
 
