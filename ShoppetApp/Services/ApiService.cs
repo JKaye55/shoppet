@@ -165,7 +165,11 @@ public class ApiService
 
     public async Task<bool> DeletePetAsync(int petId)
     {
-        try { return (await _http.DeleteAsync($"pets/{petId}")).IsSuccessStatusCode; }
+        try
+        {
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            return (await _http.DeleteAsync($"pets/{petId}?userId={userId}")).IsSuccessStatusCode;
+        }
         catch { return false; }
     }
 
