@@ -174,7 +174,9 @@ public class ApiService
                 pet.Breed,
                 pet.AgeYears,
                 pet.Weight,
-                pet.PhotoUrl
+                pet.PhotoUrl,
+                pet.Diet,
+                pet.CardTheme
             };
 
             HttpResponseMessage res;
