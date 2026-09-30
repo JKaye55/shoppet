@@ -247,20 +247,34 @@ namespace ShoppetApp.Services
             {
                 if (ApiService != null)
                 {
-                    try {
+                    try
+                    {
                         var apiLogs = await ApiService.GetHealthLogsAsync(petId);
-                        if (apiLogs != null) {
+                        if (apiLogs != null)
+                        {
                             await Database.CreateTableAsync<HealthLog>();
                             await Database.ExecuteAsync("DELETE FROM HealthLog WHERE Id > 0 AND PetId = ?", petId);
-                            foreach(var log in apiLogs) {
+                            foreach (var log in apiLogs)
                                 await Database.InsertAsync(log);
-                            }
+
+                            // Return the server objects so non-persisted computed fields
+                            // such as Status are preserved for the dashboard UI.
+                            return apiLogs;
                         }
-                    } catch { }
+                    }
+                    catch { }
                 }
 
                 await Database.CreateTableAsync<HealthLog>();
-                return await Database.Table<HealthLog>().Where(h => h.PetId == petId).ToListAsync();
+                var local = await Database.Table<HealthLog>().Where(h => h.PetId == petId).ToListAsync();
+                foreach (var log in local)
+                {
+                    if (log.Completed) log.Status = "Completed";
+                    else if (DateTime.TryParse(log.DueDate, out var due))
+                        log.Status = due <= DateTime.Now.AddDays(7) ? "Action Required" : "Pending";
+                    else log.Status = "Pending";
+                }
+                return local;
             }
             catch { return new List<HealthLog>(); }
         }
