@@ -150,8 +150,35 @@
                                    Margin="0,0,0,8" />
 
                             <Grid ColumnDefinitions="*,Auto" Padding="0,12">
-                                <Label Text="Post Settings (Edit/Delete Posts)" FontFamily="Nunito" VerticalOptions="Center" />
-                                <Label Text="&#x276F;" FontSize="14" Grid.Column="1" VerticalOptions="Center" />
+                                <Label Text="Notifications" FontFamily="Nunito" VerticalOptions="Center" />
+                                <Label Text="›" FontSize="18" Grid.Column="1" VerticalOptions="Center" TextColor="{StaticResource Primary}" />
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding OpenNotificationsCommand}" />
+                                </Grid.GestureRecognizers>
+                            </Grid>
+                            <BoxView HeightRequest="1" Color="{StaticResource Secondary20}" />
+
+                            <Grid ColumnDefinitions="*,Auto" Padding="0,12">
+                                <Label Text="Orders / Purchases" FontFamily="Nunito" VerticalOptions="Center" />
+                                <Label Text="›" FontSize="18" Grid.Column="1" VerticalOptions="Center" TextColor="{StaticResource Primary}" />
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding OpenOrdersCommand}" />
+                                </Grid.GestureRecognizers>
+                            </Grid>
+                            <BoxView HeightRequest="1" Color="{StaticResource Secondary20}" />
+
+                            <Grid ColumnDefinitions="*,Auto" Padding="0,12">
+                                <Label Text="Premium" FontFamily="Nunito" VerticalOptions="Center" />
+                                <Label Text="›" FontSize="18" Grid.Column="1" VerticalOptions="Center" TextColor="{StaticResource Primary}" />
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding OpenPremiumCommand}" />
+                                </Grid.GestureRecognizers>
+                            </Grid>
+                            <BoxView HeightRequest="1" Color="{StaticResource Secondary20}" />
+
+                            <Grid ColumnDefinitions="*,Auto" Padding="0,12">
+                                <Label Text="Post Settings" FontFamily="Nunito" VerticalOptions="Center" />
+                                <Label Text="›" FontSize="18" Grid.Column="1" VerticalOptions="Center" TextColor="{StaticResource Primary}" />
                                 <Grid.GestureRecognizers>
                                     <TapGestureRecognizer Command="{Binding OpenPostSettingsCommand}" />
                                 </Grid.GestureRecognizers>
