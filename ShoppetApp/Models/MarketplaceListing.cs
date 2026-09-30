@@ -17,6 +17,14 @@ namespace ShoppetApp.Models
         public string? ImageUrls { get; set; }
         public bool IsAvailable { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public string FacebookUrl { get; set; } = string.Empty;
+        public string InstagramUrl { get; set; } = string.Empty;
+        public string OtherSocialUrl { get; set; } = string.Empty;
+
+        public bool HasSocialLinks =>
+            !string.IsNullOrWhiteSpace(FacebookUrl) ||
+            !string.IsNullOrWhiteSpace(InstagramUrl) ||
+            !string.IsNullOrWhiteSpace(OtherSocialUrl);
 
         [ObservableProperty]
         private bool _isOptionsVisible;
