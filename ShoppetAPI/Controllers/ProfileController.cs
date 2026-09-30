@@ -23,6 +23,8 @@ public class ProfileController : ControllerBase
         public string InstagramUrl{get;set;}=string.Empty;
         public string OtherSocialUrl{get;set;}=string.Empty;
         public bool ShowSocialLinksOnMarketplace{get;set;}=true;
+        public string MobileNumber{get;set;}=string.Empty;
+        public bool ShowMobileOnPublicPetId{get;set;}
     }
 
     [HttpGet("{userId:int}")]
@@ -35,7 +37,8 @@ public class ProfileController : ControllerBase
             await using var cmd=new SqlCommand("""
                 SELECT FullName,ISNULL(ProfilePicture,''),
                        ISNULL(FacebookUrl,''),ISNULL(InstagramUrl,''),
-                       ISNULL(OtherSocialUrl,''),ISNULL(ShowSocialLinksOnMarketplace,1)
+                       ISNULL(OtherSocialUrl,''),ISNULL(ShowSocialLinksOnMarketplace,1),
+                       ISNULL(MobileNumber,''),ISNULL(ShowMobileOnPublicPetId,0)
                 FROM UserAccounts WHERE Id=@UserId;
                 """,conn);
             cmd.Parameters.AddWithValue("@UserId",userId);
@@ -47,7 +50,9 @@ public class ProfileController : ControllerBase
                 FacebookUrl=r.GetString(2),
                 InstagramUrl=r.GetString(3),
                 OtherSocialUrl=r.GetString(4),
-                ShowSocialLinksOnMarketplace=r.GetBoolean(5)
+                ShowSocialLinksOnMarketplace=r.GetBoolean(5),
+                MobileNumber=r.GetString(6),
+                ShowMobileOnPublicPetId=r.GetBoolean(7)
             });
         }
         catch(Exception ex){return StatusCode(500,$"Profile error: {ex.Message}");}
@@ -69,7 +74,9 @@ public class ProfileController : ControllerBase
                     FacebookUrl=@FacebookUrl,
                     InstagramUrl=@InstagramUrl,
                     OtherSocialUrl=@OtherSocialUrl,
-                    ShowSocialLinksOnMarketplace=@ShowSocialLinksOnMarketplace
+                    ShowSocialLinksOnMarketplace=@ShowSocialLinksOnMarketplace,
+                    MobileNumber=@MobileNumber,
+                    ShowMobileOnPublicPetId=@ShowMobileOnPublicPetId
                 WHERE Id=@UserId;
                 """,conn);
             cmd.Parameters.AddWithValue("@UserId",req.UserId);
@@ -79,6 +86,8 @@ public class ProfileController : ControllerBase
             cmd.Parameters.AddWithValue("@InstagramUrl",req.InstagramUrl??string.Empty);
             cmd.Parameters.AddWithValue("@OtherSocialUrl",req.OtherSocialUrl??string.Empty);
             cmd.Parameters.AddWithValue("@ShowSocialLinksOnMarketplace",req.ShowSocialLinksOnMarketplace);
+            cmd.Parameters.AddWithValue("@MobileNumber",req.MobileNumber??string.Empty);
+            cmd.Parameters.AddWithValue("@ShowMobileOnPublicPetId",req.ShowMobileOnPublicPetId);
             return await cmd.ExecuteNonQueryAsync()==0?NotFound():Ok(new{success=true});
         }
         catch(Exception ex){return StatusCode(500,$"Profile update error: {ex.Message}");}
