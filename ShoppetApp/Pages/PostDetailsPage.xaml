@@ -13,11 +13,13 @@
         <!-- Header -->
         <Border Grid.Row="0" BackgroundColor="{StaticResource AppBackground}" StrokeThickness="0" Padding="15,10">
             <HorizontalStackLayout Spacing="10">
-                <Label Text="&#x25C0; Back" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" FontSize="16" VerticalOptions="Center">
-                    <Label.GestureRecognizers>
+                <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                    <HorizontalStackLayout.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding GoBackCommand}" />
-                    </Label.GestureRecognizers>
-                </Label>
+                    </HorizontalStackLayout.GestureRecognizers>
+                    <Path Data="{StaticResource IconBack}" Fill="{StaticResource Primary}" WidthRequest="18" HeightRequest="18" Aspect="Uniform" />
+                    <Label Text="Back" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" FontSize="16" VerticalOptions="Center" />
+                </HorizontalStackLayout>
             </HorizontalStackLayout>
         </Border>
 
@@ -69,7 +71,12 @@
                                         Command="{Binding ToggleLikeCommand}"
                                         TextColor="{Binding Post.IsLikedByMe, Converter={StaticResource BoolToLikeColorConverter}}"
                                         BackgroundColor="Transparent" FontFamily="NunitoBold" />
-                                <Button Grid.Column="1" Text="&#x1F5E8; Comment" TextColor="{StaticResource Primary}" BackgroundColor="Transparent" FontFamily="NunitoBold" />
+                                <Border Grid.Column="1" BackgroundColor="Transparent" StrokeThickness="0" Padding="8">
+                                    <HorizontalStackLayout Spacing="7" HorizontalOptions="Center">
+                                        <Path Data="{StaticResource IconMessage}" Fill="{StaticResource Primary}" WidthRequest="18" HeightRequest="18" Aspect="Uniform" />
+                                        <Label Text="Comment" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" VerticalOptions="Center" />
+                                    </HorizontalStackLayout>
+                                </Border>
                             </Grid>
                             <BoxView HeightRequest="1" Color="{StaticResource Secondary30}" Margin="0,5" />
                         </VerticalStackLayout>
@@ -116,13 +123,16 @@
                                             
                                             <!-- Right side: Like Heart and Count -->
                                             <HorizontalStackLayout Grid.Column="2" Spacing="4" VerticalOptions="Center" HorizontalOptions="End">
-                                                <Label Text="{Binding IsLikedByMe, Converter={StaticResource BoolToHeartIconConverter}}"
-                                                       TextColor="{Binding IsLikedByMe, Converter={StaticResource BoolToLikeColorConverter}}"
-                                                       FontSize="16" FontFamily="NunitoBold" VerticalOptions="Center">
-                                                    <Label.GestureRecognizers>
+                                                <Path Data="{StaticResource IconHeart}"
+                                                      Fill="{Binding IsLikedByMe, Converter={StaticResource BoolToLikeColorConverter}}"
+                                                      WidthRequest="17"
+                                                      HeightRequest="17"
+                                                      Aspect="Uniform"
+                                                      VerticalOptions="Center">
+                                                    <Path.GestureRecognizers>
                                                         <TapGestureRecognizer Tapped="OnCommentLikeTapped" />
-                                                    </Label.GestureRecognizers>
-                                                </Label>
+                                                    </Path.GestureRecognizers>
+                                                </Path>
                                                 <Label Text="{Binding LikeCount}" TextColor="#888888" FontSize="12" VerticalOptions="Center"
                                                        IsVisible="{Binding LikeCount, Converter={StaticResource CountToBoolConverter}}" />
                                             </HorizontalStackLayout>
@@ -167,11 +177,17 @@
                                 </FormattedString>
                             </Label.FormattedText>
                         </Label>
-                        <Label Grid.Column="1" Text="&#x2715;" TextColor="{StaticResource Primary}" FontSize="14" FontFamily="NunitoBold" VerticalOptions="Center">
-                            <Label.GestureRecognizers>
+                        <Path Grid.Column="1"
+                              Data="{StaticResource IconClose}"
+                              Fill="{StaticResource Primary}"
+                              WidthRequest="16"
+                              HeightRequest="16"
+                              Aspect="Uniform"
+                              VerticalOptions="Center">
+                            <Path.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding CancelReplyCommand}" />
-                            </Label.GestureRecognizers>
-                        </Label>
+                            </Path.GestureRecognizers>
+                        </Path>
                     </Grid>
                 </Border>
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
@@ -182,9 +198,15 @@
                                 TextColor="{StaticResource BodyText}"
                                 PlaceholderColor="#888888"
                                 BackgroundColor="Transparent"
-                                AutoSize="TextChanges" />
+                                AutoSize="TextChanges"
+                                MaxLength="1000" />
                     </Border>
-                    <Button Grid.Column="1" Text="Send" Command="{Binding SendCommentCommand}" BackgroundColor="Transparent" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" />
+                    <Button Grid.Column="1" Text="Send"
+                            Command="{Binding SendCommentCommand}"
+                            IsEnabled="{Binding IsSendingComment, Converter={StaticResource InverseBoolConverter}}"
+                            BackgroundColor="Transparent"
+                            TextColor="{StaticResource Primary}"
+                            FontFamily="NunitoBold" />
                 </Grid>
             </VerticalStackLayout>
         </Border>
