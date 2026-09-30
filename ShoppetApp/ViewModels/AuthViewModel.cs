@@ -124,8 +124,9 @@ public partial class AuthViewModel : ObservableObject
                 if (result.Success && result.Data is not null)
                 {
                     _apiService.SetToken(result.Data.Token);
+                    await SecureStorage.Default.SetAsync("ShoppetApiToken", result.Data.Token);
 
-                    // ⭐ Save user session locally for API mapping + Community RBAC
+                    // Save user session locally for API mapping + Community RBAC
                     Preferences.Set("LoggedInUserId", result.Data.UserId);
                     Preferences.Set("LoggedInUserName", result.Data.FullName);
                     Preferences.Set("LoggedInUserEmail", result.Data.Email);
@@ -174,8 +175,9 @@ public partial class AuthViewModel : ObservableObject
                 if (result.Success && result.Data is not null)
                 {
                     _apiService.SetToken(result.Data.Token);
+                    await SecureStorage.Default.SetAsync("ShoppetApiToken", result.Data.Token);
 
-                    // ⭐ Save user session locally for API mapping + Community RBAC
+                    // Save user session locally for API mapping + Community RBAC
                     Preferences.Set("LoggedInUserId", result.Data.UserId);
                     Preferences.Set("LoggedInUserName", result.Data.FullName);
                     Preferences.Set("LoggedInUserEmail", result.Data.Email);
