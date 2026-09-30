@@ -198,7 +198,7 @@ namespace ShoppetApp.ViewModels
         private async Task DeleteCommentAsync(CommunityComment comment)
         {
             if (comment == null) return;
-            bool confirm = await Shell.Current.DisplayAlert("Delete Comment", "Are you sure you want to delete this comment?", "Yes", "No");
+            bool confirm = await Shell.Current.DisplayAlertAsync("Delete Comment", "Are you sure you want to delete this comment?", "Yes", "No");
             if (!confirm) return;
 
             var success = await _api.DeleteCommentAsync(comment.Id);
@@ -209,7 +209,7 @@ namespace ShoppetApp.ViewModels
             }
             else
             {
-                await Shell.Current.DisplayAlert("Error", "Failed to delete comment.", "OK");
+                await Shell.Current.DisplayAlertAsync("Error", "Failed to delete comment.", "OK");
             }
         }
 
@@ -237,7 +237,7 @@ namespace ShoppetApp.ViewModels
             int userId = _db.CurrentUser?.Id ?? Preferences.Get("LoggedInUserId", 0);
             if (userId <= 0)
             {
-                await Shell.Current.DisplayAlert("Sign in required", "Please sign in to like posts.", "OK");
+                await Shell.Current.DisplayAlertAsync("Sign in required", "Please sign in to like posts.", "OK");
                 return;
             }
 
@@ -261,7 +261,7 @@ namespace ShoppetApp.ViewModels
             int userId = _db.CurrentUser?.Id ?? Preferences.Get("LoggedInUserId", 0);
             if (userId <= 0)
             {
-                await Shell.Current.DisplayAlert("Sign in required", "Please sign in to like comments.", "OK");
+                await Shell.Current.DisplayAlertAsync("Sign in required", "Please sign in to like comments.", "OK");
                 return;
             }
 
@@ -304,7 +304,7 @@ namespace ShoppetApp.ViewModels
             int userId = _db.CurrentUser?.Id ?? Preferences.Get("LoggedInUserId", 0);
             if (userId <= 0)
             {
-                await Shell.Current.DisplayAlert("Sign in required", "Please sign in to comment.", "OK");
+                await Shell.Current.DisplayAlertAsync("Sign in required", "Please sign in to comment.", "OK");
                 return;
             }
 
