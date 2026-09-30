@@ -17,6 +17,7 @@ public partial class ContactFormViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty] public partial string Address { get; set; } = string.Empty;
     [ObservableProperty] public partial string Phone { get; set; } = string.Empty;
     [ObservableProperty] public partial bool IsEmergency { get; set; } = true;
+    [ObservableProperty] public partial bool IsBusy { get; set; }
 
     public IList<string> RoleOptions { get; } = ["Veterinarian", "Clinic", "Family", "Pet Sitter", "Groomer", "Other"];
 
@@ -36,7 +37,7 @@ public partial class ContactFormViewModel : ObservableObject, IQueryAttributable
 
     public async Task LoadAsync()
     {
-        if (ContactId == 0) return;
+        if (ContactId == 0 || IsBusy) return;
         var contact = await _db.GetContactAsync(ContactId);
         if (contact is null) return;
 
@@ -56,15 +57,34 @@ public partial class ContactFormViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     private async Task SaveAsync()
     {
-        if (string.IsNullOrWhiteSpace(Name))
+        if (IsBusy) return;
+
+        var cleanName = (Name ?? string.Empty).Trim();
+        var cleanAddress = (Address ?? string.Empty).Trim();
+        var cleanPhone = (Phone ?? string.Empty).Trim();
+
+        if (cleanName.Length < 2 || cleanName.Length > 80)
         {
-            await Shell.Current.DisplayAlertAsync("Validation", "Name or clinic is required.", "OK");
+            await Shell.Current.DisplayAlertAsync("Check name", "Contact name must be between 2 and 80 characters.", "OK");
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(Phone))
+        if (!RoleOptions.Contains(Role))
         {
-            await Shell.Current.DisplayAlertAsync("Validation", "Phone number is required.", "OK");
+            await Shell.Current.DisplayAlertAsync("Choose role", "Select a contact role from the list.", "OK");
+            return;
+        }
+
+        var phoneDigits = new string(cleanPhone.Where(char.IsDigit).ToArray());
+        if (phoneDigits.Length < 7 || phoneDigits.Length > 15)
+        {
+            await Shell.Current.DisplayAlertAsync("Check phone number", "Enter a valid phone number with 7 to 15 digits.", "OK");
+            return;
+        }
+
+        if (cleanAddress.Length > 200)
+        {
+            await Shell.Current.DisplayAlertAsync("Address too long", "Address can contain up to 200 characters.", "OK");
             return;
         }
 
@@ -72,22 +92,30 @@ public partial class ContactFormViewModel : ObservableObject, IQueryAttributable
         {
             Id = ContactId,
             UserId = Preferences.Get("LoggedInUserId", 0),
-            Name = Name.Trim(),
+            Name = cleanName,
             Role = Role,
-            Address = Address?.Trim() ?? string.Empty,
-            Phone = Phone?.Trim() ?? string.Empty,
+            Address = cleanAddress,
+            Phone = cleanPhone,
             IsEmergency = IsEmergency
         };
 
-        int result = await _db.SaveContactAsync(contact);
-        if (result > 0)
+        IsBusy = true;
+        try
         {
-            WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
-            await Shell.Current.GoToAsync("..");
+            int result = await _db.SaveContactAsync(contact);
+            if (result > 0)
+            {
+                WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
+                await Shell.Current.GoToAsync("..");
+            }
+            else
+            {
+                await Shell.Current.DisplayAlertAsync("Could not save", "The contact could not be saved. Please try again.", "OK");
+            }
         }
-        else
+        finally
         {
-            await Shell.Current.DisplayAlertAsync("Error", "Failed to save contact to server.", "OK");
+            IsBusy = false;
         }
     }
 
