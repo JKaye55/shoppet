@@ -21,6 +21,18 @@ namespace ShoppetApp.ViewModels
         private string _profilePictureBase64 = string.Empty;
 
         [ObservableProperty]
+        private string _facebookUrl = string.Empty;
+
+        [ObservableProperty]
+        private string _instagramUrl = string.Empty;
+
+        [ObservableProperty]
+        private string _otherSocialUrl = string.Empty;
+
+        [ObservableProperty]
+        private bool _showSocialLinksOnMarketplace = true;
+
+        [ObservableProperty]
         private ImageSource? _profileImageSource;
 
         [ObservableProperty]
@@ -39,6 +51,10 @@ namespace ShoppetApp.ViewModels
                 {
                     FullName = profile.FullName;
                     ProfilePictureBase64 = profile.ProfilePicture;
+                    FacebookUrl = profile.FacebookUrl;
+                    InstagramUrl = profile.InstagramUrl;
+                    OtherSocialUrl = profile.OtherSocialUrl;
+                    ShowSocialLinksOnMarketplace = profile.ShowSocialLinksOnMarketplace;
                     
                     if (!string.IsNullOrEmpty(ProfilePictureBase64))
                     {
@@ -93,7 +109,14 @@ namespace ShoppetApp.ViewModels
             try
             {
                 var userId = Preferences.Get("LoggedInUserId", 0);
-                var success = await _api.UpdateProfileAsync(userId, FullName, ProfilePictureBase64);
+                var success = await _api.UpdateProfileAsync(
+                    userId,
+                    FullName,
+                    ProfilePictureBase64,
+                    FacebookUrl.Trim(),
+                    InstagramUrl.Trim(),
+                    OtherSocialUrl.Trim(),
+                    ShowSocialLinksOnMarketplace);
                 if (success)
                 {
                     Preferences.Set("LoggedInUserName", FullName);
