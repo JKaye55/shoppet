@@ -1,3 +1,4 @@
+using ShoppetAPI.Security;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 
@@ -20,6 +21,7 @@ public class MarketplacePurchasesController : ControllerBase
     public async Task<IActionResult> GetCart(int userId)
     {
         if (userId <= 0) return BadRequest("A valid user ID is required.");
+        if (!this.IsAuthenticatedUser(userId)) return Forbid();
 
         try
         {
@@ -38,6 +40,7 @@ public class MarketplacePurchasesController : ControllerBase
     {
         if (request.UserId <= 0 || request.ListingId <= 0)
             return BadRequest("A valid user and listing are required.");
+        if (!this.IsAuthenticatedUser(request.UserId)) return Forbid();
 
         try
         {
@@ -94,6 +97,7 @@ public class MarketplacePurchasesController : ControllerBase
     {
         if (userId <= 0 || listingId <= 0)
             return BadRequest("A valid user and listing are required.");
+        if (!this.IsAuthenticatedUser(userId)) return Forbid();
 
         try
         {
@@ -120,6 +124,7 @@ public class MarketplacePurchasesController : ControllerBase
     {
         if (request.UserId <= 0)
             return BadRequest("A valid user ID is required.");
+        if (!this.IsAuthenticatedUser(request.UserId)) return Forbid();
 
         string[] allowedMethods = ["GCash Simulation", "Cash on Meetup"];
         if (!allowedMethods.Contains(request.PaymentMethod))
@@ -271,6 +276,7 @@ public class MarketplacePurchasesController : ControllerBase
     private async Task<IActionResult> LoadOrdersAsync(int userId, bool isSeller)
     {
         if (userId <= 0) return BadRequest("A valid user ID is required.");
+        if (!this.IsAuthenticatedUser(userId)) return Forbid();
 
         try
         {
