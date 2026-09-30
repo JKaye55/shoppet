@@ -281,8 +281,6 @@ public partial class ShopPage : ContentPage
                 var cacheDir = Path.Combine(FileSystem.CacheDirectory, "marketplace-photos");
                 Directory.CreateDirectory(cacheDir);
                 var cachedPath = Path.Combine(cacheDir, $"{Guid.NewGuid():N}{extension}");
-
-                stream.Position = 0;
                 await using (var output = File.Create(cachedPath))
                 {
                     await stream.CopyToAsync(output);
