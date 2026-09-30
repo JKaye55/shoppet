@@ -144,6 +144,18 @@ namespace ShoppetApp.ViewModels
             await Shell.Current.GoToAsync("PostSettingsPage");
 
         [RelayCommand]
+        private async Task OpenNotificationsAsync() =>
+            await Shell.Current.GoToAsync("notifications");
+
+        [RelayCommand]
+        private async Task OpenOrdersAsync() =>
+            await Shell.Current.GoToAsync("orders");
+
+        [RelayCommand]
+        private async Task OpenPremiumAsync() =>
+            await Shell.Current.GoToAsync("premium");
+
+        [RelayCommand]
         private void ViewContact(ShoppetApp.Models.Contact contact)
         {
             ShowContactRequested?.Invoke(this, contact);
