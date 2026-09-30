@@ -304,7 +304,11 @@ public class ApiService
 
     public async Task<bool> DeleteContactAsync(int contactId)
     {
-        try { return (await _http.DeleteAsync($"contacts/{contactId}")).IsSuccessStatusCode; }
+        try
+        {
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            return (await _http.DeleteAsync($"contacts/{contactId}?userId={userId}")).IsSuccessStatusCode;
+        }
         catch { return false; }
     }
 
@@ -576,14 +580,39 @@ public class ApiService
             if (!string.IsNullOrEmpty(category)) q.Add($"category={Uri.EscapeDataString(category)}");
             if (!string.IsNullOrEmpty(search)) q.Add($"search={Uri.EscapeDataString(search)}");
             var qs = q.Count > 0 ? "?" + string.Join("&", q) : "";
-            return await _http.GetFromJsonAsync<List<MarketplaceListing>>($"marketplace{qs}") ?? new List<MarketplaceListing>();
+            var listings = await _http.GetFromJsonAsync<List<MarketplaceListing>>($"marketplace{qs}") ?? new List<MarketplaceListing>();
+#if ANDROID
+            foreach (var listing in listings)
+            {
+                if (!string.IsNullOrWhiteSpace(listing.ImageUrls))
+                    listing.ImageUrls = listing.ImageUrls.Replace(
+                        "http://localhost:5020",
+                        "http://10.0.2.2:5020",
+                        StringComparison.OrdinalIgnoreCase);
+            }
+#endif
+            return listings;
         }
         catch (Exception ex) { Console.WriteLine($"Marketplace fetch error: {ex.Message}"); return new List<MarketplaceListing>(); }
     }
 
     public async Task<List<MarketplaceListing>> GetMyListingsAsync(int userId)
     {
-        try { return await _http.GetFromJsonAsync<List<MarketplaceListing>>($"marketplace/my/{userId}") ?? new List<MarketplaceListing>(); }
+        try
+        {
+            var listings = await _http.GetFromJsonAsync<List<MarketplaceListing>>($"marketplace/my/{userId}") ?? new List<MarketplaceListing>();
+#if ANDROID
+            foreach (var listing in listings)
+            {
+                if (!string.IsNullOrWhiteSpace(listing.ImageUrls))
+                    listing.ImageUrls = listing.ImageUrls.Replace(
+                        "http://localhost:5020",
+                        "http://10.0.2.2:5020",
+                        StringComparison.OrdinalIgnoreCase);
+            }
+#endif
+            return listings;
+        }
         catch (Exception ex) { Console.WriteLine($"My listings fetch error: {ex.Message}"); return new List<MarketplaceListing>(); }
     }
 
@@ -638,7 +667,8 @@ public class ApiService
             try
             {
                 var userId = Preferences.Get("LoggedInUserId", 0);
-                var result = await _http.GetFromJsonAsync<IEnumerable<ChatMessage>>($"messages/chat/{userId}/{contactId}");
+                var result = await _http.GetFromJsonAsync<IEnumerable<ChatMessage>>($"messages/chat/{userId}/{contactId}")
+                             ?? Enumerable.Empty<ChatMessage>();
                 foreach(var msg in result)
                 {
                     msg.IsMine = msg.SenderId == userId;
