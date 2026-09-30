@@ -276,16 +276,51 @@ public partial class ShopPage : ContentPage
         CheckoutButton.IsEnabled = false;
         try
         {
-            var order = await _api.CheckoutAsync();
+            var paymentMethod = await DisplayActionSheetAsync(
+                "Mock Payment Method",
+                "Cancel",
+                null,
+                "GCash Mock",
+                "Cash on Meetup");
+
+            if (string.IsNullOrWhiteSpace(paymentMethod) || paymentMethod == "Cancel")
+                return;
+
+            if (paymentMethod == "GCash Mock")
+            {
+                var simulation = await DisplayActionSheetAsync(
+                    "GCash Payment Simulation",
+                    "Cancel",
+                    null,
+                    "Simulate Success",
+                    "Simulate Failure");
+
+                if (simulation == "Simulate Failure")
+                {
+                    await DisplayAlertAsync(
+                        "Payment Failed",
+                        "Simulation only: no order or successful transaction was created, and the listing remains available.",
+                        "OK");
+                    return;
+                }
+
+                if (simulation != "Simulate Success")
+                    return;
+            }
+
+            var order = await _api.CheckoutAsync(paymentMethod);
             if (order == null)
             {
-                await DisplayAlertAsync("Checkout", "Mock checkout could not be completed.", "OK");
+                await DisplayAlertAsync(
+                    "Checkout",
+                    "The simulated checkout could not be completed. Your cart was not cleared.",
+                    "OK");
                 return;
             }
 
             await DisplayAlertAsync(
                 "Order Confirmed",
-                $"Mock payment completed. Order #{order.Id} • ₱{order.TotalAmount:N0}",
+                $"Simulation only — no real money was charged.\n\nOrder #{order.Id}\nMethod: {paymentMethod}\nTotal: ₱{order.TotalAmount:N0}",
                 "OK");
 
             CartModal.IsVisible = false;
