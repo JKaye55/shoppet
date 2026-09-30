@@ -21,6 +21,8 @@ public static class CommunitySchemaInitializer
             BEGIN
                 IF COL_LENGTH('dbo.UserAccounts', 'ProfilePicture') IS NULL
                     ALTER TABLE dbo.UserAccounts ADD ProfilePicture NVARCHAR(MAX) NULL;
+                IF COL_LENGTH('dbo.UserAccounts', 'FacebookUrl') IS NULL
+                    ALTER TABLE dbo.UserAccounts ADD FacebookUrl NVARCHAR(300) NULL;
                 IF COL_LENGTH('dbo.UserAccounts', 'InstagramUrl') IS NULL
                     ALTER TABLE dbo.UserAccounts ADD InstagramUrl NVARCHAR(300) NULL;
                 IF COL_LENGTH('dbo.UserAccounts', 'OtherSocialUrl') IS NULL
