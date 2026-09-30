@@ -74,7 +74,6 @@
                         
                 <!-- Prominent photo attachment area: keeps the original Shoppet styling, but makes photo sharing obvious. -->
                 <Border BackgroundColor="{StaticResource CardBg}"
-                        IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}"
                         Stroke="{StaticResource Secondary}"
                         StrokeThickness="1"
                         StrokeDashArray="6,4"
