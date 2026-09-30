@@ -204,7 +204,9 @@ namespace ShoppetApp.ViewModels
             var success = await _api.DeleteCommentAsync(comment.Id);
             if (success)
             {
-                Post.CommentsCount--;
+                if (Post is not null && Post.CommentsCount > 0)
+                    Post.CommentsCount--;
+
                 await LoadCommentsAsync();
             }
             else
