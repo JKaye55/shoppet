@@ -389,7 +389,7 @@
                             <CollectionView.ItemTemplate>
                                 <DataTemplate>
                                     <Grid WidthRequest="80" HeightRequest="80" Margin="4,4">
-                                        <Image Source="{Binding .}" Aspect="AspectFill" HeightRequest="80" WidthRequest="80"/>
+                                        <Image Source="{Binding ., Converter={StaticResource UrlToImageSourceConverter}}" Aspect="AspectFill" HeightRequest="80" WidthRequest="80"/>
                                         <Border BackgroundColor="#CC000000" StrokeThickness="0" WidthRequest="22" HeightRequest="22" StrokeShape="RoundRectangle 11" HorizontalOptions="End" VerticalOptions="Start" Margin="0,2,2,0">
                                             <Grid>
                                                 <Grid.GestureRecognizers>
