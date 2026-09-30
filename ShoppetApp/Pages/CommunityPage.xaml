@@ -219,7 +219,7 @@
                                         <Button Text="{Binding IsLikedByMe, Converter={StaticResource BoolToLikeTextConverter}}"
                                                 Command="{Binding Source={RelativeSource AncestorType={x:Type vm:CommunityViewModel}}, Path=ToggleLikeCommand}"
                                                 CommandParameter="{Binding .}"
-                                                BackgroundColor="{Binding IsLikedByMe, Converter={StaticResource BoolToOpacityConverter}}"
+                                                BackgroundColor="{StaticResource Secondary10}"
                                                 TextColor="{Binding IsLikedByMe, Converter={StaticResource BoolToLikeColorConverter}}"
                                                 FontFamily="NunitoBold"
                                                 FontSize="13"
