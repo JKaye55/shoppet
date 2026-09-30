@@ -85,7 +85,7 @@ public class CartController : ControllerBase
                 """,conn);
             cmd.Parameters.AddWithValue("@CartId",cartId);
             cmd.Parameters.AddWithValue("@ListingId",request.ProductId);
-            cmd.Parameters.AddWithValue("@Quantity",Math.Max(1,request.Quantity));
+            cmd.Parameters.AddWithValue("@Quantity",1);
             await cmd.ExecuteNonQueryAsync();
             return await GetCart(request.UserId);
         }
@@ -228,6 +228,28 @@ public class CartController : ControllerBase
                 item.Parameters.AddWithValue("@Quantity",e.Qty);
                 item.Parameters.AddWithValue("@UnitPrice",e.Price);
                 await item.ExecuteNonQueryAsync();
+            }
+
+            foreach(var e in entries)
+            {
+                await using var sold=new SqlCommand(
+                    "UPDATE MarketplaceListings SET Status='Sold' WHERE Id=@ListingId",conn,tx);
+                sold.Parameters.AddWithValue("@ListingId",e.ListingId);
+                await sold.ExecuteNonQueryAsync();
+            }
+
+            var reference = "MOCK-" + Guid.NewGuid().ToString("N")[..10].ToUpperInvariant();
+            await using(var payment=new SqlCommand("""
+                INSERT INTO Transactions
+                    (UserId,Type,Amount,Reference,PaidAt,PaymentMethod,Status)
+                VALUES
+                    (@UserId,'MarketplacePurchase',@Amount,@Reference,SYSDATETIME(),'Mock Payment','Completed');
+                """,conn,tx))
+            {
+                payment.Parameters.AddWithValue("@UserId",userId);
+                payment.Parameters.AddWithValue("@Amount",total);
+                payment.Parameters.AddWithValue("@Reference",reference);
+                await payment.ExecuteNonQueryAsync();
             }
 
             await using(var clear=new SqlCommand("DELETE FROM MarketplaceCartItems WHERE CartId=@CartId",conn,tx))
