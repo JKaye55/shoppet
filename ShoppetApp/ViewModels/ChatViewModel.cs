@@ -161,13 +161,29 @@ public partial class ChatViewModel : ObservableObject, IDisposable, Microsoft.Ma
     [RelayCommand]
     private async Task SendMessageAsync()
     {
-        if (string.IsNullOrWhiteSpace(NewMessageText) || ContactId == 0 || IsBusy) return;
+        if (ContactId == 0 || IsBusy) return;
+
+        var cleanText=(NewMessageText??string.Empty).Trim();
+        if(cleanText.Length==0) return;
+
+        if(cleanText.Length>1000)
+        {
+            await Shell.Current.DisplayAlertAsync("Message too long","Messages can contain up to 1,000 characters.","OK");
+            return;
+        }
+
+        var senderId=Preferences.Get("LoggedInUserId",0);
+        if(senderId<=0)
+        {
+            await Shell.Current.DisplayAlertAsync("Sign in required","Please sign in again before sending a message.","OK");
+            return;
+        }
 
         var tempMsg = new ChatMessage
         {
-            SenderId = Preferences.Get("LoggedInUserId", 0),
+            SenderId = senderId,
             ReceiverId = ContactId,
-            Text = NewMessageText,
+            Text = cleanText,
             Timestamp = DateTime.UtcNow,
             IsMine = true,
             SenderName = Preferences.Get("LoggedInUserName", "Me")
@@ -176,7 +192,7 @@ public partial class ChatViewModel : ObservableObject, IDisposable, Microsoft.Ma
         // Insert at index 0 because the list is visually inverted
         Messages.Insert(0, tempMsg); 
 
-        var textToSend = NewMessageText;
+        var textToSend = cleanText;
         NewMessageText = string.Empty;
 
         IsBusy = true;
