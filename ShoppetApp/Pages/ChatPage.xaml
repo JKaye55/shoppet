@@ -21,11 +21,13 @@
         <!-- Header -->
         <Border Grid.Row="0" BackgroundColor="{StaticResource CardBg}" StrokeThickness="0" Padding="15,10">
             <HorizontalStackLayout Spacing="10">
-                <Label Text="&#x25C0; Back" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" FontSize="16" VerticalOptions="Center">
-                    <Label.GestureRecognizers>
+                <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                    <HorizontalStackLayout.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding GoBackCommand}" />
-                    </Label.GestureRecognizers>
-                </Label>
+                    </HorizontalStackLayout.GestureRecognizers>
+                    <Path Data="{StaticResource IconBack}" Fill="{StaticResource Primary}" WidthRequest="18" HeightRequest="18" Aspect="Uniform" />
+                    <Label Text="Back" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" FontSize="16" VerticalOptions="Center" />
+                </HorizontalStackLayout>
                 <Label Text="{Binding ContactName}" TextColor="{StaticResource SecondaryFg}" FontFamily="NunitoExtraBold" FontSize="18" VerticalOptions="Center" Margin="10,0,0,0"/>
             </HorizontalStackLayout>
         </Border>
@@ -82,7 +84,7 @@
         <Border Grid.Row="2" BackgroundColor="{StaticResource CardBg}" StrokeThickness="0" Padding="10">
             <Grid ColumnDefinitions="*, Auto">
                 <Border Grid.Column="0" BackgroundColor="{StaticResource AppBackground}" StrokeThickness="0" StrokeShape="RoundRectangle 20" Padding="15,0">
-                    <Entry Text="{Binding NewMessageText}" Placeholder="Type a message..." TextColor="{StaticResource BodyText}" PlaceholderColor="#888" BackgroundColor="Transparent" ReturnCommand="{Binding SendMessageCommand}" />
+                    <Entry Text="{Binding NewMessageText}" MaxLength="1000" Placeholder="Type a message..." TextColor="{StaticResource BodyText}" PlaceholderColor="#888" BackgroundColor="Transparent" ReturnCommand="{Binding SendMessageCommand}" />
                 </Border>
                 <Button Grid.Column="1" Text="Send" BackgroundColor="{StaticResource Primary}" TextColor="White" FontFamily="NunitoBold" CornerRadius="20" Margin="10,0,0,0" Padding="15,0" Command="{Binding SendMessageCommand}" />
             </Grid>
