@@ -32,6 +32,7 @@ namespace ShoppetApp.Models
         public string FirstImage => ImageList.Any() ? ImageList[0] : string.Empty;
 
         public string PriceDisplay => $"₱{Price:N0}";
+        public string AvailabilityDisplay => IsAvailable ? "Available" : "Sold / Unavailable";
         public string Initials => string.IsNullOrWhiteSpace(SellerName) ? "U" : SellerName.Substring(0, 1).ToUpper();
         public bool HasFacebook => !string.IsNullOrWhiteSpace(FacebookUrl);
         public bool HasInstagram => !string.IsNullOrWhiteSpace(InstagramUrl);
