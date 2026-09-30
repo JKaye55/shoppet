@@ -1,230 +1,184 @@
 using Microsoft.AspNetCore.Mvc;
-using MySql.Data.MySqlClient;
-using System.Data;
+using Microsoft.Data.SqlClient;
 
-namespace ShoppetAPI.Controllers
+namespace ShoppetAPI.Controllers;
+
+[Route("api/pets/{petId}/[controller]")]
+[ApiController]
+public class FoodLogsController : ControllerBase
 {
-    [Route("api/pets/{petId}/[controller]")]
-    [ApiController]
-    public class FoodLogsController : ControllerBase
+    private readonly IConfiguration _configuration;
+    public FoodLogsController(IConfiguration configuration) => _configuration = configuration;
+
+    private string ConnectionString =>
+        _configuration.GetConnectionString("SharedSqlServer")
+        ?? throw new InvalidOperationException("SharedSqlServer connection string not found.");
+
+    [HttpGet]
+    public async Task<IActionResult> GetFoodLogs(int petId)
     {
-        private readonly IConfiguration _configuration;
-
-        public FoodLogsController(IConfiguration configuration)
+        try
         {
-            _configuration = configuration;
-        }
+            var logs = new List<object>();
+            await using var connection = new SqlConnection(ConnectionString);
+            await connection.OpenAsync();
 
-        [HttpGet]
-        public async Task<IActionResult> GetFoodLogs(int petId)
-        {
-            try
+            await using var cmd = new SqlCommand(@"
+                SELECT Id, PetId, FoodName, AmountGrams, IntervalHours, IntervalMinutes,
+                       StartTimestamp, LastFedTimestamp, FedDate, Notes, CreatedAt,
+                       IsCompleted, CompletedAt
+                FROM FoodLogs
+                WHERE PetId=@PetId
+                ORDER BY CreatedAt DESC;", connection);
+            cmd.Parameters.AddWithValue("@PetId", petId);
+
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
             {
-                string connString = _configuration.GetConnectionString("DefaultConnection")!;
-                var logs = new List<object>();
-
-                using (var connection = new MySqlConnection(connString))
+                logs.Add(new
                 {
-                    await connection.OpenAsync();
-                    var query = "SELECT Id, PetId, FoodName, AmountGrams, IntervalHours, IntervalMinutes, StartTimestamp, LastFedTimestamp, FedDate, Notes, CreatedAt, IsCompleted, CompletedAt FROM foodlogs WHERE PetId = @PetId";
-
-                    using (var cmd = new MySqlCommand(query, connection))
-                    {
-                        cmd.Parameters.AddWithValue("@PetId", petId);
-                        using (var reader = await cmd.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                logs.Add(new
-                                {
-                                    Id = reader.GetInt32("Id"),
-                                    PetId = reader.GetInt32("PetId"),
-                                    FoodName = reader.GetString("FoodName"),
-                                    AmountGrams = reader.GetDouble("AmountGrams"),
-                                    IntervalHours = reader.GetInt32("IntervalHours"),
-                                    IntervalMinutes = reader.GetInt32("IntervalMinutes"),
-                                    StartTimestamp = reader.IsDBNull(reader.GetOrdinal("StartTimestamp")) ? "" : reader.GetString("StartTimestamp"),
-                                    LastFedTimestamp = reader.IsDBNull(reader.GetOrdinal("LastFedTimestamp")) ? "" : reader.GetString("LastFedTimestamp"),
-                                    FedDate = reader.IsDBNull(reader.GetOrdinal("FedDate")) ? "" : reader.GetString("FedDate"),
-                                    Notes = reader.IsDBNull(reader.GetOrdinal("Notes")) ? "" : reader.GetString("Notes"),
-                                    CreatedAt = reader.GetDateTime("CreatedAt"),
-                                    IsCompleted = reader.IsDBNull(reader.GetOrdinal("IsCompleted")) ? false : reader.GetBoolean("IsCompleted"),
-                                    CompletedAt = reader.IsDBNull(reader.GetOrdinal("CompletedAt")) ? (DateTime?)null : reader.GetDateTime("CompletedAt")
-                                });
-                            }
-                        }
-                    }
-                }
-
-                return Ok(logs);
+                    Id = reader.GetInt32(0),
+                    PetId = reader.GetInt32(1),
+                    FoodName = reader.GetString(2),
+                    AmountGrams = reader.GetDouble(3),
+                    IntervalHours = reader.GetInt32(4),
+                    IntervalMinutes = reader.GetInt32(5),
+                    StartTimestamp = reader.IsDBNull(6) ? "" : reader.GetString(6),
+                    LastFedTimestamp = reader.IsDBNull(7) ? "" : reader.GetString(7),
+                    FedDate = reader.IsDBNull(8) ? "" : reader.GetString(8),
+                    Notes = reader.IsDBNull(9) ? "" : reader.GetString(9),
+                    CreatedAt = reader.GetDateTime(10),
+                    IsCompleted = reader.GetBoolean(11),
+                    CompletedAt = reader.IsDBNull(12) ? (DateTime?)null : reader.GetDateTime(12)
+                });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Error fetching food logs: {ex.Message}");
-            }
+
+            return Ok(logs);
         }
-
-        [HttpPost]
-        public async Task<IActionResult> CreateFoodLog(int petId, [FromBody] FoodLogRequest request)
-        {
-            try
-            {
-                if (petId <= 0)
-                    return BadRequest("A valid pet ID is required.");
-
-                string connString = _configuration.GetConnectionString("DefaultConnection")!;
-                long newId = 0;
-
-                using (var connection = new MySqlConnection(connString))
-                {
-                    await connection.OpenAsync();
-                    var query = @"INSERT INTO foodlogs
-                                  (PetId, FoodName, AmountGrams, IntervalHours, IntervalMinutes,
-                                   StartTimestamp, LastFedTimestamp, FedDate, Notes, CreatedAt, IsCompleted)
-                                  VALUES
-                                  (@PetId, @FoodName, @AmountGrams, @IntervalHours, @IntervalMinutes,
-                                   @StartTimestamp, @LastFedTimestamp, @FedDate, @Notes, NOW(), 0)";
-
-                    using (var cmd = new MySqlCommand(query, connection))
-                    {
-                        cmd.Parameters.AddWithValue("@PetId", petId);
-                        cmd.Parameters.AddWithValue("@FoodName", request.FoodName ?? "");
-                        cmd.Parameters.AddWithValue("@AmountGrams", request.AmountGrams);
-                        cmd.Parameters.AddWithValue("@IntervalHours", request.IntervalHours);
-                        cmd.Parameters.AddWithValue("@IntervalMinutes", request.IntervalMinutes);
-                        cmd.Parameters.AddWithValue("@StartTimestamp", request.StartTimestamp ?? "");
-                        cmd.Parameters.AddWithValue("@LastFedTimestamp", request.LastFedTimestamp ?? "");
-                        cmd.Parameters.AddWithValue("@FedDate", request.FedDate ?? "");
-                        cmd.Parameters.AddWithValue("@Notes", request.Notes ?? "");
-
-                        await cmd.ExecuteNonQueryAsync();
-                        newId = cmd.LastInsertedId;
-                    }
-                }
-
-                return Ok(new { Id = (int)newId });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Error saving food log: {ex.Message}");
-            }
-        }
-
-                [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateFoodLog(int petId, int id, [FromBody] FoodLogRequest request)
-        {
-            try
-            {
-                string connString = _configuration.GetConnectionString("DefaultConnection")!;
-                using (var connection = new MySqlConnection(connString))
-                {
-                    await connection.OpenAsync();
-                    var query = @"UPDATE foodlogs 
-                                  SET FoodName=@FoodName, AmountGrams=@AmountGrams, 
-                                      IntervalHours=@IntervalHours, IntervalMinutes=@IntervalMinutes,
-                                      StartTimestamp=@StartTimestamp,
-                                      LastFedTimestamp=@LastFedTimestamp,
-                                      FedDate=@FedDate,
-                                      Notes=@Notes
-                                  WHERE Id = @Id AND PetId = @PetId";
-
-                    using (var cmd = new MySqlCommand(query, connection))
-                    {
-                        cmd.Parameters.AddWithValue("@Id", id);
-                        cmd.Parameters.AddWithValue("@PetId", petId);
-                        cmd.Parameters.AddWithValue("@FoodName", request.FoodName ?? "");
-                        cmd.Parameters.AddWithValue("@AmountGrams", request.AmountGrams);
-                        cmd.Parameters.AddWithValue("@IntervalHours", request.IntervalHours);
-                        cmd.Parameters.AddWithValue("@IntervalMinutes", request.IntervalMinutes);
-                        cmd.Parameters.AddWithValue("@StartTimestamp", request.StartTimestamp ?? "");
-                        cmd.Parameters.AddWithValue("@LastFedTimestamp", request.LastFedTimestamp ?? "");
-                        cmd.Parameters.AddWithValue("@FedDate", request.FedDate ?? "");
-                        cmd.Parameters.AddWithValue("@Notes", request.Notes ?? "");
-
-                        int rows = await cmd.ExecuteNonQueryAsync();
-                        if (rows == 0)
-                            return NotFound("Food log not found.");
-                    }
-                }
-                return Ok();
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Error updating food log: {ex.Message}");
-            }
-        }
-
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteFoodLog(int petId, int id)
-        {
-            try
-            {
-                string connString = _configuration.GetConnectionString("DefaultConnection")!;
-                using (var connection = new MySqlConnection(connString))
-                {
-                    await connection.OpenAsync();
-                    var query = "DELETE FROM foodlogs WHERE Id = @Id AND PetId = @PetId";
-
-                    using (var cmd = new MySqlCommand(query, connection))
-                    {
-                        cmd.Parameters.AddWithValue("@Id", id);
-                        cmd.Parameters.AddWithValue("@PetId", petId);
-                        int rows = await cmd.ExecuteNonQueryAsync();
-                        if (rows == 0)
-                            return NotFound("Food log not found.");
-                    }
-                }
-
-                return Ok();
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Error deleting food log: {ex.Message}");
-            }
-        }
-
-        [HttpPut("{id}/complete")]
-        public async Task<IActionResult> CompleteFoodLog(int petId, int id)
-        {
-            try
-            {
-                string connString = _configuration.GetConnectionString("DefaultConnection")!;
-                string lastFed = DateTime.Now.ToString("o"); // ISO 8601
-                using (var connection = new MySqlConnection(connString))
-                {
-                    await connection.OpenAsync();
-                    var query = "UPDATE foodlogs SET IsCompleted = 1, CompletedAt = NOW(), LastFedTimestamp = @LastFed WHERE Id = @Id AND PetId = @PetId";
-
-                    using (var cmd = new MySqlCommand(query, connection))
-                    {
-                        cmd.Parameters.AddWithValue("@Id", id);
-                        cmd.Parameters.AddWithValue("@PetId", petId);
-                        cmd.Parameters.AddWithValue("@LastFed", lastFed);
-                        int rows = await cmd.ExecuteNonQueryAsync();
-                        if (rows == 0)
-                            return NotFound("Food log not found.");
-                    }
-                }
-
-                return Ok(new { LastFedTimestamp = lastFed });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Error completing food log: {ex.Message}");
-            }
-        }
+        catch (Exception ex) { return StatusCode(500, $"Error fetching food logs: {ex.Message}"); }
     }
 
-    public class FoodLogRequest
+    [HttpPost]
+    public async Task<IActionResult> CreateFoodLog(int petId, [FromBody] FoodLogRequest request)
     {
-        public string FoodName { get; set; } = string.Empty;
-        public double AmountGrams { get; set; }
-        public int IntervalHours { get; set; }
-        public int IntervalMinutes { get; set; }
-        public string StartTimestamp { get; set; } = string.Empty;
-        public string LastFedTimestamp { get; set; } = string.Empty;
-        public string FedDate { get; set; } = string.Empty;
-        public string Notes { get; set; } = string.Empty;
+        if (petId <= 0) return BadRequest("A valid pet ID is required.");
+
+        try
+        {
+            await using var connection = new SqlConnection(ConnectionString);
+            await connection.OpenAsync();
+
+            await using var cmd = new SqlCommand(@"
+                INSERT INTO FoodLogs
+                    (PetId, FoodName, PortionSize, Notes, FedAt, CreatedAt,
+                     AmountGrams, IntervalHours, IntervalMinutes, StartTimestamp,
+                     LastFedTimestamp, FedDate, IsCompleted, CompletedAt)
+                OUTPUT INSERTED.Id
+                VALUES
+                    (@PetId, @FoodName, @PortionSize, @Notes, SYSDATETIME(), SYSDATETIME(),
+                     @AmountGrams, @IntervalHours, @IntervalMinutes, @StartTimestamp,
+                     @LastFedTimestamp, @FedDate, 0, NULL);", connection);
+
+            AddParameters(cmd, petId, request);
+            int id = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+            return Ok(new { Id = id });
+        }
+        catch (Exception ex) { return StatusCode(500, $"Error saving food log: {ex.Message}"); }
+    }
+
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> UpdateFoodLog(int petId, int id, [FromBody] FoodLogRequest request)
+    {
+        try
+        {
+            await using var connection = new SqlConnection(ConnectionString);
+            await connection.OpenAsync();
+
+            await using var cmd = new SqlCommand(@"
+                UPDATE FoodLogs
+                SET FoodName=@FoodName,
+                    PortionSize=@PortionSize,
+                    AmountGrams=@AmountGrams,
+                    IntervalHours=@IntervalHours,
+                    IntervalMinutes=@IntervalMinutes,
+                    StartTimestamp=@StartTimestamp,
+                    LastFedTimestamp=@LastFedTimestamp,
+                    FedDate=@FedDate,
+                    Notes=@Notes
+                WHERE Id=@Id AND PetId=@PetId;", connection);
+
+            cmd.Parameters.AddWithValue("@Id", id);
+            AddParameters(cmd, petId, request);
+            return await cmd.ExecuteNonQueryAsync() > 0 ? Ok() : NotFound("Food log not found.");
+        }
+        catch (Exception ex) { return StatusCode(500, $"Error updating food log: {ex.Message}"); }
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> DeleteFoodLog(int petId, int id)
+    {
+        try
+        {
+            await using var connection = new SqlConnection(ConnectionString);
+            await connection.OpenAsync();
+            await using var cmd = new SqlCommand("DELETE FROM FoodLogs WHERE Id=@Id AND PetId=@PetId", connection);
+            cmd.Parameters.AddWithValue("@Id", id);
+            cmd.Parameters.AddWithValue("@PetId", petId);
+            return await cmd.ExecuteNonQueryAsync() > 0 ? Ok() : NotFound("Food log not found.");
+        }
+        catch (Exception ex) { return StatusCode(500, $"Error deleting food log: {ex.Message}"); }
+    }
+
+    [HttpPut("{id:int}/complete")]
+    public async Task<IActionResult> CompleteFoodLog(int petId, int id)
+    {
+        try
+        {
+            string lastFed = DateTimeOffset.Now.ToString("o");
+            await using var connection = new SqlConnection(ConnectionString);
+            await connection.OpenAsync();
+
+            await using var cmd = new SqlCommand(@"
+                UPDATE FoodLogs
+                SET IsCompleted=1,
+                    CompletedAt=SYSDATETIME(),
+                    LastFedTimestamp=@LastFed,
+                    FedAt=SYSDATETIME()
+                WHERE Id=@Id AND PetId=@PetId;", connection);
+            cmd.Parameters.AddWithValue("@Id", id);
+            cmd.Parameters.AddWithValue("@PetId", petId);
+            cmd.Parameters.AddWithValue("@LastFed", lastFed);
+
+            return await cmd.ExecuteNonQueryAsync() > 0
+                ? Ok(new { LastFedTimestamp = lastFed })
+                : NotFound("Food log not found.");
+        }
+        catch (Exception ex) { return StatusCode(500, $"Error completing food log: {ex.Message}"); }
+    }
+
+    private static void AddParameters(SqlCommand cmd, int petId, FoodLogRequest request)
+    {
+        cmd.Parameters.AddWithValue("@PetId", petId);
+        cmd.Parameters.AddWithValue("@FoodName", request.FoodName ?? "");
+        cmd.Parameters.AddWithValue("@PortionSize", request.AmountGrams > 0 ? $"{request.AmountGrams:0.##} g" : "");
+        cmd.Parameters.AddWithValue("@AmountGrams", request.AmountGrams);
+        cmd.Parameters.AddWithValue("@IntervalHours", request.IntervalHours);
+        cmd.Parameters.AddWithValue("@IntervalMinutes", request.IntervalMinutes);
+        cmd.Parameters.AddWithValue("@StartTimestamp", request.StartTimestamp ?? "");
+        cmd.Parameters.AddWithValue("@LastFedTimestamp", request.LastFedTimestamp ?? "");
+        cmd.Parameters.AddWithValue("@FedDate", request.FedDate ?? "");
+        cmd.Parameters.AddWithValue("@Notes", request.Notes ?? "");
     }
 }
 
+public class FoodLogRequest
+{
+    public string FoodName { get; set; } = "";
+    public double AmountGrams { get; set; }
+    public int IntervalHours { get; set; }
+    public int IntervalMinutes { get; set; }
+    public string StartTimestamp { get; set; } = "";
+    public string LastFedTimestamp { get; set; } = "";
+    public string FedDate { get; set; } = "";
+    public string Notes { get; set; } = "";
+}
