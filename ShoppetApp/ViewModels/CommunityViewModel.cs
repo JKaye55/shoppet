@@ -24,10 +24,17 @@ namespace ShoppetApp.ViewModels
         [ObservableProperty]
         public partial string UserProfilePicture { get; set; } = string.Empty;
 
+        [ObservableProperty]
+        public partial string LoadError { get; set; } = string.Empty;
+
+        public bool HasPosts => Posts.Count > 0;
+        public bool HasLoadError => !string.IsNullOrWhiteSpace(LoadError);
+
         public CommunityViewModel(ApiService api, DatabaseService db)
         {
             _api = api;
             _db = db;
+            Posts.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasPosts));
         }
 
         [RelayCommand]
@@ -40,15 +47,31 @@ namespace ShoppetApp.ViewModels
             }
 
             IsRefreshing = true;
+            LoadError = string.Empty;
+            OnPropertyChanged(nameof(HasLoadError));
+
             try
             {
-                int userId = _db.CurrentUser?.Id ?? 0;
+                int userId = _db.CurrentUser?.Id ?? Preferences.Get("LoggedInUserId", 0);
+                if (userId <= 0)
+                {
+                    LoadError = "Please sign in again to load the Community.";
+                    OnPropertyChanged(nameof(HasLoadError));
+                    return;
+                }
+
                 var data = await _api.GetCommunityPostsAsync(userId);
                 Posts.Clear();
                 foreach (var p in data)
-                {
                     Posts.Add(p);
-                }
+
+                OnPropertyChanged(nameof(HasPosts));
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Community load error: {ex.Message}");
+                LoadError = "Community could not be loaded. Pull down to try again.";
+                OnPropertyChanged(nameof(HasLoadError));
             }
             finally
             {
