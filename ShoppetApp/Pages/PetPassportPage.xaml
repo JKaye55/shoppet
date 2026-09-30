@@ -306,7 +306,7 @@
 
                                             <!-- Done button -->
                                             <Button Grid.Column="1"
-                                                    Text="✓ Done"
+                                                    Text="Done"
                                                     FontFamily="NunitoBold"
                                                     FontSize="12"
                                                     HeightRequest="36"
