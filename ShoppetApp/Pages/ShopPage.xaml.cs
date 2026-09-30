@@ -1,13 +1,14 @@
 ﻿using ShoppetApp.Models;
 using ShoppetApp.Services;
 using System.Collections.ObjectModel;
+using System.Globalization;
 
 namespace ShoppetApp.Pages;
 
 public partial class ShopPage : ContentPage
 {
     private readonly ApiService _api;
-    private MarketplaceListing _currentListing;
+    private MarketplaceListing? _currentListing;
     private readonly DatabaseService _db;
     private ObservableCollection<MarketplaceListing> MyListings { get; } = new();
     private List<MarketplaceListing> _allExploreListings = new();
@@ -38,7 +39,7 @@ public partial class ShopPage : ContentPage
 
     // --- Tab switching ---
 
-    private async void OnExploreTabClicked(object sender, EventArgs e)
+    private async void OnExploreTabClicked(object? sender, EventArgs e)
     {
         _isSellTab = false;
         BtnExplore.BackgroundColor = (Color)Application.Current!.Resources["Primary"];
@@ -50,7 +51,7 @@ public partial class ShopPage : ContentPage
         await LoadExploreListingsAsync();
     }
 
-    private async void OnSellTabClicked(object sender, EventArgs e)
+    private async void OnSellTabClicked(object? sender, EventArgs e)
     {
         _isSellTab = true;
         BtnSell.BackgroundColor = (Color)Application.Current!.Resources["Primary"];
@@ -62,12 +63,12 @@ public partial class ShopPage : ContentPage
         await LoadMyListingsAsync();
     }
 
-    private void OnSearchTapped(object sender, TappedEventArgs e)
+    private void OnSearchTapped(object? sender, TappedEventArgs e)
     {
         ToggleSearchPanel();
     }
 
-    private void OnSearchButtonClicked(object sender, EventArgs e) => ToggleSearchPanel();
+    private void OnSearchButtonClicked(object? sender, EventArgs e) => ToggleSearchPanel();
 
     private void ToggleSearchPanel()
     {
@@ -80,7 +81,7 @@ public partial class ShopPage : ContentPage
         }
     }
 
-    private async void OnSearchTextChanged(object sender, TextChangedEventArgs e)
+    private async void OnSearchTextChanged(object? sender, TextChangedEventArgs e)
     {
         _currentSearch = e.NewTextValue?.Trim() ?? "";
         if (!_isSellTab)
@@ -137,13 +138,13 @@ public partial class ShopPage : ContentPage
 
     // --- Category Filter ---
 
-    private async void OnCategoryAllClicked(object sender, EventArgs e)
+    private async void OnCategoryAllClicked(object? sender, EventArgs e)
     {
         _currentCategory = "";
         await LoadExploreListingsAsync();
     }
 
-    private async void OnCategoryClicked(object sender, EventArgs e)
+    private async void OnCategoryClicked(object? sender, EventArgs e)
     {
         if (sender is Button btn && btn.CommandParameter is string cat)
         {
@@ -154,7 +155,7 @@ public partial class ShopPage : ContentPage
 
     // --- Explore Listing Detail Modal ---
 
-    private void OnListingTapped(object sender, SelectionChangedEventArgs e)
+    private void OnListingTapped(object? sender, SelectionChangedEventArgs e)
     {
         if (e.CurrentSelection.FirstOrDefault() is MarketplaceListing listing)
         {
@@ -175,7 +176,7 @@ public partial class ShopPage : ContentPage
         DetailLocation.Text = string.IsNullOrEmpty(listing.Location) ? "Location not specified" : listing.Location;
         DetailTime.Text = listing.TimeAgo;
         DetailSellerInitial.Text = listing.Initials;
-        DetailSellerImage.Source = (ImageSource?)new ShoppetApp.Converters.Base64ToImageSourceConverter().Convert(listing.SellerProfilePic, typeof(ImageSource), null, null);
+        DetailSellerImage.Source = (ImageSource?)new ShoppetApp.Converters.Base64ToImageSourceConverter().Convert(listing.SellerProfilePic, typeof(ImageSource), null, CultureInfo.InvariantCulture);
 
         if (listing.HasImages)
         {
@@ -206,7 +207,7 @@ public partial class ShopPage : ContentPage
         DetailModal.IsVisible = true;
     }
 
-    private async void OnAddToCartClicked(object sender, EventArgs e)
+    private async void OnAddToCartClicked(object? sender, EventArgs e)
     {
         if (_currentListing == null) return;
 
@@ -229,13 +230,13 @@ public partial class ShopPage : ContentPage
         CartModal.IsVisible = true;
     }
 
-    private async void OnCartClicked(object sender, EventArgs e)
+    private async void OnCartClicked(object? sender, EventArgs e)
     {
         await RefreshCartAsync();
         CartModal.IsVisible = true;
     }
 
-    private void OnCloseCartClicked(object sender, EventArgs e) => CartModal.IsVisible = false;
+    private void OnCloseCartClicked(object? sender, EventArgs e) => CartModal.IsVisible = false;
 
     private async Task RefreshCartAsync()
     {
@@ -261,7 +262,7 @@ public partial class ShopPage : ContentPage
         return Task.CompletedTask;
     }
 
-    private async void OnRemoveCartItemClicked(object sender, EventArgs e)
+    private async void OnRemoveCartItemClicked(object? sender, EventArgs e)
     {
         if (sender is not Button button || button.CommandParameter is not CartItemDto item)
             return;
@@ -271,7 +272,7 @@ public partial class ShopPage : ContentPage
             await RefreshCartAsync();
     }
 
-    private async void OnCheckoutClicked(object sender, EventArgs e)
+    private async void OnCheckoutClicked(object? sender, EventArgs e)
     {
         CheckoutButton.IsEnabled = false;
         try
@@ -332,9 +333,9 @@ public partial class ShopPage : ContentPage
         }
     }
 
-    private void OnDismissModal(object sender, EventArgs e) => DetailModal.IsVisible = false;
+    private void OnDismissModal(object? sender, EventArgs e) => DetailModal.IsVisible = false;
 
-    private async void OnSellerSocialClicked(object sender, EventArgs e)
+    private async void OnSellerSocialClicked(object? sender, EventArgs e)
     {
         if (_currentListing == null || sender is not Button button)
             return;
@@ -360,7 +361,7 @@ public partial class ShopPage : ContentPage
         await Launcher.Default.OpenAsync(uri);
     }
 
-    private async void OnMessageSellerClicked(object sender, EventArgs e)
+    private async void OnMessageSellerClicked(object? sender, EventArgs e)
     {
         if (_currentListing != null)
         {
@@ -372,11 +373,11 @@ public partial class ShopPage : ContentPage
             });
         }
     }
-    private void OnModalBodyTapped(object sender, TappedEventArgs e) { }
+    private void OnModalBodyTapped(object? sender, TappedEventArgs e) { }
 
     // --- Sell Tab: Photo Picker ---
 
-    private async void OnPickPhotoClicked(object sender, EventArgs e)
+    private async void OnPickPhotoClicked(object? sender, EventArgs e)
     {
         try
         {
@@ -405,7 +406,7 @@ public partial class ShopPage : ContentPage
         }
     }
 
-    private void OnRemovePickedPhoto(object sender, TappedEventArgs e)
+    private void OnRemovePickedPhoto(object? sender, TappedEventArgs e)
     {
         if (e.Parameter is string path)
         {
@@ -423,7 +424,7 @@ public partial class ShopPage : ContentPage
 
     // --- Sell Tab: Create/Edit/Delete ---
 
-    private void OnPostItemClicked(object sender, EventArgs e)
+    private void OnPostItemClicked(object? sender, EventArgs e)
     {
         _editingListing = null;
         PostModalTitle.Text = "Post a Pet Item";
@@ -431,7 +432,7 @@ public partial class ShopPage : ContentPage
         PostModal.IsVisible = true;
     }
 
-    private void OnEditListingClicked(object sender, EventArgs e)
+    private void OnEditListingClicked(object? sender, EventArgs e)
     {
         if (sender is Button btn && btn.CommandParameter is MarketplaceListing listing)
         {
@@ -452,7 +453,7 @@ public partial class ShopPage : ContentPage
         }
     }
 
-    private async void OnDeleteListingClicked(object sender, EventArgs e)
+    private async void OnDeleteListingClicked(object? sender, EventArgs e)
     {
         if (sender is Button btn && btn.CommandParameter is MarketplaceListing listing)
         {
@@ -475,13 +476,13 @@ public partial class ShopPage : ContentPage
         }
     }
 
-    private void OnCancelPostClicked(object sender, EventArgs e)
+    private void OnCancelPostClicked(object? sender, EventArgs e)
     {
         PostModal.IsVisible = false;
         ClearPostForm();
     }
 
-    private async void OnSaveListingClicked(object sender, EventArgs e)
+    private async void OnSaveListingClicked(object? sender, EventArgs e)
     {
         var userId = _db.CurrentUser?.Id ?? Preferences.Get("LoggedInUserId", 0);
         var userName = _db.CurrentUser?.FullName ?? Preferences.Get("LoggedInUserName", "User");
