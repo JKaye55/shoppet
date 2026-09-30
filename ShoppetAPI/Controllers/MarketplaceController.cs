@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using ShoppetAPI.Services;
 
 namespace ShoppetAPI.Controllers;
 
@@ -72,7 +73,10 @@ public class MarketplaceController : ControllerBase
                        m.Price,m.Category,ISNULL(m.ItemCondition,'Used'),
                        ISNULL(m.Location,''),ISNULL(m.ImageUrl,''),
                        CASE WHEN ISNULL(m.Status,'Available')='Sold' THEN CAST(0 AS bit) ELSE CAST(1 AS bit) END,
-                       m.CreatedAt
+                       m.CreatedAt,
+                       CASE WHEN ISNULL(u.ShowSocialLinksOnMarketplace,1)=1 THEN ISNULL(u.FacebookUrl,'') ELSE '' END,
+                       CASE WHEN ISNULL(u.ShowSocialLinksOnMarketplace,1)=1 THEN ISNULL(u.InstagramUrl,'') ELSE '' END,
+                       CASE WHEN ISNULL(u.ShowSocialLinksOnMarketplace,1)=1 THEN ISNULL(u.OtherSocialUrl,'') ELSE '' END
                 FROM MarketplaceListings m
                 LEFT JOIN UserAccounts u ON u.Id=m.SellerUserId
                 WHERE m.SellerUserId=@UserId
@@ -95,6 +99,10 @@ public class MarketplaceController : ControllerBase
         {
             await using var conn=new SqlConnection(ConnectionString);
             await conn.OpenAsync();
+
+            if(!await RbacService.IsPetOwnerAsync(conn,x.UserId))
+                return Forbid();
+
             await using var cmd=new SqlCommand("""
                 INSERT INTO MarketplaceListings
                 (SellerUserId,Title,Category,ItemCondition,Price,Description,Location,ImageUrl,Status,CreatedAt)
@@ -115,6 +123,10 @@ public class MarketplaceController : ControllerBase
         {
             await using var conn=new SqlConnection(ConnectionString);
             await conn.OpenAsync();
+
+            if(!await RbacService.IsPetOwnerAsync(conn,x.UserId))
+                return Forbid();
+
             await using var cmd=new SqlCommand("""
                 UPDATE MarketplaceListings
                 SET Title=@Title,Description=@Description,Price=@Price,Category=@Category,
@@ -142,8 +154,15 @@ public class MarketplaceController : ControllerBase
         {
             await using var conn=new SqlConnection(ConnectionString);
             await conn.OpenAsync();
-            await using var cmd=new SqlCommand(
-                "DELETE FROM MarketplaceListings WHERE Id=@Id AND SellerUserId=@UserId",conn);
+
+            var role = await RbacService.GetActiveRoleAsync(conn,userId);
+            if(role is null) return Unauthorized();
+
+            var sql = RbacService.IsAdmin(role)
+                ? "DELETE FROM MarketplaceListings WHERE Id=@Id"
+                : "DELETE FROM MarketplaceListings WHERE Id=@Id AND SellerUserId=@UserId";
+
+            await using var cmd=new SqlCommand(sql,conn);
             cmd.Parameters.AddWithValue("@Id",id);
             cmd.Parameters.AddWithValue("@UserId",userId);
             return await cmd.ExecuteNonQueryAsync()==0?NotFound():Ok(new{success=true});
