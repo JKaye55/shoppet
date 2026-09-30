@@ -111,7 +111,13 @@
                 <Label Text="Weight (kg)" FontFamily="NunitoSemiBold" FontSize="13" />
                 <Border Stroke="{StaticResource Secondary30}" StrokeThickness="1" Padding="12,0">
                     <Border.StrokeShape><RoundRectangle CornerRadius="20" /></Border.StrokeShape>
-                    <Entry Text="{Binding Weight}" Keyboard="Numeric" MaxLength="2" Placeholder="25" HeightRequest="52" />
+                    <Entry Text="{Binding Weight}" Keyboard="Numeric" Placeholder="25" HeightRequest="52" />
+                </Border>
+
+                <Label Text="Diet / Feeding Notes" FontFamily="NunitoSemiBold" FontSize="13" />
+                <Border Stroke="{StaticResource Secondary30}" StrokeThickness="1" Padding="12,0">
+                    <Border.StrokeShape><RoundRectangle CornerRadius="20" /></Border.StrokeShape>
+                    <Entry Text="{Binding Diet}" Placeholder="e.g. Dry food, twice daily" HeightRequest="52" />
                 </Border>
             </VerticalStackLayout>
 
