@@ -22,6 +22,9 @@ public partial class CommunityViewModel : ObservableObject
     public bool HasPosts => Posts.Count > 0;
     public bool IsEmpty => !IsLoading && !HasError && Posts.Count == 0;
 
+    partial void OnIsLoadingChanged(bool value) => OnPropertyChanged(nameof(IsEmpty));
+    partial void OnHasErrorChanged(bool value) => OnPropertyChanged(nameof(IsEmpty));
+
     public CommunityViewModel(ApiService api, DatabaseService db)
     {
         _api = api;
