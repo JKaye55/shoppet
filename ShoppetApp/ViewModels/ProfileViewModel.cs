@@ -16,7 +16,6 @@ namespace ShoppetApp.ViewModels
         [ObservableProperty] public partial bool IsBusy { get; set; }
                         [ObservableProperty] public partial string FullName { get; set; } = string.Empty;
         [ObservableProperty] public partial bool IsAdmin { get; set; }
-        [ObservableProperty] public partial bool IsBusinessOwner { get; set; }
         [ObservableProperty] public partial ImageSource? ProfileImageSource { get; set; }
         private readonly ShoppetApp.Services.ApiService _api;
 
@@ -53,7 +52,6 @@ namespace ShoppetApp.ViewModels
 
                     // RBAC Role check
                     IsAdmin = _db.CurrentUser.Role == "Admin";
-                    IsBusinessOwner = _db.CurrentUser.Role == "BusinessOwner";
                     
                     var profile = await _api.GetProfileAsync(Preferences.Get("LoggedInUserId", 0));
                     if (profile != null)
@@ -126,15 +124,7 @@ namespace ShoppetApp.ViewModels
 
         [RelayCommand]
         private async Task OpenAdminPanelAsync() =>
-            await Shell.Current.DisplayAlertAsync("Admin", "Opening Platform Admin Console...", "OK");
-
-        [RelayCommand]
-        private async Task OpenBusinessPanelAsync() =>
-            await Shell.Current.DisplayAlertAsync("Business Owner", "Opening Clinic Counter & Inventory Desk...", "OK");
-
-        [RelayCommand]
-        private async Task OpenLocalShopsAsync() =>
-            await Shell.Current.DisplayAlertAsync("Directory", "Opening Local Pet Shops & Clinics around Lipa...", "OK");
+            await Shell.Current.DisplayAlertAsync("Admin", "Admin tools cover users, content moderation, and transactions.", "OK");
 
         [RelayCommand]
         private async Task OpenPostSettingsAsync() =>
