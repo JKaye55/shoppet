@@ -26,7 +26,7 @@
                                 <RoundRectangle CornerRadius="40" />
                             </Border.StrokeShape>
                             <Grid>
-                                <Label Text="&#x1F464;" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center" />
+                                <Path Data="{StaticResource IconUser}" Fill="{StaticResource Secondary}" WidthRequest="26" HeightRequest="26" HorizontalOptions="Center" VerticalOptions="Center" Aspect="Uniform" />
                                 <Image Source="{Binding ProfileImageSource}" Aspect="AspectFill" />
                             </Grid>
                         </Border>
@@ -39,7 +39,11 @@
                                    VerticalOptions="Center" />
                             
                         </HorizontalStackLayout>
-                        <Button Text="Edit Profile" Command="{Binding EditProfileCommand}" BackgroundColor="Transparent" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" Padding="0" HeightRequest="30" HorizontalOptions="Center"/>
+                        <Label Text="Pet Owner account • Buy and sell with one profile"
+                               FontSize="12"
+                               TextColor="{StaticResource Secondary}"
+                               HorizontalOptions="Center" />
+                        <Button Text="Edit Profile &amp; Privacy" Command="{Binding EditProfileCommand}" BackgroundColor="Transparent" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" Padding="0" HeightRequest="30" HorizontalOptions="Center"/>
                     </VerticalStackLayout>
 
                     <!-- ==========================================
@@ -53,25 +57,13 @@
                             <RoundRectangle CornerRadius="20" />
                         </Border.StrokeShape>
                         <VerticalStackLayout Spacing="8">
-                            <Label Text="&#x2699; Admin Control Panel" FontFamily="NunitoBold" FontSize="14" TextColor="#1E2824"/>
-                            <Button Text="Manage Platform Users &amp; Clinics" 
+                            <HorizontalStackLayout Spacing="8">
+                                <Path Data="{StaticResource IconShield}" Fill="{StaticResource BodyText}" WidthRequest="18" HeightRequest="18" Aspect="Uniform" />
+                                <Label Text="Admin Control Panel" FontFamily="NunitoBold" FontSize="14" TextColor="#1E2824"/>
+                            </HorizontalStackLayout>
+                            <Button Text="Manage Users, Content &amp; Transactions" 
                                     BackgroundColor="#F7DD7D" TextColor="#16241F" FontAttributes="Bold" CornerRadius="12"
                                     Command="{Binding OpenAdminPanelCommand}" />
-                        </VerticalStackLayout>
-                    </Border>
-
-                    <Border BackgroundColor="{StaticResource CardBg}"
-                            StrokeThickness="0"
-                            Padding="16"
-                            IsVisible="{Binding IsBusinessOwner}">
-                        <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="20" />
-                        </Border.StrokeShape>
-                        <VerticalStackLayout Spacing="8">
-                            <Label Text="&#x1F3E5; Clinic / Vet Shop Management" FontFamily="NunitoBold" FontSize="14" TextColor="#1E2824"/>
-                            <Button Text="Manage Counter Orders &amp; Inventory" 
-                                    BackgroundColor="#5C766D" TextColor="White" FontAttributes="Bold" CornerRadius="12"
-                                    Command="{Binding OpenBusinessPanelCommand}" />
                         </VerticalStackLayout>
                     </Border>
 
@@ -137,7 +129,7 @@
                                                     <Border.GestureRecognizers>
                                                         <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ProfileViewModel}}, Path=EditContactCommand}" CommandParameter="{Binding .}" />
                                                     </Border.GestureRecognizers>
-                                                    <Label Text="&#x270F;" FontSize="14" HorizontalOptions="Center" VerticalOptions="Center" />
+                                                    <Path Data="{StaticResource IconEdit}" Fill="{StaticResource Primary}" WidthRequest="17" HeightRequest="17" HorizontalOptions="Center" VerticalOptions="Center" Aspect="Uniform" />
                                                 </Border>
                                                 <Border Grid.Column="2" WidthRequest="40" HeightRequest="40" BackgroundColor="#1AFF3B30" StrokeThickness="0">
                                                     <Border.StrokeShape>
@@ -146,7 +138,7 @@
                                                     <Border.GestureRecognizers>
                                                         <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ProfileViewModel}}, Path=DeleteContactCommand}" CommandParameter="{Binding .}" />
                                                     </Border.GestureRecognizers>
-                                                    <Label Text="&#x1F5D1;" FontSize="14" HorizontalOptions="Center" VerticalOptions="Center" />
+                                                    <Path Data="{StaticResource IconDelete}" Fill="{StaticResource StatusOverdue}" WidthRequest="17" HeightRequest="17" HorizontalOptions="Center" VerticalOptions="Center" Aspect="Uniform" />
                                                 </Border>
                                                 <Border Grid.Column="3" WidthRequest="40" HeightRequest="40" BackgroundColor="{Binding IsEmergency, Converter={StaticResource EmergencyPhoneBgConverter}}" StrokeThickness="0">
                                                     <Border.StrokeShape>
@@ -155,7 +147,7 @@
                                                     <Border.GestureRecognizers>
                                                         <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ProfileViewModel}}, Path=CallContactCommand}" CommandParameter="{Binding .}" />
                                                     </Border.GestureRecognizers>
-                                                    <Label Text="&#x1F4DE;" FontSize="14" HorizontalOptions="Center" VerticalOptions="Center" />
+                                                    <Path Data="{StaticResource IconPhone}" Fill="{StaticResource Primary}" WidthRequest="17" HeightRequest="17" HorizontalOptions="Center" VerticalOptions="Center" Aspect="Uniform" />
                                                 </Border>
                                             </Grid>
                                         </Border>
@@ -176,25 +168,17 @@
                             <Shadow Brush="{StaticResource Black60}" Offset="0,2" Radius="10" Opacity="0.12" />
                         </Border.Shadow>
                         <VerticalStackLayout Spacing="0">
-                            <Label Text="Settings &amp; Directory"
+                            <Label Text="Account &amp; Privacy"
                                    FontFamily="NunitoBold"
                                    FontSize="16"
                                    TextColor="{StaticResource SecondaryFg}"
                                    Margin="0,0,0,8" />
 
-                            <!-- Local Pet Shops Around Lipa Button Link -->
-                            <Grid ColumnDefinitions="*,Auto" Padding="0,12">
-                                <Label Text="&#x1F4CD; Local Lipa Pet Shops &amp; Clinics" FontFamily="Nunito" VerticalOptions="Center" />
-                                <Label Text="&#x276F;" FontSize="14" Grid.Column="1" VerticalOptions="Center" />
-                                <Grid.GestureRecognizers>
-                                    <TapGestureRecognizer Command="{Binding OpenLocalShopsCommand}" />
-                                </Grid.GestureRecognizers>
-                            </Grid>
-                            <BoxView HeightRequest="1" Color="{StaticResource Secondary20}" />
+
 
                             <Grid ColumnDefinitions="*,Auto" Padding="0,12">
-                                <Label Text="Post Settings (Edit/Delete Posts)" FontFamily="Nunito" VerticalOptions="Center" />
-                                <Label Text="&#x276F;" FontSize="14" Grid.Column="1" VerticalOptions="Center" />
+                                <Label Text="Manage Community Posts" FontFamily="Nunito" VerticalOptions="Center" />
+                                <Path Data="{StaticResource IconArrowRight}" Fill="{StaticResource Secondary}" WidthRequest="18" HeightRequest="18" Grid.Column="1" VerticalOptions="Center" Aspect="Uniform" />
                                 <Grid.GestureRecognizers>
                                     <TapGestureRecognizer Command="{Binding OpenPostSettingsCommand}" />
                                 </Grid.GestureRecognizers>
@@ -202,13 +186,16 @@
                             <BoxView HeightRequest="1" Color="{StaticResource Secondary20}" />
                             
                             <Grid ColumnDefinitions="*,Auto" Padding="0,12">
-                                <Label Text="Account Settings" FontFamily="Nunito" VerticalOptions="Center" />
-                                <Label Text="&#x276F;" FontSize="14" Grid.Column="1" VerticalOptions="Center" />
+                                <Label Text="Profile, Seller Links &amp; Privacy" FontFamily="Nunito" VerticalOptions="Center" />
+                                <Path Data="{StaticResource IconArrowRight}" Fill="{StaticResource Secondary}" WidthRequest="18" HeightRequest="18" Grid.Column="1" VerticalOptions="Center" Aspect="Uniform" />
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding EditProfileCommand}" />
+                                </Grid.GestureRecognizers>
                             </Grid>
                             <BoxView HeightRequest="1" Color="{StaticResource Secondary20}" />
 
                             <HorizontalStackLayout Spacing="8" Padding="0,12">
-                                <Label Text="&#x1F6AA;" FontSize="16" VerticalOptions="Center" />
+                                <Path Data="{StaticResource IconLogout}" Fill="{StaticResource StatusOverdue}" WidthRequest="18" HeightRequest="18" Aspect="Uniform" VerticalOptions="Center" />
                                 <Label Text="Log Out"
                                        FontFamily="Nunito"
                                        TextColor="{StaticResource StatusOverdue}"
@@ -253,7 +240,7 @@
                         </VerticalStackLayout>
                         <Border x:Name="ModalEmergencyBadge" BackgroundColor="#FFDE03" StrokeThickness="0" HorizontalOptions="End" VerticalOptions="Start" Margin="0,12,12,0" Padding="8,4">
                             <Border.StrokeShape><RoundRectangle CornerRadius="10" /></Border.StrokeShape>
-                            <Label Text="&#x26A0; Emergency" FontFamily="NunitoBold" FontSize="11" TextColor="#1A1A1A" />
+                            <Label Text="Emergency" FontFamily="NunitoBold" FontSize="11" TextColor="#1A1A1A" />
                         </Border>
                     </Grid>
                     <VerticalStackLayout Padding="24,20,24,24" Spacing="16">
@@ -265,7 +252,7 @@
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
                             <Border Grid.Column="0" WidthRequest="44" HeightRequest="44" BackgroundColor="{StaticResource Primary10}" StrokeThickness="0">
                                 <Border.StrokeShape><RoundRectangle CornerRadius="22" /></Border.StrokeShape>
-                                <Label Text="&#x1F4DE;" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center" />
+                                <Path Data="{StaticResource IconPhone}" Fill="{StaticResource Primary}" WidthRequest="20" HeightRequest="20" HorizontalOptions="Center" VerticalOptions="Center" Aspect="Uniform" />
                             </Border>
                             <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
                                 <Label Text="Phone" FontFamily="NunitoBold" FontSize="12" TextColor="{StaticResource Secondary}" />
@@ -275,7 +262,7 @@
                         <Grid x:Name="ModalAddressRow" ColumnDefinitions="Auto,*" ColumnSpacing="14">
                             <Border Grid.Column="0" WidthRequest="44" HeightRequest="44" BackgroundColor="{StaticResource Primary10}" StrokeThickness="0">
                                 <Border.StrokeShape><RoundRectangle CornerRadius="22" /></Border.StrokeShape>
-                                <Label Text="&#x1F4CD;" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center" />
+                                <Path Data="{StaticResource IconLocation}" Fill="{StaticResource Primary}" WidthRequest="20" HeightRequest="20" HorizontalOptions="Center" VerticalOptions="Center" Aspect="Uniform" />
                             </Border>
                             <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
                                 <Label Text="Address" FontFamily="NunitoBold" FontSize="12" TextColor="{StaticResource Secondary}" />
@@ -283,7 +270,7 @@
                             </VerticalStackLayout>
                         </Grid>
                         <Grid ColumnDefinitions="*,*" ColumnSpacing="12" Margin="0,4,0,0">
-                            <Button x:Name="ModalCallBtn" Grid.Column="0" Text="&#x1F4DE; Call" BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="16" FontFamily="NunitoBold" FontSize="15" HeightRequest="48" Clicked="OnModalCallClicked" />
+                            <Button x:Name="ModalCallBtn" Grid.Column="0" Text="Call" BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="16" FontFamily="NunitoBold" FontSize="15" HeightRequest="48" Clicked="OnModalCallClicked" />
                             <Button Grid.Column="1" Text="Close" BackgroundColor="{StaticResource CardBg}" TextColor="{StaticResource BodyText}" BorderColor="{StaticResource Secondary30}" BorderWidth="1" CornerRadius="16" FontFamily="NunitoBold" FontSize="15" HeightRequest="48" Clicked="OnDismissContactModal" />
                         </Grid>
                     </VerticalStackLayout>
