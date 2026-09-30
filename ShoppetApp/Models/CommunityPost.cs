@@ -28,9 +28,11 @@ namespace ShoppetApp.Models
         [ObservableProperty]
         private bool _isOptionsVisible;
 
-        public List<string> ImageList => string.IsNullOrEmpty(ImageUrls)
+        public List<string> ImageList => string.IsNullOrWhiteSpace(ImageUrls)
             ? new List<string>()
-            : ImageUrls.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+            : ImageUrls.Contains('|')
+                ? ImageUrls.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList()
+                : ImageUrls.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
         public bool HasImages => ImageList.Any();
         public int LikeCount { get; set; }
