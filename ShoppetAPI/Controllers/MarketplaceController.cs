@@ -35,7 +35,10 @@ public class MarketplaceController : ControllerBase
                        m.Price,m.Category,ISNULL(m.ItemCondition,'Used'),
                        ISNULL(m.Location,''),ISNULL(m.ImageUrl,''),
                        CASE WHEN ISNULL(m.Status,'Available')='Sold' THEN CAST(0 AS bit) ELSE CAST(1 AS bit) END,
-                       m.CreatedAt
+                       m.CreatedAt,
+                       CASE WHEN ISNULL(u.ShowSocialLinksOnMarketplace,1)=1 THEN ISNULL(u.FacebookUrl,'') ELSE '' END,
+                       CASE WHEN ISNULL(u.ShowSocialLinksOnMarketplace,1)=1 THEN ISNULL(u.InstagramUrl,'') ELSE '' END,
+                       CASE WHEN ISNULL(u.ShowSocialLinksOnMarketplace,1)=1 THEN ISNULL(u.OtherSocialUrl,'') ELSE '' END
                 FROM MarketplaceListings m
                 LEFT JOIN UserAccounts u ON u.Id=m.SellerUserId
                 WHERE {string.Join(" AND ",conditions)}
@@ -153,7 +156,8 @@ public class MarketplaceController : ControllerBase
         SellerProfilePic=r.GetString(3),Title=r.GetString(4),Description=r.GetString(5),
         Price=r.GetDecimal(6),Category=r.GetString(7),Condition=r.GetString(8),
         Location=r.GetString(9),ImageUrls=r.GetString(10),IsAvailable=r.GetBoolean(11),
-        CreatedAt=r.GetDateTime(12)
+        CreatedAt=r.GetDateTime(12),FacebookUrl=r.GetString(13),
+        InstagramUrl=r.GetString(14),OtherSocialUrl=r.GetString(15)
     };
 
     private static void Bind(SqlCommand cmd,CreateListingRequest x)
