@@ -94,7 +94,7 @@ public partial class CommunityViewModel : ObservableObject
         var userId = _db.CurrentUser?.Id ?? Preferences.Get("LoggedInUserId", 0);
         if (userId <= 0)
         {
-            await Shell.Current.DisplayAlert("Sign in required", "Please sign in to like community posts.", "OK");
+            await Shell.Current.DisplayAlertAsync("Sign in required", "Please sign in to like community posts.", "OK");
             return;
         }
 
@@ -126,7 +126,7 @@ public partial class CommunityViewModel : ObservableObject
         var userId = _db.CurrentUser?.Id ?? Preferences.Get("LoggedInUserId", 0);
         if (userId <= 0)
         {
-            await Shell.Current.DisplayAlert("Sign in required", "Please sign in before creating a post.", "OK");
+            await Shell.Current.DisplayAlertAsync("Sign in required", "Please sign in before creating a post.", "OK");
             return;
         }
 
