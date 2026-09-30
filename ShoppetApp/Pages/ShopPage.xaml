@@ -26,9 +26,11 @@
                     </HorizontalStackLayout>
 
                     <!-- Filter Tabs -->
+                    <Label Text="One Pet Owner account can both buy and sell. Browse items or manage your own listings."
+                           FontSize="12" TextColor="{StaticResource Secondary}" />
                     <HorizontalStackLayout Spacing="0">
-                        <Button x:Name="BtnSell" Text="Sell" BackgroundColor="Transparent" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" FontSize="15" Clicked="OnSellTabClicked" Padding="0,6,20,6"/>
-                        <Button x:Name="BtnExplore" Text="Explore" BackgroundColor="{StaticResource Primary}" TextColor="White" FontFamily="NunitoBold" FontSize="15" CornerRadius="20" Clicked="OnExploreTabClicked" Padding="16,6"/>
+                        <Button x:Name="BtnSell" Text="My Listings" BackgroundColor="Transparent" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" FontSize="15" Clicked="OnSellTabClicked" Padding="0,6,20,6"/>
+                        <Button x:Name="BtnExplore" Text="Browse" BackgroundColor="{StaticResource Primary}" TextColor="White" FontFamily="NunitoBold" FontSize="15" CornerRadius="20" Clicked="OnExploreTabClicked" Padding="16,6"/>
                     </HorizontalStackLayout>
                 </VerticalStackLayout>
             </Border>
@@ -98,14 +100,14 @@
                 <Grid x:Name="SellPanel" IsVisible="False" RowDefinitions="Auto,*">
                     <!-- Post button -->
                     <Border Grid.Row="0" BackgroundColor="{StaticResource CardBg}" StrokeThickness="0" Padding="16,10">
-                        <Button Text="+ Post a Pet Item" BackgroundColor="{StaticResource Primary}" TextColor="White" FontFamily="NunitoBold" FontSize="15" CornerRadius="12" HeightRequest="48" Clicked="OnPostItemClicked"/>
+                        <Button Text="List an Item" BackgroundColor="{StaticResource Primary}" TextColor="White" FontFamily="NunitoBold" FontSize="15" CornerRadius="12" HeightRequest="48" Clicked="OnPostItemClicked"/>
                     </Border>
 
                     <!-- My Listings -->
                     <ScrollView Grid.Row="1">
                         <VerticalStackLayout Padding="16,8,16,100" Spacing="12">
                             <Label Text="Your Listings" FontFamily="NunitoBold" FontSize="16" TextColor="{StaticResource BodyText}"/>
-                            <Label x:Name="SellEmptyLabel" Text="You have no listings yet. Tap '+ Post a Pet Item' to start selling!" TextColor="#888" HorizontalOptions="Center" IsVisible="False" HorizontalTextAlignment="Center" Margin="0,30"/>
+                            <Label x:Name="SellEmptyLabel" Text="You have no listings yet. Tap 'List an Item' to sell a preloved pet item." TextColor="#888" HorizontalOptions="Center" IsVisible="False" HorizontalTextAlignment="Center" Margin="0,30"/>
                             <VerticalStackLayout x:Name="MyListingsContainer" Spacing="12" BindableLayout.ItemsSource="{Binding MyListings}">
                                 <BindableLayout.ItemTemplate>
                                     <DataTemplate x:DataType="models:MarketplaceListing">
@@ -185,14 +187,20 @@
                             </HorizontalStackLayout>
                             <Label x:Name="DetailTime" TextColor="#aaa" FontSize="11"/>
                             <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Margin="0,8,0,0">
-                                <Button x:Name="BtnMessageSeller"
+                                <Border x:Name="BtnMessageSeller"
                                         Grid.Column="0"
-                                        Text="&#x1F4AC; Message"
                                         BackgroundColor="{StaticResource Primary}"
-                                        TextColor="White"
-                                        CornerRadius="10"
-                                        FontFamily="NunitoBold"
-                                        Clicked="OnMessageSellerClicked"/>
+                                        StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 10"
+                                        Padding="12,10">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnMessageSellerTapped"/>
+                                    </Border.GestureRecognizers>
+                                    <HorizontalStackLayout HorizontalOptions="Center" Spacing="8">
+                                        <Path Data="{StaticResource IconMessage}" Fill="White" WidthRequest="18" HeightRequest="18" Aspect="Uniform" />
+                                        <Label Text="Message" TextColor="White" FontFamily="NunitoBold" VerticalOptions="Center"/>
+                                    </HorizontalStackLayout>
+                                </Border>
                                 <Button Grid.Column="1"
                                         Text="Close"
                                         BackgroundColor="{StaticResource CardBg}"
@@ -215,19 +223,20 @@
                     Margin="16,80" VerticalOptions="Center" HorizontalOptions="Fill">
                 <ScrollView MaximumHeightRequest="580">
                     <VerticalStackLayout Padding="20" Spacing="14">
-                        <Label x:Name="PostModalTitle" Text="Post a Pet Item" FontFamily="NunitoBold" FontSize="20" TextColor="{StaticResource BodyText}"/>
+                        <Label x:Name="PostModalTitle" Text="List a Pet Item" FontFamily="NunitoBold" FontSize="20" TextColor="{StaticResource BodyText}"/>
 
-                        <Label Text="Title *" TextColor="{StaticResource BodyText}" FontSize="13"/>
+                        <Label Text="Title *" TextColor="{StaticResource BodyText}" FontSize="13" FontFamily="NunitoSemiBold"/>
                         <Border BackgroundColor="{StaticResource AppBackground}" Stroke="{StaticResource Secondary30}" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="12,8">
-                            <Entry x:Name="EntryTitle" Placeholder="e.g. Royal Canin Dog Food 2kg" TextColor="{StaticResource BodyText}" BackgroundColor="Transparent"/>
+                            <Entry x:Name="EntryTitle" Placeholder="e.g. Dog carrier - gently used" MaxLength="80" TextColor="{StaticResource BodyText}" BackgroundColor="Transparent"/>
+                        </Border>
+                        <Label Text="2–80 characters" TextColor="{StaticResource Secondary}" FontSize="11"/>
+
+                        <Label Text="Price (PHP) *" TextColor="{StaticResource BodyText}" FontSize="13" FontFamily="NunitoSemiBold"/>
+                        <Border BackgroundColor="{StaticResource AppBackground}" Stroke="{StaticResource Secondary30}" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="12,8">
+                            <Entry x:Name="EntryPrice" Placeholder="0.00" Keyboard="Numeric" MaxLength="9" TextColor="{StaticResource BodyText}" BackgroundColor="Transparent"/>
                         </Border>
 
-                        <Label Text="Price (PHP) *" TextColor="{StaticResource BodyText}" FontSize="13"/>
-                        <Border BackgroundColor="{StaticResource AppBackground}" Stroke="{StaticResource Secondary30}" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="12,8">
-                            <Entry x:Name="EntryPrice" Placeholder="0.00" Keyboard="Numeric" TextColor="{StaticResource BodyText}" BackgroundColor="Transparent"/>
-                        </Border>
-
-                        <Label Text="Category" TextColor="{StaticResource BodyText}" FontSize="13"/>
+                        <Label Text="Category *" TextColor="{StaticResource BodyText}" FontSize="13" FontFamily="NunitoSemiBold"/>
                         <Border BackgroundColor="{StaticResource AppBackground}" Stroke="{StaticResource Secondary30}" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="4,0">
                             <Picker x:Name="PickerCategory" TextColor="{StaticResource BodyText}" BackgroundColor="Transparent">
                                 <Picker.Items>
@@ -243,7 +252,7 @@
                             </Picker>
                         </Border>
 
-                        <Label Text="Condition" TextColor="{StaticResource BodyText}" FontSize="13"/>
+                        <Label Text="Condition *" TextColor="{StaticResource BodyText}" FontSize="13" FontFamily="NunitoSemiBold"/>
                         <Border BackgroundColor="{StaticResource AppBackground}" Stroke="{StaticResource Secondary30}" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="4,0">
                             <Picker x:Name="PickerCondition" TextColor="{StaticResource BodyText}" BackgroundColor="Transparent">
                                 <Picker.Items>
@@ -255,34 +264,69 @@
                             </Picker>
                         </Border>
 
-                        <Label Text="Location" TextColor="{StaticResource BodyText}" FontSize="13"/>
+                        <Label Text="Meetup Area *" TextColor="{StaticResource BodyText}" FontSize="13" FontFamily="NunitoSemiBold"/>
+                        <Border BackgroundColor="{StaticResource AppBackground}" Stroke="{StaticResource Secondary30}" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="4,0">
+                            <Picker x:Name="PickerLocation"
+                                    Title="Select meetup area"
+                                    TitleColor="{StaticResource Secondary}"
+                                    TextColor="{StaticResource BodyText}"
+                                    BackgroundColor="Transparent">
+                                <Picker.Items>
+                                    <x:String>Lipa City</x:String>
+                                    <x:String>Tanauan City</x:String>
+                                    <x:String>Malvar</x:String>
+                                    <x:String>Sto. Tomas</x:String>
+                                    <x:String>Other nearby area</x:String>
+                                </Picker.Items>
+                            </Picker>
+                        </Border>
+                        <Label Text="For privacy, share only a city or general meetup area. Do not post your exact home address."
+                               TextColor="{StaticResource Secondary}" FontSize="11"/>
+
+                        <Label Text="Description *" TextColor="{StaticResource BodyText}" FontSize="13" FontFamily="NunitoSemiBold"/>
                         <Border BackgroundColor="{StaticResource AppBackground}" Stroke="{StaticResource Secondary30}" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="12,8">
-                            <Entry x:Name="EntryLocation" Placeholder="e.g. Lipa City, Batangas" TextColor="{StaticResource BodyText}" BackgroundColor="Transparent"/>
+                            <Editor x:Name="EditorDescription" Placeholder="Describe the item, size, inclusions, and any defects." MaxLength="500" TextColor="{StaticResource BodyText}" BackgroundColor="Transparent" HeightRequest="90" AutoSize="TextChanges"/>
                         </Border>
 
-                        <Label Text="Description *" TextColor="{StaticResource BodyText}" FontSize="13"/>
-                        <Border BackgroundColor="{StaticResource AppBackground}" Stroke="{StaticResource Secondary30}" StrokeThickness="1" StrokeShape="RoundRectangle 10" Padding="12,8">
-                            <Editor x:Name="EditorDescription" Placeholder="Describe your item..." TextColor="{StaticResource BodyText}" BackgroundColor="Transparent" HeightRequest="80" AutoSize="TextChanges"/>
+                        <Label Text="Photos *" TextColor="{StaticResource BodyText}" FontSize="13" FontFamily="NunitoSemiBold"/>
+                        <Border BackgroundColor="{StaticResource AppBackground}" Stroke="{StaticResource Primary}" StrokeThickness="1" StrokeDashArray="6,4" StrokeShape="RoundRectangle 12" Padding="14">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnPickPhotoTapped"/>
+                            </Border.GestureRecognizers>
+                            <HorizontalStackLayout Spacing="10">
+                                <Path Data="{StaticResource IconCamera}" Fill="{StaticResource Primary}" WidthRequest="22" HeightRequest="22" Aspect="Uniform"/>
+                                <VerticalStackLayout Spacing="1">
+                                    <Label Text="Add item photos" FontFamily="NunitoBold" TextColor="{StaticResource BodyText}" />
+                                    <Label Text="1–5 clear photos. Avoid showing personal documents or private addresses."
+                                           FontSize="11" TextColor="{StaticResource Secondary}" />
+                                </VerticalStackLayout>
+                            </HorizontalStackLayout>
                         </Border>
-
-                        <Label Text="Photos (optional, max 5)" TextColor="{StaticResource BodyText}" FontSize="13"/>
-                        <Button x:Name="BtnPickPhoto" Text="&#x1F4F7;  Pick Photos" BackgroundColor="{StaticResource AppBackground}" TextColor="{StaticResource Primary}" BorderColor="{StaticResource Primary}" BorderWidth="1" CornerRadius="10" FontFamily="NunitoBold" FontSize="14" HeightRequest="44" Clicked="OnPickPhotoClicked"/>
                         <CollectionView x:Name="PickedPhotosView" ItemsLayout="HorizontalList" HeightRequest="90" IsVisible="False">
                             <CollectionView.ItemTemplate>
                                 <DataTemplate>
                                     <Grid WidthRequest="80" HeightRequest="80" Margin="4,4">
                                         <Image Source="{Binding .}" Aspect="AspectFill" HeightRequest="80" WidthRequest="80"/>
                                         <Border BackgroundColor="#CC000000" StrokeThickness="0" WidthRequest="22" HeightRequest="22" StrokeShape="RoundRectangle 11" HorizontalOptions="End" VerticalOptions="Start" Margin="0,2,2,0">
-                                            <Label Text="x" TextColor="White" FontSize="12" HorizontalOptions="Center" VerticalOptions="Center" FontFamily="NunitoBold">
-                                                <Label.GestureRecognizers>
+                                            <Grid>
+                                                <Grid.GestureRecognizers>
                                                     <TapGestureRecognizer Tapped="OnRemovePickedPhoto" CommandParameter="{Binding .}"/>
-                                                </Label.GestureRecognizers>
-                                            </Label>
+                                                </Grid.GestureRecognizers>
+                                                <Path Data="{StaticResource IconClose}" Fill="White" WidthRequest="12" HeightRequest="12" Aspect="Uniform" HorizontalOptions="Center" VerticalOptions="Center"/>
+                                            </Grid>
                                         </Border>
                                     </Grid>
                                 </DataTemplate>
                             </CollectionView.ItemTemplate>
                         </CollectionView>
+
+                        <Border BackgroundColor="{StaticResource Secondary10}" StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="12">
+                            <HorizontalStackLayout Spacing="8">
+                                <Path Data="{StaticResource IconShield}" Fill="{StaticResource Primary}" WidthRequest="18" HeightRequest="18" Aspect="Uniform"/>
+                                <Label Text="Your full name is shown as the seller name. Social links are only shown if you enable them in your profile."
+                                       FontSize="11" TextColor="{StaticResource BodyText}" LineBreakMode="WordWrap"/>
+                            </HorizontalStackLayout>
+                        </Border>
 
                         <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                             <Button Grid.Column="0" Text="Cancel" BackgroundColor="{StaticResource CardBg}" TextColor="{StaticResource BodyText}" BorderColor="{StaticResource Secondary30}" BorderWidth="1" CornerRadius="10" FontFamily="NunitoBold" Clicked="OnCancelPostClicked"/>
