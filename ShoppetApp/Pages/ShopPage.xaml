@@ -58,6 +58,16 @@
             <!-- Content Panel -->
             <Grid Grid.Row="3">
 
+                <ActivityIndicator x:Name="MarketplaceLoading"
+                                   IsVisible="False"
+                                   IsRunning="False"
+                                   Color="{StaticResource Primary}"
+                                   WidthRequest="36"
+                                   HeightRequest="36"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center"
+                                   ZIndex="20" />
+
                 <!-- EXPLORE TAB -->
                 <Grid x:Name="ExplorePanel" RowDefinitions="Auto,*">
                     <!-- Category pills -->
