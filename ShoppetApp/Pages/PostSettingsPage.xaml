@@ -78,7 +78,7 @@
                                                         Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PostSettingsViewModel}}, Path=ToggleLikeCommand}"
                                                         CommandParameter="{Binding .}"
                                                         BackgroundColor="Transparent" FontFamily="NunitoBold" />
-                                                <Button Grid.Column="1" Text="💬 Comment" TextColor="{StaticResource Primary}" BackgroundColor="Transparent" FontFamily="NunitoBold"
+                                                <Button Grid.Column="1" Text="Comment" TextColor="{StaticResource Primary}" BackgroundColor="Transparent" FontFamily="NunitoBold"
                                                         Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PostSettingsViewModel}}, Path=GoToPostDetailsCommand}"
                                                         CommandParameter="{Binding .}" />
                                             </Grid>
