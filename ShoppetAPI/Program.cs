@@ -1,12 +1,22 @@
+using ShoppetAPI.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers();
+builder.Services.AddSingleton<SharedDatabaseInitializer>();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+// Ensure the shared SQL Server schema contains every table/column required by
+// the current Web + MAUI integration. The initializer is idempotent.
+using (var scope = app.Services.CreateScope())
+{
+    var initializer = scope.ServiceProvider.GetRequiredService<SharedDatabaseInitializer>();
+    await initializer.InitializeAsync();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
