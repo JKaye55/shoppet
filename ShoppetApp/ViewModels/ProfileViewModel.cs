@@ -111,14 +111,14 @@ namespace ShoppetApp.ViewModels
             }
             catch
             {
-                await Shell.Current.DisplayAlert("Phone", "Unable to open dialer.", "OK");
+                await Shell.Current.DisplayAlertAsync("Phone", "Unable to open dialer.", "OK");
             }
         }
 
         [RelayCommand]
         private async Task DeleteContactAsync(ContactModel contact)
         {
-            bool confirm = await Shell.Current.DisplayAlert("Delete", $"Are you sure you want to delete {contact.Name}?", "Yes", "No");
+            bool confirm = await Shell.Current.DisplayAlertAsync("Delete", $"Are you sure you want to delete {contact.Name}?", "Yes", "No");
             if (!confirm)
                 return;
 
@@ -129,15 +129,15 @@ namespace ShoppetApp.ViewModels
 
         [RelayCommand]
         private async Task OpenAdminPanelAsync() =>
-            await Shell.Current.DisplayAlert("Admin", "Opening Platform Admin Console...", "OK");
+            await Shell.Current.DisplayAlertAsync("Admin", "Opening Platform Admin Console...", "OK");
 
         [RelayCommand]
         private async Task OpenBusinessPanelAsync() =>
-            await Shell.Current.DisplayAlert("Business Owner", "Opening Clinic Counter & Inventory Desk...", "OK");
+            await Shell.Current.DisplayAlertAsync("Business Owner", "Opening Clinic Counter & Inventory Desk...", "OK");
 
         [RelayCommand]
         private async Task OpenLocalShopsAsync() =>
-            await Shell.Current.DisplayAlert("Directory", "Opening Local Pet Shops & Clinics around Lipa...", "OK");
+            await Shell.Current.DisplayAlertAsync("Directory", "Opening Local Pet Shops & Clinics around Lipa...", "OK");
 
         [RelayCommand]
         private async Task OpenPostSettingsAsync() =>
