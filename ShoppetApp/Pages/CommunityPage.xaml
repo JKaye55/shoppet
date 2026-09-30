@@ -1,7 +1,6 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              xmlns:vm="clr-namespace:ShoppetApp.ViewModels"
              xmlns:controls="clr-namespace:ShoppetApp.Controls"
              x:Class="ShoppetApp.Pages.CommunityPage"
@@ -9,132 +8,320 @@
              Shell.NavBarIsVisible="False"
              BackgroundColor="{StaticResource AppBackground}">
 
-    <Grid RowDefinitions="Auto, *">
-        <!-- Header -->
-        <VerticalStackLayout Grid.Row="0">
-            <controls:HeaderView />
-            </VerticalStackLayout>
+    <Grid RowDefinitions="Auto,*">
+        <controls:HeaderView Grid.Row="0" />
 
         <Grid Grid.Row="1">
-            <RefreshView Command="{Binding LoadPostsCommand}" IsRefreshing="{Binding IsRefreshing}">
-                <ScrollView>
-                    <VerticalStackLayout Spacing="15" Padding="15,10,15,100">
-                        <Border BackgroundColor="{StaticResource AppBackground}" StrokeThickness="0" Padding="5,5,5,5">
-                            <VerticalStackLayout Spacing="5">
-                                <Label Text="Shoppet Community" FontFamily="NunitoBold" FontSize="26" TextColor="{StaticResource BodyText}" />
-                                <Label Text="Share stories, experiences, and helpful pet-care tips with fellow pet parents." TextColor="#666666" FontSize="14" />
-                            </VerticalStackLayout>
-                        </Border>
-                        
-                        <!-- What's on your mind? Section -->
-                        <Border BackgroundColor="{StaticResource CardBg}" Stroke="{StaticResource Secondary30}" StrokeThickness="1" StrokeShape="RoundRectangle 20" Padding="15">
-                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                                <!-- Profile Picture Placeholder -->
-                                <Border Grid.Column="0" WidthRequest="40" HeightRequest="40" BackgroundColor="{StaticResource Secondary}" StrokeShape="RoundRectangle 20" StrokeThickness="0">
-                                    <Grid><Label Text="{Binding UserInitials}" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" FontSize="16" FontFamily="NunitoBold" /><Image Source="{Binding UserProfilePicture, Converter={StaticResource Base64ToImageSourceConverter}}" Aspect="AspectFill" /></Grid>
-                                </Border>
+            <RefreshView Command="{Binding RefreshCommand}"
+                         IsRefreshing="{Binding IsRefreshing}"
+                         RefreshColor="{StaticResource Primary}">
+                <CollectionView ItemsSource="{Binding Posts}"
+                                SelectionMode="None"
+                                Margin="0"
+                                VerticalScrollBarVisibility="Never">
+                    <CollectionView.ItemsLayout>
+                        <LinearItemsLayout Orientation="Vertical" ItemSpacing="14" />
+                    </CollectionView.ItemsLayout>
 
-                                <!-- Fake Input -->
-                                <Border Grid.Column="1" BackgroundColor="{StaticResource AppBackground}" StrokeShape="RoundRectangle 20" StrokeThickness="1" Stroke="{StaticResource Secondary30}" Padding="15,0">
+                    <CollectionView.Header>
+                        <VerticalStackLayout Padding="18,16,18,14" Spacing="14">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <VerticalStackLayout Spacing="3">
+                                    <Label Text="Shoppet Community"
+                                           FontFamily="NunitoExtraBold"
+                                           FontSize="27"
+                                           TextColor="{StaticResource BodyText}" />
+                                    <Label Text="Stories, tips, and everyday moments from pet parents."
+                                           FontFamily="Nunito"
+                                           FontSize="13"
+                                           TextColor="{StaticResource Gray500}" />
+                                </VerticalStackLayout>
+
+                                <Border Grid.Column="1"
+                                        WidthRequest="42"
+                                        HeightRequest="42"
+                                        BackgroundColor="{StaticResource Primary10}"
+                                        Stroke="{StaticResource Primary20}"
+                                        StrokeThickness="1"
+                                        StrokeShape="RoundRectangle 21">
+                                    <Path Data="{StaticResource IconCamera}"
+                                          Fill="{StaticResource Primary}"
+                                          WidthRequest="20"
+                                          HeightRequest="20"
+                                          Aspect="Uniform"
+                                          HorizontalOptions="Center"
+                                          VerticalOptions="Center" />
                                     <Border.GestureRecognizers>
                                         <TapGestureRecognizer Command="{Binding GoToCreatePostCommand}" />
                                     </Border.GestureRecognizers>
-                                    <Label Text="What's on your mind?" TextColor="#888888" VerticalOptions="Center" FontSize="15" />
-                                </Border>
-
-                                <!-- Photo Icon -->
-                                <Border Grid.Column="2" BackgroundColor="{StaticResource AppBackground}" WidthRequest="40" HeightRequest="40" StrokeShape="RoundRectangle 20" StrokeThickness="1" Stroke="{StaticResource Secondary30}">
-                                    <Label Text="📷" HorizontalOptions="Center" VerticalOptions="Center" FontSize="18">
-                                        <Label.GestureRecognizers>
-                                            <TapGestureRecognizer Command="{Binding GoToCreatePostCommand}" />
-                                        </Label.GestureRecognizers>
-                                    </Label>
                                 </Border>
                             </Grid>
-                        </Border>
 
-                        <!-- Feed List -->
-                        <CollectionView ItemsSource="{Binding Posts}">
-                            <CollectionView.ItemsLayout>
-                                <LinearItemsLayout Orientation="Vertical" ItemSpacing="2" />
-                            </CollectionView.ItemsLayout>
-                            <CollectionView.ItemTemplate>
-                                <DataTemplate>
-                                    <Border BackgroundColor="{StaticResource CardBg}" Stroke="{StaticResource Secondary30}" StrokeThickness="1" StrokeShape="RoundRectangle 20" Margin="0,0,0,0" Padding="15">
-                                        <VerticalStackLayout Spacing="12">
-                                            <!-- Post Header -->
-                                            <HorizontalStackLayout Spacing="10">
-                                                <Border WidthRequest="40" HeightRequest="40" BackgroundColor="{StaticResource Secondary}" StrokeShape="RoundRectangle 20" StrokeThickness="0">
-                                                    <Grid><Label Text="{Binding Initials}" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" FontSize="16" FontFamily="NunitoBold" /><Image Source="{Binding ProfilePicture, Converter={StaticResource Base64ToImageSourceConverter}}" Aspect="AspectFill" /></Grid>
-                                                </Border>
-                                                <VerticalStackLayout VerticalOptions="Center">
-                                                    <HorizontalStackLayout Spacing="5">
-                                                        <Label Text="{Binding AuthorName}" TextColor="{StaticResource BodyText}" FontFamily="NunitoBold" FontSize="16" />
-                                                        <Label Text="{Binding PetName, StringFormat=' is with {0}'}" TextColor="#666666" FontSize="14" IsVisible="{Binding PetName, Converter={StaticResource IsNotNullOrEmptyConverter}}" />
-                                                    </HorizontalStackLayout>
-                                                    <Label Text="{Binding TimeAgo}" TextColor="#888888" FontSize="12" />
-                                                </VerticalStackLayout>
-                                            </HorizontalStackLayout>
-
-                                            <!-- Content -->
-                                            <Label Text="{Binding Content}" TextColor="{StaticResource BodyText}" FontSize="15" />
-
-                                            <!-- Attached Media -->
-                                            <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Always" IsVisible="{Binding HasImages}" HeightRequest="250" Margin="0,5">
-                                                <HorizontalStackLayout BindableLayout.ItemsSource="{Binding ImageList}" Spacing="5">
-                                                    <BindableLayout.ItemTemplate>
-                                                        <DataTemplate x:DataType="x:String">
-                                                            <Grid WidthRequest="300" HeightRequest="250">
-                                                                <Image Source="{Binding .}" Aspect="AspectFill" HeightRequest="250" />
-                                                            </Grid>
-                                                        </DataTemplate>
-                                                    </BindableLayout.ItemTemplate>
-                                                </HorizontalStackLayout>
-                                            </ScrollView>
-
-                                            <!-- Stats -->
-                                            <HorizontalStackLayout Spacing="15" Margin="0,5,0,0">
-                                                <Label Text="{Binding LikesCount, StringFormat='{0} Likes'}" TextColor="#666666" FontSize="13" />
-                                                <Label Text="{Binding CommentsCount, StringFormat='{0} Comments'}" TextColor="#666666" FontSize="13" HorizontalOptions="EndAndExpand" />
-                                            </HorizontalStackLayout>
-
-                                            <BoxView HeightRequest="1" Color="{StaticResource Secondary30}" Margin="0,5" />
-
-                                            <!-- Actions -->
-                                            <Grid ColumnDefinitions="*,*">
-                                                <Button Grid.Column="0" Text="{Binding IsLikedByMe, Converter={StaticResource BoolToLikeTextConverter}}" 
-                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:CommunityViewModel}}, Path=ToggleLikeCommand}"
-                                                        CommandParameter="{Binding .}"
-                                                        TextColor="{Binding IsLikedByMe, Converter={StaticResource BoolToLikeColorConverter}}"
-                                                        BackgroundColor="Transparent" FontFamily="NunitoBold" />
-                                                <Button Grid.Column="1" Text="🗨 Comment" TextColor="{StaticResource Primary}" BackgroundColor="Transparent" FontFamily="NunitoBold"
-                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:CommunityViewModel}}, Path=GoToPostDetailsCommand}"
-                                                        CommandParameter="{Binding .}" />
-                                            </Grid>
-                                        </VerticalStackLayout>
+                            <Border BackgroundColor="{StaticResource CardBg}"
+                                    Stroke="{StaticResource Secondary20}"
+                                    StrokeThickness="1"
+                                    StrokeShape="RoundRectangle 22"
+                                    Padding="14">
+                                <Border.Shadow>
+                                    <Shadow Brush="#16000000" Offset="0,4" Radius="14" Opacity="0.16" />
+                                </Border.Shadow>
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="11">
+                                    <Border WidthRequest="42"
+                                            HeightRequest="42"
+                                            BackgroundColor="{StaticResource Primary}"
+                                            StrokeThickness="0"
+                                            StrokeShape="RoundRectangle 21">
+                                        <Grid>
+                                            <Label Text="{Binding UserInitials}"
+                                                   TextColor="White"
+                                                   FontFamily="NunitoBold"
+                                                   FontSize="15"
+                                                   HorizontalOptions="Center"
+                                                   VerticalOptions="Center" />
+                                            <Image Source="{Binding UserProfilePicture, Converter={StaticResource Base64ToImageSourceConverter}}"
+                                                   Aspect="AspectFill" />
+                                        </Grid>
                                     </Border>
-                                </DataTemplate>
-                            </CollectionView.ItemTemplate>
-                        </CollectionView>
 
-                    </VerticalStackLayout>
-                </ScrollView>
+                                    <Border Grid.Column="1"
+                                            BackgroundColor="{StaticResource Secondary05}"
+                                            Stroke="{StaticResource Secondary20}"
+                                            StrokeThickness="1"
+                                            StrokeShape="RoundRectangle 18"
+                                            Padding="14,0">
+                                        <Label Text="Share something with the community..."
+                                               FontSize="14"
+                                               TextColor="{StaticResource Gray500}"
+                                               VerticalOptions="Center" />
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding GoToCreatePostCommand}" />
+                                        </Border.GestureRecognizers>
+                                    </Border>
+
+                                    <Button Grid.Column="2"
+                                            Text="Post"
+                                            Command="{Binding GoToCreatePostCommand}"
+                                            BackgroundColor="{StaticResource Primary}"
+                                            TextColor="White"
+                                            FontFamily="NunitoBold"
+                                            FontSize="13"
+                                            CornerRadius="17"
+                                            HeightRequest="42"
+                                            Padding="16,0" />
+                                </Grid>
+                            </Border>
+                        </VerticalStackLayout>
+                    </CollectionView.Header>
+
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="18,0"
+                                    Padding="16"
+                                    BackgroundColor="{StaticResource CardBg}"
+                                    Stroke="{StaticResource Secondary20}"
+                                    StrokeThickness="1"
+                                    StrokeShape="RoundRectangle 22">
+                                <Border.Shadow>
+                                    <Shadow Brush="#14000000" Offset="0,4" Radius="12" Opacity="0.14" />
+                                </Border.Shadow>
+
+                                <VerticalStackLayout Spacing="13">
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="11">
+                                        <Border WidthRequest="44"
+                                                HeightRequest="44"
+                                                BackgroundColor="{StaticResource Secondary}"
+                                                StrokeThickness="0"
+                                                StrokeShape="RoundRectangle 22">
+                                            <Grid>
+                                                <Label Text="{Binding Initials}"
+                                                       TextColor="White"
+                                                       FontFamily="NunitoBold"
+                                                       FontSize="15"
+                                                       HorizontalOptions="Center"
+                                                       VerticalOptions="Center" />
+                                                <Image Source="{Binding ProfilePicture, Converter={StaticResource Base64ToImageSourceConverter}}"
+                                                       Aspect="AspectFill" />
+                                            </Grid>
+                                        </Border>
+
+                                        <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center">
+                                            <Label Text="{Binding AuthorName}"
+                                                   FontFamily="NunitoBold"
+                                                   FontSize="15"
+                                                   TextColor="{StaticResource BodyText}"
+                                                   LineBreakMode="TailTruncation" />
+                                            <HorizontalStackLayout Spacing="6">
+                                                <Label Text="{Binding TimeAgo}"
+                                                       FontSize="12"
+                                                       TextColor="{StaticResource Gray500}" />
+                                                <Label Text="Edited"
+                                                       FontSize="12"
+                                                       TextColor="{StaticResource Gray500}"
+                                                       IsVisible="{Binding IsEdited}" />
+                                            </HorizontalStackLayout>
+                                        </VerticalStackLayout>
+
+                                        <Border Grid.Column="2"
+                                                IsVisible="{Binding PetName, Converter={StaticResource IsNotNullOrEmptyConverter}}"
+                                                BackgroundColor="{StaticResource Highlight30}"
+                                                StrokeThickness="0"
+                                                StrokeShape="RoundRectangle 12"
+                                                Padding="9,5"
+                                                VerticalOptions="Center">
+                                            <Label Text="{Binding PetName}"
+                                                   FontFamily="NunitoSemiBold"
+                                                   FontSize="11"
+                                                   TextColor="{StaticResource SecondaryFg}"
+                                                   MaxLines="1"
+                                                   LineBreakMode="TailTruncation" />
+                                        </Border>
+                                    </Grid>
+
+                                    <Label Text="{Binding Content}"
+                                           FontSize="15"
+                                           LineHeight="1.18"
+                                           TextColor="{StaticResource BodyText}" />
+
+                                    <CollectionView ItemsSource="{Binding ImageList}"
+                                                    IsVisible="{Binding HasImages}"
+                                                    HeightRequest="238"
+                                                    SelectionMode="None">
+                                        <CollectionView.ItemsLayout>
+                                            <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8" />
+                                        </CollectionView.ItemsLayout>
+                                        <CollectionView.ItemTemplate>
+                                            <DataTemplate x:DataType="x:String">
+                                                <Border WidthRequest="300"
+                                                        HeightRequest="238"
+                                                        StrokeThickness="0"
+                                                        StrokeShape="RoundRectangle 16"
+                                                        BackgroundColor="{StaticResource Secondary10}">
+                                                    <Image Source="{Binding .}"
+                                                           Aspect="AspectFill" />
+                                                </Border>
+                                            </DataTemplate>
+                                        </CollectionView.ItemTemplate>
+                                    </CollectionView>
+
+                                    <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,1,0,0">
+                                        <Label Text="{Binding LikesCount, StringFormat='{0} likes'}"
+                                               FontSize="12"
+                                               TextColor="{StaticResource Gray500}" />
+                                        <Label Grid.Column="2"
+                                               Text="{Binding CommentsCount, StringFormat='{0} comments'}"
+                                               FontSize="12"
+                                               TextColor="{StaticResource Gray500}" />
+                                    </Grid>
+
+                                    <BoxView HeightRequest="1" Color="{StaticResource Secondary20}" />
+
+                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                        <Button Text="{Binding IsLikedByMe, Converter={StaticResource BoolToLikeTextConverter}}"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:CommunityViewModel}}, Path=ToggleLikeCommand}"
+                                                CommandParameter="{Binding .}"
+                                                BackgroundColor="{Binding IsLikedByMe, Converter={StaticResource BoolToOpacityConverter}}"
+                                                TextColor="{Binding IsLikedByMe, Converter={StaticResource BoolToLikeColorConverter}}"
+                                                FontFamily="NunitoBold"
+                                                FontSize="13"
+                                                CornerRadius="14"
+                                                HeightRequest="42" />
+                                        <Button Grid.Column="1"
+                                                Text="Comment"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:CommunityViewModel}}, Path=GoToPostDetailsCommand}"
+                                                CommandParameter="{Binding .}"
+                                                BackgroundColor="{StaticResource Secondary10}"
+                                                TextColor="{StaticResource Primary}"
+                                                FontFamily="NunitoBold"
+                                                FontSize="13"
+                                                CornerRadius="14"
+                                                HeightRequest="42" />
+                                    </Grid>
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+
+                    <CollectionView.Footer>
+                        <BoxView HeightRequest="110" Color="Transparent" />
+                    </CollectionView.Footer>
+                </CollectionView>
             </RefreshView>
 
-            <!-- Navigation Bar placed here -->
-            <controls:FloatingTabBar SelectedTab="community" VerticalOptions="End" />
+            <VerticalStackLayout IsVisible="{Binding IsLoading}"
+                                 HorizontalOptions="Center"
+                                 VerticalOptions="Center"
+                                 Spacing="12">
+                <ActivityIndicator IsRunning="{Binding IsLoading}"
+                                   Color="{StaticResource Primary}"
+                                   WidthRequest="34"
+                                   HeightRequest="34" />
+                <Label Text="Loading community..."
+                       FontSize="13"
+                       TextColor="{StaticResource Gray500}" />
+            </VerticalStackLayout>
+
+            <Border IsVisible="{Binding IsEmpty}"
+                    Margin="28"
+                    Padding="24"
+                    HorizontalOptions="Fill"
+                    VerticalOptions="Center"
+                    BackgroundColor="{StaticResource CardBg}"
+                    Stroke="{StaticResource Secondary20}"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 22">
+                <VerticalStackLayout Spacing="10" HorizontalOptions="Center">
+                    <Label Text="No posts yet"
+                           FontFamily="NunitoBold"
+                           FontSize="18"
+                           TextColor="{StaticResource BodyText}"
+                           HorizontalTextAlignment="Center" />
+                    <Label Text="Be the first to share a pet story or helpful tip."
+                           FontSize="13"
+                           TextColor="{StaticResource Gray500}"
+                           HorizontalTextAlignment="Center" />
+                    <Button Text="Create a post"
+                            Command="{Binding GoToCreatePostCommand}"
+                            BackgroundColor="{StaticResource Primary}"
+                            TextColor="White"
+                            FontFamily="NunitoBold"
+                            CornerRadius="16"
+                            Margin="0,6,0,0"
+                            Padding="18,10" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border IsVisible="{Binding HasError}"
+                    Margin="28"
+                    Padding="22"
+                    HorizontalOptions="Fill"
+                    VerticalOptions="Center"
+                    BackgroundColor="{StaticResource CardBg}"
+                    Stroke="{StaticResource StatusOverdue}"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 22">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Community is unavailable"
+                           FontFamily="NunitoBold"
+                           FontSize="18"
+                           TextColor="{StaticResource BodyText}"
+                           HorizontalTextAlignment="Center" />
+                    <Label Text="{Binding ErrorMessage}"
+                           FontSize="13"
+                           TextColor="{StaticResource Gray500}"
+                           HorizontalTextAlignment="Center" />
+                    <Button Text="Try again"
+                            Command="{Binding RetryCommand}"
+                            BackgroundColor="{StaticResource Primary}"
+                            TextColor="White"
+                            FontFamily="NunitoBold"
+                            CornerRadius="16"
+                            Margin="0,6,0,0" />
+                </VerticalStackLayout>
+            </Border>
+
+            <controls:FloatingTabBar SelectedTab="community"
+                                     VerticalOptions="End"
+                                     ZIndex="10" />
         </Grid>
     </Grid>
 </ContentPage>
-
-
-
-
-
-
-
-
-
-
-
-
