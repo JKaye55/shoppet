@@ -1,3 +1,4 @@
+using ShoppetAPI.Security;
 using ShoppetAPI.Services;
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +32,8 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
+
+app.UseMiddleware<ApiTokenAuthenticationMiddleware>();
 
 app.UseAuthorization();
 
