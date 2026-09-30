@@ -45,7 +45,11 @@ namespace ShoppetApp.ViewModels
             {
                 Content = value.Content;
                 AttachedMedia.Clear();
-                foreach(var img in value.ImageList)
+                var existingImages = string.IsNullOrWhiteSpace(value.ImageUrls)
+                    ? Array.Empty<string>()
+                    : value.ImageUrls.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+                foreach (var img in existingImages)
                 {
                     AttachedMedia.Add(new MediaAttachment { FilePath = img, IsVideo = false });
                 }
