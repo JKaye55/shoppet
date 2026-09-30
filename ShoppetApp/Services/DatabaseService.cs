@@ -441,13 +441,20 @@ namespace ShoppetApp.Services
         }
 
         // --- Products & E-Commerce Cart ---
-        public Task<List<Product>> GetProductsAsync() => Task.FromResult(new List<Product>
+        public async Task<List<Product>> GetProductsAsync()
         {
-            new Product { Id = 1, Name = "Royal Canin Mini Adult", Category = "Food", Price = 950.00m, StockQuantity = 15, Description = "Balanced nutrition for small adult dogs." },
-            new Product { Id = 2, Name = "NexGard Spectra (10-25kg)", Category = "Pharmacy", Price = 650.00m, StockQuantity = 20, Description = "Flea, tick, and heartworm protection." }
-        });
+            if (ApiService is null) return new List<Product>();
+            return await ApiService.GetProductsAsync();
+        }
 
-        public Task<List<string>> GetCategoriesAsync() => Task.FromResult(new List<string> { "All", "Food", "Pharmacy", "Accessories", "Healthcare" });
+        public async Task<List<string>> GetCategoriesAsync()
+        {
+            if (ApiService is null) return new List<string> { "All" };
+            var categories = await ApiService.GetCategoriesAsync();
+            var names = categories.Select(c => c.Name).Where(n => !string.IsNullOrWhiteSpace(n)).Distinct().ToList();
+            names.Insert(0, "All");
+            return names;
+        }
 
         public async Task<List<CartItem>> GetCartAsync()
         {
