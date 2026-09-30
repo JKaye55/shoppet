@@ -24,6 +24,9 @@ namespace ShoppetApp.ViewModels
         [ObservableProperty]
         public partial bool IsRefreshing { get; set; }
 
+        [ObservableProperty]
+        public partial bool IsSendingComment { get; set; }
+
         // Reply state: tracks which comment is being replied to
         [ObservableProperty]
         public partial CommunityComment? ReplyingToComment { get; set; }
@@ -288,20 +291,37 @@ namespace ShoppetApp.ViewModels
         [RelayCommand]
         private async Task SendCommentAsync()
         {
-            if (string.IsNullOrWhiteSpace(NewCommentText) || Post == null || _db.CurrentUser == null) return;
+            if (IsSendingComment || Post == null || _db.CurrentUser == null) return;
+
+            var cleanComment = (NewCommentText ?? string.Empty).Trim();
+            if (cleanComment.Length == 0) return;
+
+            if (cleanComment.Length > 1000)
+            {
+                await Shell.Current.DisplayAlertAsync("Comment too long", "Comments can contain up to 1,000 characters.", "OK");
+                return;
+            }
 
             int? parentId = ReplyingToComment?.Id;
-            var success = await _api.AddCommentAsync(Post.Id, _db.CurrentUser.Id, NewCommentText, parentId);
-            if (success)
+            IsSendingComment = true;
+            try
             {
-                NewCommentText = string.Empty;
-                CancelReply();
-                Post.CommentsCount++;
-                await LoadCommentsAsync();
+                var success = await _api.AddCommentAsync(Post.Id, _db.CurrentUser.Id, cleanComment, parentId);
+                if (success)
+                {
+                    NewCommentText = string.Empty;
+                    CancelReply();
+                    Post.CommentsCount++;
+                    await LoadCommentsAsync();
+                }
+                else
+                {
+                    await Shell.Current.DisplayAlertAsync("Could not comment", "Your comment could not be posted. Please try again.", "OK");
+                }
             }
-            else
+            finally
             {
-                await Shell.Current.DisplayAlertAsync("Error", "Failed to add comment. Try again.", "OK");
+                IsSendingComment = false;
             }
         }
     }
