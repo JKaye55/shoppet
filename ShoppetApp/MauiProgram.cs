@@ -84,6 +84,8 @@ public static class MauiProgram
         builder.Services.AddTransient<EditProfileViewModel>();
         builder.Services.AddTransient<PostDetailsPage>();
         builder.Services.AddTransient<PostDetailsViewModel>();
+        builder.Services.AddTransient<MarketplaceCartPage>();
+        builder.Services.AddTransient<MarketplaceCartViewModel>();
 
         var app = builder.Build();
         Services = app.Services;
