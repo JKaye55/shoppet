@@ -4,10 +4,6 @@ on:
   push:
     branches:
       - fix/mobile-community-polish
-  pull_request:
-    branches:
-      - main
-
 jobs:
   build:
     runs-on: windows-latest
