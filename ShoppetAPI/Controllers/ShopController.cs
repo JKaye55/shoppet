@@ -1,157 +1,95 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using MySql.Data.MySqlClient;
-using System.Data;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 
-namespace ShoppetAPI.Controllers
+namespace ShoppetAPI.Controllers;
+
+[Route("api/[controller]")]
+[ApiController]
+public class ShopController : ControllerBase
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class ShopController : ControllerBase
+    private readonly IConfiguration _configuration;
+    public ShopController(IConfiguration configuration) => _configuration = configuration;
+
+    private string ConnectionString =>
+        _configuration.GetConnectionString("SharedSqlServer")
+        ?? throw new InvalidOperationException("SharedSqlServer connection string not found.");
+
+    [HttpGet("products")]
+    public async Task<IActionResult> GetProducts([FromQuery] string? species,[FromQuery] string? category,[FromQuery] string? search)
     {
-        private readonly IConfiguration _configuration;
-
-        public ShopController(IConfiguration configuration)
+        try
         {
-            _configuration = configuration;
-        }
+            var products=new List<object>();
+            await using var connection=new SqlConnection(ConnectionString);
+            await connection.OpenAsync();
 
-        // ── Get Products (supports optional filtering by species, category, or search query) ──
-        [HttpGet("products")]
-        public async Task<IActionResult> GetProducts([FromQuery] string? species, [FromQuery] string? category, [FromQuery] string? search)
+            string sql=@"
+                SELECT p.Id,p.Name,p.Description,p.Price,p.ImageUrl,p.StockQuantity,p.IsAvailable,p.CreatedAt
+                FROM ShopProducts p
+                WHERE (@Search IS NULL OR p.Name LIKE @SearchLike OR p.Description LIKE @SearchLike)
+                  AND (@Category IS NULL OR EXISTS(
+                        SELECT 1 FROM ProductShopCategories psc
+                        JOIN ShopCategories sc ON sc.Id=psc.ShopCategoryId
+                        WHERE psc.ProductId=p.Id AND sc.Name=@Category))
+                  AND (@Species IS NULL OR EXISTS(
+                        SELECT 1 FROM ProductPetCategories ppc
+                        JOIN PetCategories pc ON pc.Id=ppc.PetCategoryId
+                        WHERE ppc.ProductId=p.Id AND pc.Name=@Species))
+                ORDER BY p.Name;";
+
+            await using var cmd=new SqlCommand(sql,connection);
+            cmd.Parameters.AddWithValue("@Search",(object?)search ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@SearchLike",string.IsNullOrWhiteSpace(search)?DBNull.Value:$"%{search}%");
+            cmd.Parameters.AddWithValue("@Category",(object?)category ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Species",(object?)species ?? DBNull.Value);
+
+            await using var reader=await cmd.ExecuteReaderAsync();
+            while(await reader.ReadAsync())
+            {
+                int id=reader.GetInt32(0);
+                products.Add(new{
+                    Id=id,
+                    Name=reader.GetString(1),
+                    Description=reader.GetString(2),
+                    Price=reader.GetDecimal(3),
+                    ImageUrl=reader.IsDBNull(4)?"":reader.GetString(4),
+                    StockQuantity=reader.GetInt32(5),
+                    IsAvailable=reader.GetBoolean(6),
+                    CreatedAt=reader.GetDateTime(7),
+                    Species=await GetNamesAsync(connection,
+                        @"SELECT pc.Name FROM ProductPetCategories x JOIN PetCategories pc ON pc.Id=x.PetCategoryId WHERE x.ProductId=@Id",id),
+                    Categories=await GetNamesAsync(connection,
+                        @"SELECT sc.Name FROM ProductShopCategories x JOIN ShopCategories sc ON sc.Id=x.ShopCategoryId WHERE x.ProductId=@Id",id)
+                });
+            }
+            return Ok(products);
+        }
+        catch(Exception ex){ return StatusCode(500,$"Error fetching products: {ex.Message}"); }
+    }
+
+    [HttpGet("categories")]
+    public async Task<IActionResult> GetCategories()
+    {
+        try
         {
-            try
-            {
-                string connString = _configuration.GetConnectionString("DefaultConnection")!;
-                var products = new List<object>();
-
-                using (var connection = new MySqlConnection(connString))
-                {
-                    await connection.OpenAsync();
-
-                    var query = @"SELECT
-                                      p.Id,
-                                      p.Name,
-                                      p.Description,
-                                      p.Price,
-                                      p.ImageUrl,
-                                      p.StockQuantity,
-                                      p.IsAvailable,
-                                      p.CreatedAt,
-                                      GROUP_CONCAT(DISTINCT pc.Name ORDER BY pc.Name SEPARATOR ',') AS SpeciesNames,
-                                      GROUP_CONCAT(DISTINCT sc.Name ORDER BY sc.Name SEPARATOR ',') AS CategoryNames
-                                  FROM products p
-                                  LEFT JOIN productpetcategories ppc ON p.Id = ppc.ProductId
-                                  LEFT JOIN petcategories pc ON ppc.PetCategoryId = pc.Id
-                                  LEFT JOIN productshopcategories psc ON p.Id = psc.ProductId
-                                  LEFT JOIN shopcategories sc ON psc.ShopCategoryId = sc.Id
-                                  WHERE 1=1";
-
-                    var cmd = new MySqlCommand();
-                    cmd.Connection = connection;
-
-                    if (!string.IsNullOrEmpty(species))
-                    {
-                        query += " AND (pc.Name = @species OR pc.Name IS NULL)";
-                        cmd.Parameters.AddWithValue("@species", species);
-                    }
-
-                    if (!string.IsNullOrEmpty(category))
-                    {
-                        query += " AND sc.Name = @category";
-                        cmd.Parameters.AddWithValue("@category", category);
-                    }
-
-                    if (!string.IsNullOrEmpty(search))
-                    {
-                        query += " AND (p.Name LIKE @search OR p.Description LIKE @search)";
-                        cmd.Parameters.AddWithValue("@search", $"%{search}%");
-                    }
-
-                    query += @" GROUP BY
-                                    p.Id,
-                                    p.Name,
-                                    p.Description,
-                                    p.Price,
-                                    p.ImageUrl,
-                                    p.StockQuantity,
-                                    p.IsAvailable,
-                                    p.CreatedAt
-                                ORDER BY p.Name";
-
-                    cmd.CommandText = query;
-
-                    using (var reader = await cmd.ExecuteReaderAsync())
-                    {
-                        while (await reader.ReadAsync())
-                        {
-                            products.Add(new
-                            {
-                                Id = reader.GetInt32("Id"),
-                                Name = reader.GetString("Name"),
-                                Description = reader.IsDBNull(reader.GetOrdinal("Description")) ? "" : reader.GetString("Description"),
-                                Price = reader.GetDecimal("Price"),
-                                ImageUrl = reader.IsDBNull(reader.GetOrdinal("ImageUrl")) ? "" : reader.GetString("ImageUrl"),
-                                StockQuantity = reader.GetInt32("StockQuantity"),
-                                IsAvailable = reader.GetBoolean("IsAvailable"),
-                                CreatedAt = reader.GetDateTime("CreatedAt"),
-                                Species = reader.IsDBNull(reader.GetOrdinal("SpeciesNames"))
-                                    ? new List<string>()
-                                    : reader.GetString("SpeciesNames")
-                                        .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                                        .ToList(),
-                                Categories = reader.IsDBNull(reader.GetOrdinal("CategoryNames"))
-                                    ? new List<string>()
-                                    : reader.GetString("CategoryNames")
-                                        .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                                        .ToList()
-                            });
-                        }
-                    }
-                }
-
-                return Ok(products);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Error fetching products: {ex.Message}");
-            }
+            var result=new List<object>();
+            await using var connection=new SqlConnection(ConnectionString);
+            await connection.OpenAsync();
+            await using var cmd=new SqlCommand("SELECT Id,Name,Icon FROM ShopCategories ORDER BY Name",connection);
+            await using var reader=await cmd.ExecuteReaderAsync();
+            while(await reader.ReadAsync()) result.Add(new{Id=reader.GetInt32(0),Name=reader.GetString(1),Icon=reader.GetString(2)});
+            return Ok(result);
         }
+        catch(Exception ex){ return StatusCode(500,$"Error fetching categories: {ex.Message}"); }
+    }
 
-        // ── Get Shop Categories ──
-        [HttpGet("categories")]
-        public async Task<IActionResult> GetCategories()
-        {
-            try
-            {
-                string connString = _configuration.GetConnectionString("DefaultConnection")!;
-                var categories = new List<object>();
-
-                using (var connection = new MySqlConnection(connString))
-                {
-                    await connection.OpenAsync();
-                    var query = "SELECT Id, Name, Icon FROM shopcategories";
-
-                    using (var cmd = new MySqlCommand(query, connection))
-                    using (var reader = await cmd.ExecuteReaderAsync())
-                    {
-                        while (await reader.ReadAsync())
-                        {
-                            categories.Add(new
-                            {
-                                Id = reader.GetInt32("Id"),
-                                Name = reader.GetString("Name"),
-                                Icon = reader.IsDBNull(reader.GetOrdinal("Icon")) ? "" : reader.GetString("Icon")
-                            });
-                        }
-                    }
-                }
-
-                return Ok(categories);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Error fetching categories: {ex.Message}");
-            }
-        }
+    private static async Task<List<string>> GetNamesAsync(SqlConnection connection,string sql,int id)
+    {
+        var names=new List<string>();
+        await using var cmd=new SqlCommand(sql,connection);
+        cmd.Parameters.AddWithValue("@Id",id);
+        await using var reader=await cmd.ExecuteReaderAsync();
+        while(await reader.ReadAsync()) names.Add(reader.GetString(0));
+        return names;
     }
 }
