@@ -375,7 +375,25 @@ public class ApiService
         try
         {
             var userId = Preferences.Get("LoggedInUserId", 0);
-            return await _http.GetFromJsonAsync<CartDto>($"cart?userId={userId}");
+            var cart = await _http.GetFromJsonAsync<CartDto>($"cart?userId={userId}");
+#if ANDROID
+            if (cart != null)
+            {
+                cart = cart with
+                {
+                    Items = cart.Items.Select(item => item with
+                    {
+                        ImageUrl = string.IsNullOrWhiteSpace(item.ImageUrl)
+                            ? string.Empty
+                            : item.ImageUrl.Replace(
+                                "http://localhost:5020",
+                                "http://10.0.2.2:5020",
+                                StringComparison.OrdinalIgnoreCase)
+                    }).ToList()
+                };
+            }
+#endif
+            return cart;
         }
         catch { return null; }
     }
