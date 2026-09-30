@@ -61,7 +61,8 @@ namespace ShoppetApp.ViewModels
         {
             try
             {
-                var photo = await MediaPicker.PickPhotoAsync();
+                var photos = await MediaPicker.Default.PickPhotosAsync(new MediaPickerOptions { Title = "Choose profile photo" });
+                var photo = photos?.FirstOrDefault();
                 if (photo != null)
                 {
                     using var stream = await photo.OpenReadAsync();
@@ -75,7 +76,7 @@ namespace ShoppetApp.ViewModels
             }
             catch (Exception ex)
             {
-                await Application.Current!.MainPage!.DisplayAlert("Photo Error", ex.Message, "OK");
+                await Shell.Current.DisplayAlertAsync("Photo Error", ex.Message, "OK");
             }
         }
 
@@ -84,7 +85,7 @@ namespace ShoppetApp.ViewModels
         {
             if (string.IsNullOrWhiteSpace(FullName))
             {
-                await Application.Current!.MainPage!.DisplayAlert("Error", "Name cannot be empty", "OK");
+                await Shell.Current.DisplayAlertAsync("Error", "Name cannot be empty", "OK");
                 return;
             }
 
@@ -101,7 +102,7 @@ namespace ShoppetApp.ViewModels
                 }
                 else
                 {
-                    await Application.Current!.MainPage!.DisplayAlert("Error", "Failed to update profile", "OK");
+                    await Shell.Current.DisplayAlertAsync("Error", "Failed to update profile", "OK");
                 }
             }
             finally { IsBusy = false; }
