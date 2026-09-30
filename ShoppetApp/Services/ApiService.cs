@@ -509,6 +509,82 @@ public class ApiService
         catch { return []; }
     }
 
+    // --- Notifications / Premium ---------------------------------------------
+
+    public async Task<List<NotificationItem>> GetNotificationsAsync()
+    {
+        try
+        {
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            return await _http.GetFromJsonAsync<List<NotificationItem>>(
+                $"notifications?userId={userId}") ?? [];
+        }
+        catch { return []; }
+    }
+
+    public async Task<int> GetUnreadNotificationCountAsync()
+    {
+        try
+        {
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            return await _http.GetFromJsonAsync<int>(
+                $"notifications/unread-count?userId={userId}");
+        }
+        catch { return 0; }
+    }
+
+    public async Task<bool> MarkNotificationReadAsync(int notificationId)
+    {
+        try
+        {
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            return (await _http.PostAsync(
+                $"notifications/{notificationId}/read?userId={userId}", null)).IsSuccessStatusCode;
+        }
+        catch { return false; }
+    }
+
+    public async Task<bool> MarkAllNotificationsReadAsync()
+    {
+        try
+        {
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            return (await _http.PostAsync(
+                $"notifications/read-all?userId={userId}", null)).IsSuccessStatusCode;
+        }
+        catch { return false; }
+    }
+
+    public class PremiumStatusDto
+    {
+        public bool IsPremium { get; set; }
+        public DateTime? ActivatedAt { get; set; }
+        public string Reference { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+    }
+
+    public async Task<PremiumStatusDto?> GetPremiumStatusAsync()
+    {
+        try
+        {
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            return await _http.GetFromJsonAsync<PremiumStatusDto>(
+                $"premium/status?userId={userId}");
+        }
+        catch { return null; }
+    }
+
+    public async Task<bool> ActivatePremiumAsync()
+    {
+        try
+        {
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            return (await _http.PostAsync(
+                $"premium/activate?userId={userId}", null)).IsSuccessStatusCode;
+        }
+        catch { return false; }
+    }
+
     // --- Community API ---
 
     public async Task<List<CommunityPost>> GetCommunityPostsAsync(int userId)
