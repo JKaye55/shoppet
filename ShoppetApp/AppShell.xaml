@@ -12,7 +12,7 @@
         <ShellContent Title="Home"
                       Route="home"
                       ContentTemplate="{DataTemplate pages:HomePage}" />
-        <ShellContent Title="Shop"
+        <ShellContent Title="Marketplace"
                       Route="shop"
                       ContentTemplate="{DataTemplate pages:ShopPage}" />
         <ShellContent Title="Pets"
