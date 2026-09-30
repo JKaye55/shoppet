@@ -278,8 +278,18 @@ public partial class ShopPage : ContentPage
                     continue;
                 }
 
-                if (!_pickedPhotoPaths.Contains(file.FullPath, StringComparer.OrdinalIgnoreCase))
-                    _pickedPhotoPaths.Add(file.FullPath);
+                var cacheDir = Path.Combine(FileSystem.CacheDirectory, "marketplace-photos");
+                Directory.CreateDirectory(cacheDir);
+                var cachedPath = Path.Combine(cacheDir, $"{Guid.NewGuid():N}{extension}");
+
+                stream.Position = 0;
+                await using (var output = File.Create(cachedPath))
+                {
+                    await stream.CopyToAsync(output);
+                }
+
+                if (!_pickedPhotoPaths.Contains(cachedPath, StringComparer.OrdinalIgnoreCase))
+                    _pickedPhotoPaths.Add(cachedPath);
             }
 
             RefreshPickedPhotos();
@@ -381,8 +391,6 @@ public partial class ShopPage : ContentPage
         var location = PickerLocation.SelectedItem?.ToString()?.Trim() ?? "";
         var category = PickerCategory.SelectedItem?.ToString()?.Trim() ?? "";
         var condition = PickerCondition.SelectedItem?.ToString()?.Trim() ?? "";
-        var imageUrls = string.Join(",", _pickedPhotoPaths);
-
         if (title.Length < 2 || title.Length > 80)
         {
             await DisplayAlertAsync("Check title", "Listing title must be between 2 and 80 characters.", "OK");
@@ -433,6 +441,29 @@ public partial class ShopPage : ContentPage
             "Cancel");
 
         if (!confirmed) return;
+
+        var uploadedImages = new List<string>();
+        foreach (var path in _pickedPhotoPaths)
+        {
+            if (ShoppetApp.Helpers.MediaUrlHelper.IsServerMedia(path))
+            {
+                uploadedImages.Add(path);
+                continue;
+            }
+
+            var uploaded = await _api.UploadImageAsync(path, "marketplace");
+            if (string.IsNullOrWhiteSpace(uploaded))
+            {
+                await DisplayAlertAsync(
+                    "Photo upload failed",
+                    "One of the listing photos could not be uploaded. Please try again.",
+                    "OK");
+                return;
+            }
+            uploadedImages.Add(uploaded);
+        }
+
+        var imageUrls = string.Join(",", uploadedImages);
 
         bool success;
         if (_editingListing != null)
