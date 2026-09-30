@@ -10,9 +10,14 @@
         <VerticalStackLayout Spacing="16" Padding="16,24,16,32">
             <!-- Header Row -->
             <Grid ColumnDefinitions="Auto,*,Auto">
-                <Button Grid.Column="0" Text="✕" FontSize="18" BackgroundColor="Transparent" TextColor="Black" WidthRequest="40" Command="{Binding CloseCommand}" />
-                <Label Grid.Column="1" Text="{Binding Title}" FontFamily="NunitoBold" FontSize="16" HorizontalOptions="Center" VerticalOptions="Center" TextColor="Black" BackgroundColor="Transparent" />
-                <Button Grid.Column="2" Text="Save" FontFamily="NunitoBold" BackgroundColor="Transparent" TextColor="{StaticResource Primary}" Command="{Binding SaveCommand}" />
+                <Border Grid.Column="0" WidthRequest="40" HeightRequest="40" BackgroundColor="{StaticResource CardBg}" Stroke="{StaticResource Secondary30}" StrokeThickness="1" StrokeShape="RoundRectangle 20">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding CloseCommand}" />
+                    </Border.GestureRecognizers>
+                    <Path Data="{StaticResource IconClose}" Fill="{StaticResource BodyText}" WidthRequest="20" HeightRequest="20" HorizontalOptions="Center" VerticalOptions="Center" Aspect="Uniform" />
+                </Border>
+                <Label Grid.Column="1" Text="{Binding Title}" FontFamily="NunitoBold" FontSize="16" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{StaticResource BodyText}" BackgroundColor="Transparent" />
+                <Button Grid.Column="2" Text="Save" FontFamily="NunitoBold" BackgroundColor="Transparent" TextColor="{StaticResource Primary}" Command="{Binding SaveCommand}" IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}" />
             </Grid>
 
             <VerticalStackLayout Spacing="12">
@@ -30,14 +35,29 @@
                             HeightRequest="44" />
                 </Border>
 
-                <!-- Record Name Entry -->
-                <Label Text="Record Name *" FontFamily="NunitoSemiBold" FontSize="13" />
-                <Border Stroke="{StaticResource Secondary30}" StrokeThickness="1" Padding="12,0">
+                <Label Text="Common Record" FontFamily="NunitoSemiBold" FontSize="13" />
+                <Border Stroke="{StaticResource Secondary30}" StrokeThickness="1" Padding="12,4">
                     <Border.StrokeShape>
                         <RoundRectangle CornerRadius="20" />
                     </Border.StrokeShape>
-                    <Entry Text="{Binding Name}" Placeholder="e.g., Rabies, Heartgard, Annual Checkup" HeightRequest="52" />
+                    <Picker ItemsSource="{Binding CommonRecordOptions}"
+                            SelectedItem="{Binding SelectedCommonRecord}"
+                            Title="Choose a common record"
+                            TitleColor="{StaticResource Secondary}"
+                            TextColor="{StaticResource BodyText}"
+                            HeightRequest="44" />
                 </Border>
+
+                <VerticalStackLayout Spacing="6" IsVisible="{Binding IsCustomRecordName}">
+                    <Label Text="Record Name *" FontFamily="NunitoSemiBold" FontSize="13" />
+                    <Border Stroke="{StaticResource Secondary30}" StrokeThickness="1" Padding="12,0">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="20" />
+                        </Border.StrokeShape>
+                        <Entry Text="{Binding Name}" Placeholder="Enter a custom record name" MaxLength="80" HeightRequest="52" />
+                    </Border>
+                    <Label Text="2–80 characters" FontSize="11" TextColor="{StaticResource Secondary}" />
+                </VerticalStackLayout>
 
                 <!-- ================== VACCINE SECTION ================== -->
                 <VerticalStackLayout Spacing="12" IsVisible="{Binding IsVaccine}">
@@ -124,7 +144,12 @@
                             <DataTemplate x:DataType="x:String">
                                 <Grid ColumnDefinitions="*,Auto" Margin="0,4">
                                     <Label Text="{Binding .}" VerticalOptions="Center" LineBreakMode="TailTruncation" FontFamily="Nunito" FontSize="12" />
-                                    <Button Grid.Column="1" Text="✕" WidthRequest="32" HeightRequest="32" Padding="0" BackgroundColor="Transparent" TextColor="{StaticResource StatusOverdue}" Command="{Binding Source={RelativeSource AncestorType={x:Type vm:HealthLogFormViewModel}}, Path=RemoveDocumentCommand}" CommandParameter="{Binding .}" />
+                                    <Border Grid.Column="1" WidthRequest="32" HeightRequest="32" BackgroundColor="Transparent" StrokeThickness="0">
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:HealthLogFormViewModel}}, Path=RemoveDocumentCommand}" CommandParameter="{Binding .}" />
+                                        </Border.GestureRecognizers>
+                                        <Path Data="{StaticResource IconClose}" Fill="{StaticResource StatusOverdue}" WidthRequest="18" HeightRequest="18" HorizontalOptions="Center" VerticalOptions="Center" Aspect="Uniform" />
+                                    </Border>
                                 </Grid>
                             </DataTemplate>
                         </CollectionView.ItemTemplate>
@@ -154,8 +179,8 @@
                 </HorizontalStackLayout>
             </VerticalStackLayout>
 
-            <Button Text="Save Record" Command="{Binding SaveCommand}" HeightRequest="52" CornerRadius="24" BackgroundColor="{StaticResource Primary}" TextColor="{StaticResource PrimaryFg}" FontFamily="NunitoBold" Margin="0,24,0,0" />
-            <Button Text="Delete Record" IsVisible="{Binding CanDelete}" Command="{Binding DeleteCommand}" BackgroundColor="Transparent" TextColor="{StaticResource StatusOverdue}" FontFamily="Nunito" FontSize="14" />
+            <Button Text="Save Record" Command="{Binding SaveCommand}" IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}" HeightRequest="52" CornerRadius="24" BackgroundColor="{StaticResource Primary}" TextColor="{StaticResource PrimaryFg}" FontFamily="NunitoBold" Margin="0,24,0,0" />
+            <Button Text="Delete Record" IsVisible="{Binding CanDelete}" Command="{Binding DeleteCommand}" IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}" BackgroundColor="Transparent" TextColor="{StaticResource StatusOverdue}" FontFamily="Nunito" FontSize="14" />
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>
