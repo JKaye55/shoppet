@@ -190,7 +190,7 @@ public partial class ShopPage : ContentPage
             return;
         }
 
-        await DisplayAlertAsync("Added to cart", "The item was added to your marketplace cart. Items are not reserved until checkout succeeds.", "OK");
+        await DisplayAlertAsync("Added to cart", "The item was added to your Marketplace cart. This does not reserve the item until checkout succeeds.", "OK");
     }
 
     private async Task MessageCurrentSellerAsync()
@@ -317,7 +317,7 @@ public partial class ShopPage : ContentPage
     private void OnPostItemClicked(object? sender, EventArgs e)
     {
         _editingListing = null;
-        PostModalTitle.Text = "List a Pet Item";
+        PostModalTitle.Text = "Sell a Pet Item";
         ClearPostForm();
         PostModal.IsVisible = true;
     }
@@ -425,6 +425,15 @@ public partial class ShopPage : ContentPage
             return;
         }
 
+        var actionLabel = _editingListing is null ? "publish this listing" : "save these changes";
+        var confirmed = await DisplayAlertAsync(
+            _editingListing is null ? "Publish listing?" : "Save listing changes?",
+            $"Please confirm the item details, condition, price, meetup area, and photos are accurate before you {actionLabel}.",
+            _editingListing is null ? "Publish" : "Save",
+            "Cancel");
+
+        if (!confirmed) return;
+
         bool success;
         if (_editingListing != null)
         {
@@ -474,7 +483,7 @@ public partial class ShopPage : ContentPage
             ClearPostForm();
             await LoadMyListingsAsync();
             await LoadExploreListingsAsync();
-            await DisplayAlertAsync("Saved", wasEditing ? "Your listing was updated." : "Your item is now listed in Marketplace.", "OK");
+            await DisplayAlertAsync("Saved", wasEditing ? "Your Marketplace listing was updated." : "Your item is now published in the Preloved Marketplace.", "OK");
         }
         else
         {
