@@ -9,9 +9,12 @@
     <ScrollView>
         <VerticalStackLayout Spacing="16" Padding="16,24,16,32">
             <Grid ColumnDefinitions="Auto,*,Auto">
-                <Button Grid.Column="0" Text="✕" FontSize="18" BackgroundColor="Transparent" TextColor="{StaticResource SecondaryFg}" WidthRequest="40" Command="{Binding CloseCommand}" />
+                <Border Grid.Column="0" WidthRequest="40" HeightRequest="40" BackgroundColor="Transparent" StrokeThickness="0">
+                    <Border.GestureRecognizers><TapGestureRecognizer Command="{Binding CloseCommand}" /></Border.GestureRecognizers>
+                    <Path Data="{StaticResource IconClose}" Fill="{StaticResource SecondaryFg}" WidthRequest="20" HeightRequest="20" HorizontalOptions="Center" VerticalOptions="Center" Aspect="Uniform"/>
+                </Border>
                 <Label Grid.Column="1" Text="{Binding Title}" FontFamily="NunitoBold" FontSize="16" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{StaticResource SecondaryFg}" />
-                <Button Grid.Column="2" Text="Save" FontFamily="NunitoBold" BackgroundColor="Transparent" TextColor="{StaticResource Primary}" Command="{Binding SaveCommand}" />
+                <Button Grid.Column="2" Text="Save" FontFamily="NunitoBold" BackgroundColor="Transparent" TextColor="{StaticResource Primary}" Command="{Binding SaveCommand}" IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}" />
             </Grid>
 
             <VerticalStackLayout Spacing="12">
@@ -20,7 +23,7 @@
                     <Border.StrokeShape>
                         <RoundRectangle CornerRadius="20" />
                     </Border.StrokeShape>
-                    <Entry Text="{Binding Name}" Placeholder="Dr. Sarah Lee" HeightRequest="52" />
+                    <Entry Text="{Binding Name}" MaxLength="80" Placeholder="Dr. Sarah Lee" HeightRequest="52" />
                 </Border>
 
                 <!-- Role Selection Picker -->
@@ -37,15 +40,15 @@
                     <Border.StrokeShape>
                         <RoundRectangle CornerRadius="20" />
                     </Border.StrokeShape>
-                    <Entry Text="{Binding Phone}" Keyboard="Numeric" MaxLength="11" Placeholder="09123456789" HeightRequest="52" />
+                    <Entry Text="{Binding Phone}" Keyboard="Telephone" MaxLength="20" Placeholder="09123456789" HeightRequest="52" />
                 </Border>
 
-                <Label Text="Address" FontFamily="NunitoSemiBold" FontSize="13" />
+                <Label Text="Address (optional)" FontFamily="NunitoSemiBold" FontSize="13" />
                 <Border Stroke="{StaticResource Secondary30}" StrokeThickness="1" Padding="12,0">
                     <Border.StrokeShape>
                         <RoundRectangle CornerRadius="20" />
                     </Border.StrokeShape>
-                    <Entry Text="{Binding Address}" Placeholder="123 Pet Lane" HeightRequest="52" />
+                    <Entry Text="{Binding Address}" MaxLength="200" Placeholder="Optional address or clinic location" HeightRequest="52" />
                 </Border>
 
                 <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
@@ -54,8 +57,8 @@
                 </HorizontalStackLayout>
             </VerticalStackLayout>
 
-            <Button Text="Save Contact" Command="{Binding SaveCommand}" HeightRequest="52" CornerRadius="24" BackgroundColor="{StaticResource Primary}" TextColor="{StaticResource PrimaryFg}" FontFamily="NunitoBold" />
-            <Button Text="Delete Contact" IsVisible="{Binding CanDelete}" Command="{Binding DeleteCommand}" BackgroundColor="Transparent" TextColor="{StaticResource StatusOverdue}" FontFamily="Nunito" FontSize="14" />
+            <Button Text="Save Contact" Command="{Binding SaveCommand}" IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}" HeightRequest="52" CornerRadius="24" BackgroundColor="{StaticResource Primary}" TextColor="{StaticResource PrimaryFg}" FontFamily="NunitoBold" />
+            <Button Text="Delete Contact" IsVisible="{Binding CanDelete}" Command="{Binding DeleteCommand}" IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}" BackgroundColor="Transparent" TextColor="{StaticResource StatusOverdue}" FontFamily="Nunito" FontSize="14" />
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>
