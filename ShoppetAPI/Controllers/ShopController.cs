@@ -24,7 +24,15 @@ public class ShopController : ControllerBase
             await connection.OpenAsync();
 
             string sql=@"
-                SELECT p.Id,p.Name,p.Description,p.Price,p.ImageUrl,p.StockQuantity,p.IsAvailable,p.CreatedAt
+                SELECT p.Id,p.Name,p.Description,p.Price,p.ImageUrl,p.StockQuantity,p.IsAvailable,p.CreatedAt,
+                       (SELECT STRING_AGG(pc.Name, ',')
+                        FROM ProductPetCategories ppc
+                        JOIN PetCategories pc ON pc.Id=ppc.PetCategoryId
+                        WHERE ppc.ProductId=p.Id) AS SpeciesNames,
+                       (SELECT STRING_AGG(sc.Name, ',')
+                        FROM ProductShopCategories psc
+                        JOIN ShopCategories sc ON sc.Id=psc.ShopCategoryId
+                        WHERE psc.ProductId=p.Id) AS CategoryNames
                 FROM ShopProducts p
                 WHERE (@Search IS NULL OR p.Name LIKE @SearchLike OR p.Description LIKE @SearchLike)
                   AND (@Category IS NULL OR EXISTS(
@@ -38,17 +46,16 @@ public class ShopController : ControllerBase
                 ORDER BY p.Name;";
 
             await using var cmd=new SqlCommand(sql,connection);
-            cmd.Parameters.AddWithValue("@Search",(object?)search ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Search",string.IsNullOrWhiteSpace(search)?DBNull.Value:search);
             cmd.Parameters.AddWithValue("@SearchLike",string.IsNullOrWhiteSpace(search)?DBNull.Value:$"%{search}%");
-            cmd.Parameters.AddWithValue("@Category",(object?)category ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@Species",(object?)species ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Category",string.IsNullOrWhiteSpace(category)?DBNull.Value:category);
+            cmd.Parameters.AddWithValue("@Species",string.IsNullOrWhiteSpace(species)?DBNull.Value:species);
 
             await using var reader=await cmd.ExecuteReaderAsync();
             while(await reader.ReadAsync())
             {
-                int id=reader.GetInt32(0);
                 products.Add(new{
-                    Id=id,
+                    Id=reader.GetInt32(0),
                     Name=reader.GetString(1),
                     Description=reader.GetString(2),
                     Price=reader.GetDecimal(3),
@@ -56,10 +63,8 @@ public class ShopController : ControllerBase
                     StockQuantity=reader.GetInt32(5),
                     IsAvailable=reader.GetBoolean(6),
                     CreatedAt=reader.GetDateTime(7),
-                    Species=await GetNamesAsync(connection,
-                        @"SELECT pc.Name FROM ProductPetCategories x JOIN PetCategories pc ON pc.Id=x.PetCategoryId WHERE x.ProductId=@Id",id),
-                    Categories=await GetNamesAsync(connection,
-                        @"SELECT sc.Name FROM ProductShopCategories x JOIN ShopCategories sc ON sc.Id=x.ShopCategoryId WHERE x.ProductId=@Id",id)
+                    Species=reader.IsDBNull(8)?new List<string>():reader.GetString(8).Split(',',StringSplitOptions.RemoveEmptyEntries).ToList(),
+                    Categories=reader.IsDBNull(9)?new List<string>():reader.GetString(9).Split(',',StringSplitOptions.RemoveEmptyEntries).ToList()
                 });
             }
             return Ok(products);
@@ -81,15 +86,5 @@ public class ShopController : ControllerBase
             return Ok(result);
         }
         catch(Exception ex){ return StatusCode(500,$"Error fetching categories: {ex.Message}"); }
-    }
-
-    private static async Task<List<string>> GetNamesAsync(SqlConnection connection,string sql,int id)
-    {
-        var names=new List<string>();
-        await using var cmd=new SqlCommand(sql,connection);
-        cmd.Parameters.AddWithValue("@Id",id);
-        await using var reader=await cmd.ExecuteReaderAsync();
-        while(await reader.ReadAsync()) names.Add(reader.GetString(0));
-        return names;
     }
 }
