@@ -88,6 +88,34 @@
                     </Border>
                 </Grid>
 
+                <!-- Digital Pet ID -->
+                <Border BackgroundColor="{StaticResource CardBg}"
+                        Stroke="{StaticResource Secondary20}"
+                        StrokeThickness="1"
+                        Padding="16"
+                        StrokeShape="RoundRectangle 22"
+                        IsVisible="{Binding HasPetId}">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
+                        <Border WidthRequest="112" HeightRequest="112"
+                                BackgroundColor="White"
+                                Stroke="{StaticResource Secondary20}"
+                                StrokeThickness="1"
+                                Padding="6"
+                                StrokeShape="RoundRectangle 16">
+                            <Image Source="{Binding QrImageUrl}" Aspect="AspectFit" />
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" Spacing="6" VerticalOptions="Center">
+                            <Label Text="DIGITAL PET ID" FontFamily="NunitoBold" FontSize="11" TextColor="{StaticResource Primary}" />
+                            <Label Text="{Binding Pet.CardId}" FontFamily="NunitoExtraBold" FontSize="20" TextColor="{StaticResource BodyText}" />
+                            <Label Text="{Binding PublicPetIdUrl}" FontSize="10" TextColor="{StaticResource NavMuted}" LineBreakMode="TailTruncation" />
+                            <HorizontalStackLayout Spacing="8" Margin="0,4,0,0">
+                                <Button Text="Copy Link" Command="{Binding CopyPetIdCommand}" FontSize="11" HeightRequest="34" Padding="12,0" CornerRadius="16" BackgroundColor="{StaticResource Primary10}" TextColor="{StaticResource Primary}" />
+                                <Button Text="Share" Command="{Binding SharePetIdCommand}" FontSize="11" HeightRequest="34" Padding="12,0" CornerRadius="16" BackgroundColor="{StaticResource Primary}" TextColor="White" />
+                            </HorizontalStackLayout>
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+
                 <!-- Two-tab pill toggle -->
                 <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                     <Border x:Name="HealthTabPill" Grid.Column="0" Padding="0,10" StrokeThickness="0">
