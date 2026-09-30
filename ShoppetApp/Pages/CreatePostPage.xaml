@@ -72,6 +72,23 @@
                         AutoSize="TextChanges" 
                         MinimumHeightRequest="150" />
                         
+                <Border BackgroundColor="{StaticResource Secondary10}"
+                        StrokeThickness="0"
+                        StrokeShape="RoundRectangle 14"
+                        Padding="12">
+                    <HorizontalStackLayout Spacing="8">
+                        <Path Data="{StaticResource IconShield}"
+                              Fill="{StaticResource Primary}"
+                              WidthRequest="18"
+                              HeightRequest="18"
+                              Aspect="Uniform" />
+                        <Label Text="Community posts are visible to other ShoppetCare users. Avoid sharing phone numbers, exact home addresses, IDs, or private medical documents."
+                               FontSize="11"
+                               TextColor="{StaticResource BodyText}"
+                               LineBreakMode="WordWrap" />
+                    </HorizontalStackLayout>
+                </Border>
+
                 <!-- Prominent photo attachment area: keeps the original Shoppet styling, but makes photo sharing obvious. -->
                 <Border BackgroundColor="{StaticResource CardBg}"
                         Stroke="{StaticResource Secondary}"
