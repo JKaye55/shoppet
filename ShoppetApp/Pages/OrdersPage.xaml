@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:ShoppetApp.Models"
+             x:Class="ShoppetApp.Pages.OrdersPage"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="{StaticResource AppBackground}">
+    <Grid RowDefinitions="Auto,*">
+        <Grid Padding="18,20,18,12" ColumnDefinitions="Auto,*">
+            <Button Text="Back" BackgroundColor="Transparent" TextColor="{StaticResource Primary}" Clicked="OnBackClicked"/>
+            <VerticalStackLayout Grid.Column="1" Spacing="1" Margin="8,0,0,0">
+                <Label Text="Purchases" FontFamily="NunitoExtraBold" FontSize="22" TextColor="{StaticResource BodyText}"/>
+                <Label Text="Simulated marketplace orders" FontSize="12" TextColor="{StaticResource NavMuted}"/>
+            </VerticalStackLayout>
+        </Grid>
+        <Grid Grid.Row="1">
+            <CollectionView x:Name="OrdersView" Margin="16,6,16,24" SelectionMode="None">
+                <CollectionView.EmptyView>
+                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="8">
+                        <Label Text="No purchases yet" FontFamily="NunitoBold" FontSize="18" TextColor="{StaticResource BodyText}"/>
+                        <Label Text="Completed mock checkouts will appear here." FontSize="13" TextColor="{StaticResource NavMuted}"/>
+                    </VerticalStackLayout>
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:OrderDto">
+                        <Border Margin="0,0,0,10" Padding="16" BackgroundColor="{StaticResource CardBg}" Stroke="{StaticResource Secondary20}" StrokeThickness="1" StrokeShape="RoundRectangle 18">
+                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto">
+                                <Label Text="{Binding Id, StringFormat='Order #{0}'}" FontFamily="NunitoBold" FontSize="15" TextColor="{StaticResource BodyText}"/>
+                                <Label Grid.Column="1" Text="{Binding Status}" FontFamily="NunitoBold" FontSize="11" TextColor="{StaticResource Primary}"/>
+                                <Label Grid.Row="1" Text="{Binding OrderedAt, StringFormat='{0:MMM d, yyyy • h:mm tt}'}" FontSize="12" TextColor="{StaticResource NavMuted}" Margin="0,4,0,0"/>
+                                <Label Grid.Row="2" Grid.ColumnSpan="2" Text="{Binding TotalAmount, StringFormat='₱{0:N2}'}" FontFamily="NunitoExtraBold" FontSize="18" TextColor="{StaticResource Primary}" Margin="0,10,0,0"/>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+            <ActivityIndicator x:Name="Loading" IsVisible="False" IsRunning="False" Color="{StaticResource Primary}" VerticalOptions="Center" HorizontalOptions="Center"/>
+        </Grid>
+    </Grid>
+</ContentPage>
