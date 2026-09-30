@@ -77,6 +77,17 @@ public class PremiumController : ControllerBase
             await log.ExecuteNonQueryAsync();
         }
 
+        await using(var notify=new SqlCommand("""
+            INSERT INTO Notifications(UserId,Title,Body,Link,Icon,IsRead,CreatedAt)
+            VALUES(@UserId,'Premium activated',
+                   'Your ShoppetCare Premium demo upgrade is active.',
+                   'premium','',0,SYSDATETIME());
+            """,conn,tx))
+        {
+            notify.Parameters.AddWithValue("@UserId",userId);
+            await notify.ExecuteNonQueryAsync();
+        }
+
         await tx.CommitAsync();
         return Ok(new{success=true,alreadyPremium=false,reference});
     }
