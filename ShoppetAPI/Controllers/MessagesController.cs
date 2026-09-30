@@ -1,3 +1,4 @@
+using ShoppetAPI.Security;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using System.Text.Json;
@@ -37,6 +38,7 @@ public class MessagesController : ControllerBase
     public async Task<IActionResult> SendMessage([FromBody] SendMessageRequest req)
     {
         if (req.SenderId <= 0 || req.ReceiverId <= 0) return BadRequest("Valid sender and receiver IDs are required.");
+        if (!this.IsAuthenticatedUser(req.SenderId)) return Forbid();
         if (req.SenderId == req.ReceiverId) return BadRequest("You cannot message yourself.");
         if (string.IsNullOrWhiteSpace(req.Text)) return BadRequest("Message text is required.");
 
@@ -122,6 +124,7 @@ public class MessagesController : ControllerBase
         if(cleanQuery.Length<2) return Ok(new List<object>());
         if(cleanQuery.Length>80) return BadRequest("Search text is too long.");
         if(currentUserId<=0) return BadRequest("A valid current user ID is required.");
+        if(!this.IsAuthenticatedUser(currentUserId)) return Forbid();
 
         try
         {
@@ -154,6 +157,7 @@ public class MessagesController : ControllerBase
     public async Task<IActionResult> GetConversations(int userId)
     {
         if (userId <= 0) return BadRequest("A valid user ID is required.");
+        if(!this.IsAuthenticatedUser(userId)) return Forbid();
         try
         {
             var result = new List<object>();
@@ -192,6 +196,7 @@ public class MessagesController : ControllerBase
     [HttpGet("chat/{userId:int}/{contactId:int}")]
     public async Task<IActionResult> GetMessages(int userId, int contactId)
     {
+        if(!this.IsAuthenticatedUser(userId)) return Forbid();
         try
         {
             int u1=Math.Min(userId,contactId), u2=Math.Max(userId,contactId);
@@ -209,6 +214,7 @@ public class MessagesController : ControllerBase
     [HttpGet("unreadCount/{userId:int}")]
     public async Task<IActionResult> GetUnreadCount(int userId)
     {
+        if(!this.IsAuthenticatedUser(userId)) return Forbid();
         try
         {
             await using var conn=new SqlConnection(ConnectionString);
@@ -226,6 +232,7 @@ public class MessagesController : ControllerBase
     [HttpPost("resetUnread/{userId:int}/{contactId:int}")]
     public async Task<IActionResult> ResetUnread(int userId,int contactId)
     {
+        if(!this.IsAuthenticatedUser(userId)) return Forbid();
         try
         {
             int u1=Math.Min(userId,contactId),u2=Math.Max(userId,contactId);
