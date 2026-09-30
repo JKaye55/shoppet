@@ -30,7 +30,10 @@ namespace ShoppetApp.Models
 
         public List<string> ImageList => string.IsNullOrEmpty(ImageUrls)
             ? new List<string>()
-            : ImageUrls.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+            : ImageUrls.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(ShoppetApp.Helpers.MediaUrlHelper.Resolve)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToList();
 
         public bool HasImages => ImageList.Any();
         public int LikeCount { get; set; }
