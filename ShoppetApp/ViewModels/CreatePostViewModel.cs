@@ -165,7 +165,22 @@ namespace ShoppetApp.ViewModels
                 return;
             }
 
-            var mediaPaths = string.Join(",", AttachedMedia.Select(m => m.FilePath));
+            var uploadedMedia = new List<string>();
+            foreach (var media in AttachedMedia)
+            {
+                var uploaded = await _api.UploadImageAsync(media.FilePath, "community");
+                if (string.IsNullOrWhiteSpace(uploaded))
+                {
+                    await Shell.Current.DisplayAlertAsync(
+                        "Photo upload failed",
+                        "One of the selected photos could not be uploaded. Please try again.",
+                        "OK");
+                    return;
+                }
+                uploadedMedia.Add(uploaded);
+            }
+
+            var mediaPaths = string.Join(",", uploadedMedia);
 
             var request = new 
             {
