@@ -385,6 +385,24 @@ if ($primary) {
 }
 
 # ---------------------------------------------------------------------------
+# MOCK PAYMENT
+# ---------------------------------------------------------------------------
+if ($primary -and $listing) {
+    Test-Step "Mock Payment - success" {
+        $payment = Invoke-Api POST "payments/mock" @{
+            userId = $primary.userId
+            listingId = $listing.id
+            amount = 109.50
+            paymentMethod = "GCash Mock"
+            type = "MarketplacePurchase"
+            simulateSuccess = $true
+        }
+        if ($payment.status -ne "SimulatedPaid") { throw "Expected SimulatedPaid status." }
+        $payment
+    } | Out-Null
+}
+
+# ---------------------------------------------------------------------------
 # MESSAGING
 # ---------------------------------------------------------------------------
 if ($primary -and $secondary) {
