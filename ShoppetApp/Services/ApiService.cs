@@ -113,7 +113,22 @@ public class ApiService
 
     public async Task<List<Pet>> GetPetsAsync()
     {
-        try { return await _http.GetFromJsonAsync<List<Pet>>($"pets?userId={Microsoft.Maui.Storage.Preferences.Get("LoggedInUserId", 0)}") ?? []; }
+        try
+        {
+            var pets = await _http.GetFromJsonAsync<List<Pet>>(
+                $"pets?userId={Microsoft.Maui.Storage.Preferences.Get("LoggedInUserId", 0)}") ?? [];
+#if ANDROID
+            foreach (var pet in pets)
+            {
+                if (!string.IsNullOrWhiteSpace(pet.PhotoUrl))
+                    pet.PhotoUrl = pet.PhotoUrl.Replace(
+                        "http://localhost:5020",
+                        "http://10.0.2.2:5020",
+                        StringComparison.OrdinalIgnoreCase);
+            }
+#endif
+            return pets;
+        }
         catch { return []; }
     }
 
