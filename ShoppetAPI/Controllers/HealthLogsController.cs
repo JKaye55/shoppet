@@ -1,237 +1,220 @@
 using Microsoft.AspNetCore.Mvc;
-using MySql.Data.MySqlClient;
-using System.Data;
+using Microsoft.Data.SqlClient;
 
-namespace ShoppetAPI.Controllers
+namespace ShoppetAPI.Controllers;
+
+[Route("api/pets/{petId:int}/[controller]")]
+[ApiController]
+public class HealthLogsController : ControllerBase
 {
-    [Route("api/pets/{petId}/[controller]")]
-    [ApiController]
-    public class HealthLogsController : ControllerBase
+    private readonly IConfiguration _configuration;
+    public HealthLogsController(IConfiguration configuration) => _configuration = configuration;
+
+    private string ConnectionString =>
+        _configuration.GetConnectionString("SharedSqlServer")
+        ?? throw new InvalidOperationException("SharedSqlServer connection is missing.");
+
+    [HttpGet]
+    public async Task<IActionResult> GetHealthLogs(int petId)
     {
-        private readonly IConfiguration _configuration;
-
-        public HealthLogsController(IConfiguration configuration)
+        try
         {
-            _configuration = configuration;
-        }
+            var result = new List<object>();
+            await using var conn = new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
 
-        [HttpGet]
-        public async Task<IActionResult> GetHealthLogs(int petId)
-        {
-            try
+            const string sql = """
+                SELECT Id, PetId, RecordType, Title, NextDueDate,
+                       ISNULL(Completed,0), DateAdministered,
+                       ISNULL(ValidityInterval,0), ISNULL(ValidityUnit,'Months'),
+                       ISNULL(MedicationIntervalHours,0), TimeStarted,
+                       ISNULL(DosageTotal,0), ISNULL(DosageRemaining,0),
+                       CheckupDate, ISNULL(DocumentPaths,''),
+                       CompletedAt
+                FROM PetHealthRecords
+                WHERE PetId=@PetId
+                ORDER BY ISNULL(NextDueDate, RecordDate) DESC, Id DESC;
+                """;
+
+            await using var cmd = new SqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@PetId", petId);
+            await using var r = await cmd.ExecuteReaderAsync();
+
+            while (await r.ReadAsync())
             {
-                string connString = _configuration.GetConnectionString("DefaultConnection")!;
-                var logs = new List<object>();
+                string Iso(int ordinal) => r.IsDBNull(ordinal)
+                    ? string.Empty
+                    : r.GetDateTime(ordinal).ToString("O");
 
-                using (var connection = new MySqlConnection(connString))
+                result.Add(new
                 {
-                    await connection.OpenAsync();
-                    var query = "SELECT Id, PetId, Type, Name, DueDate, Completed, DateAdministered, ValidityInterval, ValidityUnit, MedicationIntervalHours, TimeStarted, DosageTotal, DosageRemaining, CheckupDate, DocumentPaths, CreatedAt, CompletedAt FROM healthlogs WHERE PetId = @PetId";
-
-                    using (var cmd = new MySqlCommand(query, connection))
-                    {
-                        cmd.Parameters.AddWithValue("@PetId", petId);
-                        using (var reader = await cmd.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                logs.Add(new
-                                {
-                                    Id = reader.GetInt32("Id"),
-                                    PetId = reader.GetInt32("PetId"),
-                                    Type = reader.GetString("Type"),
-                                    Name = reader.GetString("Name"),
-                                    DueDate = reader.IsDBNull(reader.GetOrdinal("DueDate")) ? "" : reader.GetString("DueDate"),
-                                    Completed = reader.GetBoolean("Completed"),
-                                    DateAdministered = reader.IsDBNull(reader.GetOrdinal("DateAdministered")) ? "" : reader.GetString("DateAdministered"),
-                                    ValidityInterval = reader.GetInt32("ValidityInterval"),
-                                    ValidityUnit = reader.IsDBNull(reader.GetOrdinal("ValidityUnit")) ? "" : reader.GetString("ValidityUnit"),
-                                    MedicationIntervalHours = reader.GetDouble("MedicationIntervalHours"),
-                                    TimeStarted = reader.IsDBNull(reader.GetOrdinal("TimeStarted")) ? "" : reader.GetString("TimeStarted"),
-                                    DosageTotal = reader.GetInt32("DosageTotal"),
-                                    DosageRemaining = reader.GetInt32("DosageRemaining"),
-                                    CheckupDate = reader.IsDBNull(reader.GetOrdinal("CheckupDate")) ? "" : reader.GetString("CheckupDate"),
-                                    DocumentPaths = reader.IsDBNull(reader.GetOrdinal("DocumentPaths")) ? "" : reader.GetString("DocumentPaths"),
-                                    CreatedAt = reader.GetDateTime("CreatedAt"),
-                                    CompletedAt = reader.IsDBNull(reader.GetOrdinal("CompletedAt")) ? (DateTime?)null : reader.GetDateTime("CompletedAt")
-                                });
-                            }
-                        }
-                    }
-                }
-
-                return Ok(logs);
+                    Id = r.GetInt32(0),
+                    PetId = r.GetInt32(1),
+                    Type = r.IsDBNull(2) ? "vital" : r.GetString(2),
+                    Name = r.IsDBNull(3) ? string.Empty : r.GetString(3),
+                    DueDate = Iso(4),
+                    Completed = r.GetBoolean(5),
+                    DateAdministered = Iso(6),
+                    ValidityInterval = r.GetInt32(7),
+                    ValidityUnit = r.GetString(8),
+                    MedicationIntervalHours = Convert.ToDouble(r.GetDecimal(9)),
+                    TimeStarted = Iso(10),
+                    DosageTotal = r.GetInt32(11),
+                    DosageRemaining = r.GetInt32(12),
+                    CheckupDate = Iso(13),
+                    DocumentPaths = r.GetString(14),
+                    CompletedAt = r.IsDBNull(15) ? (DateTime?)null : r.GetDateTime(15)
+                });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Error fetching health logs: {ex.Message}");
-            }
+
+            return Ok(result);
         }
-
-        [HttpPost]
-        public async Task<IActionResult> CreateHealthLog(int petId, [FromBody] HealthLogRequest request)
+        catch (Exception ex)
         {
-            try
-            {
-                string connString = _configuration.GetConnectionString("DefaultConnection")!;
-                long newId = 0;
-
-                using (var connection = new MySqlConnection(connString))
-                {
-                    await connection.OpenAsync();
-                    var query = @"INSERT INTO healthlogs (PetId, Type, Name, DueDate, Completed, DateAdministered, ValidityInterval, ValidityUnit, MedicationIntervalHours, TimeStarted, DosageTotal, DosageRemaining, CheckupDate, DocumentPaths, CreatedAt) 
-                                  VALUES (@PetId, @Type, @Name, @DueDate, 0, @DateAdministered, @ValidityInterval, @ValidityUnit, @MedicationIntervalHours, @TimeStarted, @DosageTotal, @DosageRemaining, @CheckupDate, @DocumentPaths, NOW());
-                                  SELECT LAST_INSERT_ID();";
-
-                    using (var cmd = new MySqlCommand(query, connection))
-                    {
-                        cmd.Parameters.AddWithValue("@PetId", petId);
-                        cmd.Parameters.AddWithValue("@Type", request.Type ?? "vaccine");
-                        cmd.Parameters.AddWithValue("@Name", request.Name ?? "");
-                        cmd.Parameters.AddWithValue("@DueDate", request.DueDate ?? "");
-                        cmd.Parameters.AddWithValue("@DateAdministered", request.DateAdministered ?? "");
-                        cmd.Parameters.AddWithValue("@ValidityInterval", request.ValidityInterval);
-                        cmd.Parameters.AddWithValue("@ValidityUnit", request.ValidityUnit ?? "Months");
-                        cmd.Parameters.AddWithValue("@MedicationIntervalHours", request.MedicationIntervalHours);
-                        cmd.Parameters.AddWithValue("@TimeStarted", request.TimeStarted ?? "");
-                        cmd.Parameters.AddWithValue("@DosageTotal", request.DosageTotal);
-                        cmd.Parameters.AddWithValue("@DosageRemaining", request.DosageRemaining);
-                        cmd.Parameters.AddWithValue("@CheckupDate", request.CheckupDate ?? "");
-                        cmd.Parameters.AddWithValue("@DocumentPaths", request.DocumentPaths ?? "");
-
-                        object result = await cmd.ExecuteScalarAsync();
-                        if (result != null) newId = Convert.ToInt64(result);
-                    }
-                }
-
-                return Ok(new { Id = (int)newId });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Error saving health log: {ex.Message}");
-            }
-        }
-
-                [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateHealthLog(int petId, int id, [FromBody] HealthLogRequest request)
-        {
-            try
-            {
-                string connString = _configuration.GetConnectionString("DefaultConnection")!;
-                using (var connection = new MySqlConnection(connString))
-                {
-                    await connection.OpenAsync();
-                    var query = @"UPDATE healthlogs 
-                                  SET Type=@Type, Name=@Name, DueDate=@DueDate, DateAdministered=@DateAdministered, 
-                                      ValidityInterval=@ValidityInterval, ValidityUnit=@ValidityUnit, 
-                                      MedicationIntervalHours=@MedicationIntervalHours, TimeStarted=@TimeStarted, 
-                                      DosageTotal=@DosageTotal, DosageRemaining=@DosageRemaining, 
-                                      CheckupDate=@CheckupDate, DocumentPaths=@DocumentPaths
-                                  WHERE Id = @Id AND PetId = @PetId";
-
-                    using (var cmd = new MySqlCommand(query, connection))
-                    {
-                        cmd.Parameters.AddWithValue("@Id", id);
-                        cmd.Parameters.AddWithValue("@PetId", petId);
-                        cmd.Parameters.AddWithValue("@Type", request.Type ?? "vaccine");
-                        cmd.Parameters.AddWithValue("@Name", request.Name ?? "");
-                        cmd.Parameters.AddWithValue("@DueDate", request.DueDate ?? "");
-                        cmd.Parameters.AddWithValue("@DateAdministered", request.DateAdministered ?? "");
-                        cmd.Parameters.AddWithValue("@ValidityInterval", request.ValidityInterval);
-                        cmd.Parameters.AddWithValue("@ValidityUnit", request.ValidityUnit ?? "Months");
-                        cmd.Parameters.AddWithValue("@MedicationIntervalHours", request.MedicationIntervalHours);
-                        cmd.Parameters.AddWithValue("@TimeStarted", request.TimeStarted ?? "");
-                        cmd.Parameters.AddWithValue("@DosageTotal", request.DosageTotal);
-                        cmd.Parameters.AddWithValue("@DosageRemaining", request.DosageRemaining);
-                        cmd.Parameters.AddWithValue("@CheckupDate", request.CheckupDate ?? "");
-                        cmd.Parameters.AddWithValue("@DocumentPaths", request.DocumentPaths ?? "");
-
-                        await cmd.ExecuteNonQueryAsync();
-                    }
-                }
-                return Ok();
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Error updating health log: {ex.Message}");
-            }
-        }
-
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteHealthLog(int petId, int id)
-        {
-            try
-            {
-                string connString = _configuration.GetConnectionString("DefaultConnection")!;
-                using (var connection = new MySqlConnection(connString))
-                {
-                    await connection.OpenAsync();
-                    var query = "DELETE FROM healthlogs WHERE Id = @Id AND PetId = @PetId";
-
-                    using (var cmd = new MySqlCommand(query, connection))
-                    {
-                        cmd.Parameters.AddWithValue("@Id", id);
-                        cmd.Parameters.AddWithValue("@PetId", petId);
-                        await cmd.ExecuteNonQueryAsync();
-                    }
-                }
-
-                return Ok();
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Error deleting health log: {ex.Message}");
-            }
-        }
-
-        [HttpPut("{id}/complete")]
-        public async Task<IActionResult> CompleteHealthLog(int petId, int id, [FromBody] CompleteHealthLogRequest req)
-        {
-            try
-            {
-                string connString = _configuration.GetConnectionString("DefaultConnection")!;
-                using (var connection = new MySqlConnection(connString))
-                {
-                    await connection.OpenAsync();
-                    var query = "UPDATE healthlogs SET Completed = 1, CompletedAt = NOW(), DosageRemaining = 0, DueDate = @NextDueDate WHERE Id = @Id AND PetId = @PetId";
-
-                    using (var cmd = new MySqlCommand(query, connection))
-                    {
-                        cmd.Parameters.AddWithValue("@Id", id);
-                        cmd.Parameters.AddWithValue("@PetId", petId);
-                        cmd.Parameters.AddWithValue("@NextDueDate", req.NextDueDate ?? "");
-                        await cmd.ExecuteNonQueryAsync();
-                    }
-                }
-
-                return Ok(new { NextDueDate = req.NextDueDate });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Error completing health log: {ex.Message}");
-            }
+            return StatusCode(500, $"Health records error: {ex.Message}");
         }
     }
 
-    public class CompleteHealthLogRequest
+    [HttpPost]
+    public async Task<IActionResult> CreateHealthLog(int petId, [FromBody] HealthLogRequest request)
     {
-        public string NextDueDate { get; set; } = string.Empty;
+        try
+        {
+            await using var conn = new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+
+            const string sql = """
+                INSERT INTO PetHealthRecords
+                (PetId, RecordType, Title, Notes, RecordDate, NextDueDate, VetName,
+                 Completed, DateAdministered, ValidityInterval, ValidityUnit,
+                 MedicationIntervalHours, TimeStarted, DosageTotal, DosageRemaining,
+                 CheckupDate, DocumentPaths, CompletedAt)
+                OUTPUT INSERTED.Id
+                VALUES
+                (@PetId,@Type,@Name,'',SYSDATETIME(),@DueDate,'',
+                 @Completed,@DateAdministered,@ValidityInterval,@ValidityUnit,
+                 @MedicationIntervalHours,@TimeStarted,@DosageTotal,@DosageRemaining,
+                 @CheckupDate,@DocumentPaths,@CompletedAt);
+                """;
+
+            await using var cmd = BuildCommand(sql, conn, petId, request);
+            var id = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+            return Ok(new {
+                Id=id, PetId=petId, request.Type, request.Name, request.DueDate,
+                request.Completed, request.DateAdministered, request.ValidityInterval,
+                request.ValidityUnit, request.MedicationIntervalHours, request.TimeStarted,
+                request.DosageTotal, request.DosageRemaining, request.CheckupDate,
+                request.DocumentPaths, CompletedAt=request.Completed ? DateTime.Now : (DateTime?)null
+            });
+        }
+        catch (Exception ex) { return StatusCode(500, $"Health record save error: {ex.Message}"); }
     }
 
-    public class HealthLogRequest
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> UpdateHealthLog(int petId, int id, [FromBody] HealthLogRequest request)
     {
-        public string Type { get; set; } = "vaccine";
-        public string Name { get; set; } = string.Empty;
-        public string DueDate { get; set; } = string.Empty;
-        public string DateAdministered { get; set; } = string.Empty;
-        public int ValidityInterval { get; set; }
-        public string ValidityUnit { get; set; } = "Months";
-        public double MedicationIntervalHours { get; set; }
-        public string TimeStarted { get; set; } = string.Empty;
-        public int DosageTotal { get; set; }
-        public int DosageRemaining { get; set; }
-        public string CheckupDate { get; set; } = string.Empty;
-        public string DocumentPaths { get; set; } = string.Empty;
+        try
+        {
+            await using var conn = new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+            const string sql = """
+                UPDATE PetHealthRecords SET
+                    RecordType=@Type, Title=@Name, NextDueDate=@DueDate,
+                    Completed=@Completed, DateAdministered=@DateAdministered,
+                    ValidityInterval=@ValidityInterval, ValidityUnit=@ValidityUnit,
+                    MedicationIntervalHours=@MedicationIntervalHours, TimeStarted=@TimeStarted,
+                    DosageTotal=@DosageTotal, DosageRemaining=@DosageRemaining,
+                    CheckupDate=@CheckupDate, DocumentPaths=@DocumentPaths,
+                    CompletedAt=CASE WHEN @Completed=1 THEN ISNULL(CompletedAt,SYSDATETIME()) ELSE NULL END
+                WHERE Id=@Id AND PetId=@PetId;
+                """;
+            await using var cmd = BuildCommand(sql, conn, petId, request);
+            cmd.Parameters.AddWithValue("@Id", id);
+            var rows = await cmd.ExecuteNonQueryAsync();
+            return rows == 0 ? NotFound() : Ok(new { success=true });
+        }
+        catch (Exception ex) { return StatusCode(500, $"Health record update error: {ex.Message}"); }
     }
+
+    [HttpPut("{id:int}/complete")]
+    public async Task<IActionResult> CompleteHealthLog(int petId, int id, [FromBody] CompleteHealthRequest request)
+    {
+        try
+        {
+            await using var conn = new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+            const string sql = """
+                UPDATE PetHealthRecords
+                SET Completed=1, CompletedAt=SYSDATETIME(),
+                    NextDueDate=COALESCE(@NextDueDate,NextDueDate)
+                WHERE Id=@Id AND PetId=@PetId;
+                """;
+            await using var cmd = new SqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@Id", id);
+            cmd.Parameters.AddWithValue("@PetId", petId);
+            cmd.Parameters.AddWithValue("@NextDueDate",
+                ParseDate(request.NextDueDate) is DateTime d ? d : DBNull.Value);
+            var rows = await cmd.ExecuteNonQueryAsync();
+            return rows == 0 ? NotFound() : Ok(new { success=true });
+        }
+        catch (Exception ex) { return StatusCode(500, $"Complete health record error: {ex.Message}"); }
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> DeleteHealthLog(int petId, int id)
+    {
+        try
+        {
+            await using var conn = new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+            await using var cmd = new SqlCommand(
+                "DELETE FROM PetHealthRecords WHERE Id=@Id AND PetId=@PetId", conn);
+            cmd.Parameters.AddWithValue("@Id", id);
+            cmd.Parameters.AddWithValue("@PetId", petId);
+            return await cmd.ExecuteNonQueryAsync() == 0 ? NotFound() : Ok(new { success=true });
+        }
+        catch (Exception ex) { return StatusCode(500, $"Delete health record error: {ex.Message}"); }
+    }
+
+    private static SqlCommand BuildCommand(string sql, SqlConnection conn, int petId, HealthLogRequest x)
+    {
+        var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@PetId", petId);
+        cmd.Parameters.AddWithValue("@Type", x.Type ?? "vital");
+        cmd.Parameters.AddWithValue("@Name", x.Name ?? string.Empty);
+        cmd.Parameters.AddWithValue("@DueDate", ParseDate(x.DueDate) is DateTime due ? due : DBNull.Value);
+        cmd.Parameters.AddWithValue("@Completed", x.Completed);
+        cmd.Parameters.AddWithValue("@DateAdministered", ParseDate(x.DateAdministered) is DateTime da ? da : DBNull.Value);
+        cmd.Parameters.AddWithValue("@ValidityInterval", x.ValidityInterval);
+        cmd.Parameters.AddWithValue("@ValidityUnit", x.ValidityUnit ?? "Months");
+        cmd.Parameters.AddWithValue("@MedicationIntervalHours", Convert.ToDecimal(x.MedicationIntervalHours));
+        cmd.Parameters.AddWithValue("@TimeStarted", ParseDate(x.TimeStarted) is DateTime ts ? ts : DBNull.Value);
+        cmd.Parameters.AddWithValue("@DosageTotal", x.DosageTotal);
+        cmd.Parameters.AddWithValue("@DosageRemaining", x.DosageRemaining);
+        cmd.Parameters.AddWithValue("@CheckupDate", ParseDate(x.CheckupDate) is DateTime cd ? cd : DBNull.Value);
+        cmd.Parameters.AddWithValue("@DocumentPaths", x.DocumentPaths ?? string.Empty);
+        cmd.Parameters.AddWithValue("@CompletedAt", x.Completed ? DateTime.Now : DBNull.Value);
+        return cmd;
+    }
+
+    private static DateTime? ParseDate(string? value) =>
+        DateTime.TryParse(value, out var dt) ? dt : null;
 }
 
+public class HealthLogRequest
+{
+    public string Type { get; set; } = "vital";
+    public string Name { get; set; } = string.Empty;
+    public string DueDate { get; set; } = string.Empty;
+    public bool Completed { get; set; }
+    public string DateAdministered { get; set; } = string.Empty;
+    public int ValidityInterval { get; set; }
+    public string ValidityUnit { get; set; } = "Months";
+    public double MedicationIntervalHours { get; set; }
+    public string TimeStarted { get; set; } = string.Empty;
+    public int DosageTotal { get; set; }
+    public int DosageRemaining { get; set; }
+    public string CheckupDate { get; set; } = string.Empty;
+    public string DocumentPaths { get; set; } = string.Empty;
+}
+public class CompleteHealthRequest { public string NextDueDate { get; set; } = string.Empty; }
