@@ -1,150 +1,127 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using MySql.Data.MySqlClient;
-using System.Data;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 
-namespace ShoppetAPI.Controllers
+namespace ShoppetAPI.Controllers;
+
+[Route("api/[controller]")]
+[ApiController]
+public class ContactsController : ControllerBase
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class ContactsController : ControllerBase
+    private readonly IConfiguration _configuration;
+    public ContactsController(IConfiguration configuration)=>_configuration=configuration;
+
+    private string ConnectionString =>
+        _configuration.GetConnectionString("SharedSqlServer")
+        ?? throw new InvalidOperationException("SharedSqlServer connection is missing.");
+
+    [HttpGet]
+    public async Task<IActionResult> GetContacts([FromQuery] int? userId=null)
     {
-        private readonly IConfiguration _configuration;
-
-        public ContactsController(IConfiguration configuration)
+        try
         {
-            _configuration = configuration;
+            var list=new List<object>();
+            await using var conn=new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+
+            var sql="""
+                SELECT Id,UserId,Name,ISNULL(Role,''),ISNULL(Address,''),
+                       ISNULL(Phone,''),IsEmergency
+                FROM EmergencyContacts
+                """;
+            if(userId.HasValue) sql+=" WHERE UserId=@UserId";
+            sql+=" ORDER BY IsEmergency DESC, Name;";
+
+            await using var cmd=new SqlCommand(sql,conn);
+            if(userId.HasValue) cmd.Parameters.AddWithValue("@UserId",userId.Value);
+
+            await using var r=await cmd.ExecuteReaderAsync();
+            while(await r.ReadAsync())
+            {
+                list.Add(new{
+                    Id=r.GetInt32(0),UserId=r.GetInt32(1),Name=r.GetString(2),
+                    Role=r.GetString(3),Address=r.GetString(4),Phone=r.GetString(5),
+                    IsEmergency=r.GetBoolean(6)
+                });
+            }
+            return Ok(list);
         }
-
-        [HttpGet]
-        public async Task<IActionResult> GetContacts([FromQuery] int? userId = null)
-        {
-            try
-            {
-                string connString = _configuration.GetConnectionString("DefaultConnection")!;
-                var contacts = new List<object>();
-
-                using (var connection = new MySqlConnection(connString))
-                {
-                    await connection.OpenAsync();
-                    var query = "SELECT Id, UserId, Name, Role, Address, Phone, IsEmergency FROM emergencycontacts";
-
-                    if (userId.HasValue)
-                    {
-                        query += " WHERE UserId = @userId";
-                    }
-
-                    using (var cmd = new MySqlCommand(query, connection))
-                    {
-                        if (userId.HasValue)
-                        {
-                            cmd.Parameters.AddWithValue("@userId", userId.Value);
-                        }
-
-                        using (var reader = await cmd.ExecuteReaderAsync())
-                    {
-                        while (await reader.ReadAsync())
-                        {
-                            contacts.Add(new
-                            {
-                                Id = reader.GetInt32("Id"),
-                                UserId = reader.GetInt32("UserId"),
-                                Name = reader.GetString("Name"),
-                                Role = reader.GetString("Role"),
-                                Address = reader.GetString("Address"),
-                                Phone = reader.GetString("Phone"),
-                                IsEmergency = reader.GetBoolean("IsEmergency")
-                            });
-                        }
-                    }
-                }
-            }
-                return Ok(contacts);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Error fetching contacts: {ex.Message}");
-            }
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> CreateContact([FromBody] ContactRequest request)
-        {
-            try
-            {
-                string connString = _configuration.GetConnectionString("DefaultConnection")!;
-                long newId = 0;
-
-                using (var connection = new MySqlConnection(connString))
-                {
-                    await connection.OpenAsync();
-                    var query = @"INSERT INTO emergencycontacts (UserId, Name, Role, Address, Phone, IsEmergency) 
-                                  VALUES (@UserId, @Name, @Role, @Address, @Phone, @IsEmergency);
-                                  SELECT LAST_INSERT_ID();";
-
-                    using (var cmd = new MySqlCommand(query, connection))
-                    {
-                        cmd.Parameters.AddWithValue("@UserId", request.UserId);
-                        cmd.Parameters.AddWithValue("@Name", request.Name ?? "");
-                        cmd.Parameters.AddWithValue("@Role", request.Role ?? "");
-                        cmd.Parameters.AddWithValue("@Address", request.Address ?? "");
-                        cmd.Parameters.AddWithValue("@Phone", request.Phone ?? "");
-                        cmd.Parameters.AddWithValue("@IsEmergency", request.IsEmergency);
-
-                        object result = await cmd.ExecuteScalarAsync();
-                        if (result != null) newId = Convert.ToInt64(result);
-                    }
-                }
-
-                return Ok(new { Id = (int)newId, request.Name, request.Role, request.Phone });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Error saving contact: {ex.Message}");
-            }
-        }
-
-            [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateContact(int id, [FromBody] ContactRequest request)
-        {
-            try
-            {
-                string connString = _configuration.GetConnectionString("DefaultConnection")!;
-                using (var connection = new MySqlConnection(connString))
-                {
-                    await connection.OpenAsync();
-                    var query = @"UPDATE emergencycontacts SET Name = @name, Role = @role, Address = @address, Phone = @phone, IsEmergency = @isEmergency WHERE Id = @id AND UserId = @userId";
-
-                    using (var cmd = new MySqlCommand(query, connection))
-                    {
-                        cmd.Parameters.AddWithValue("@id", id);
-                        cmd.Parameters.AddWithValue("@userId", request.UserId);
-                        cmd.Parameters.AddWithValue("@name", request.Name);
-                        cmd.Parameters.AddWithValue("@role", request.Role);
-                        cmd.Parameters.AddWithValue("@address", request.Address);
-                        cmd.Parameters.AddWithValue("@phone", request.Phone);
-                        cmd.Parameters.AddWithValue("@isEmergency", request.IsEmergency);
-
-                        int rows = await cmd.ExecuteNonQueryAsync();
-                        if (rows == 0) return NotFound("Contact not found.");
-
-                        return Ok(new { Id = id, request.UserId, request.Name, request.Role, request.Address, request.Phone, request.IsEmergency });
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Error updating contact: {ex.Message}");
-            }
-        }
+        catch(Exception ex){return StatusCode(500,$"Contacts error: {ex.Message}");}
     }
 
-    public class ContactRequest
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] ContactRequest x)
     {
-        public int UserId { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public string Role { get; set; } = string.Empty;
-        public string Address { get; set; } = string.Empty;
-        public string Phone { get; set; } = string.Empty;
-        public bool IsEmergency { get; set; }
+        if(x.UserId<=0||string.IsNullOrWhiteSpace(x.Name))
+            return BadRequest("A valid user and contact name are required.");
+        try
+        {
+            await using var conn=new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+            await using var cmd=new SqlCommand("""
+                INSERT INTO EmergencyContacts(UserId,Name,Role,Address,Phone,IsEmergency)
+                OUTPUT INSERTED.Id
+                VALUES(@UserId,@Name,@Role,@Address,@Phone,@IsEmergency);
+                """,conn);
+            Bind(cmd,x);
+            var id=Convert.ToInt32(await cmd.ExecuteScalarAsync());
+            return Ok(new{Id=id,x.UserId,Name=x.Name.Trim(),x.Role,x.Address,x.Phone,x.IsEmergency});
+        }
+        catch(Exception ex){return StatusCode(500,$"Contact save error: {ex.Message}");}
     }
+
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> Update(int id,[FromBody] ContactRequest x)
+    {
+        try
+        {
+            await using var conn=new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+            await using var cmd=new SqlCommand("""
+                UPDATE EmergencyContacts
+                SET Name=@Name,Role=@Role,Address=@Address,Phone=@Phone,IsEmergency=@IsEmergency
+                WHERE Id=@Id AND UserId=@UserId;
+                """,conn);
+            Bind(cmd,x);
+            cmd.Parameters.AddWithValue("@Id",id);
+            return await cmd.ExecuteNonQueryAsync()==0?NotFound():Ok(new{success=true});
+        }
+        catch(Exception ex){return StatusCode(500,$"Contact update error: {ex.Message}");}
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id,[FromQuery] int userId=0)
+    {
+        try
+        {
+            await using var conn=new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+            var sql=userId>0
+                ?"DELETE FROM EmergencyContacts WHERE Id=@Id AND UserId=@UserId"
+                :"DELETE FROM EmergencyContacts WHERE Id=@Id";
+            await using var cmd=new SqlCommand(sql,conn);
+            cmd.Parameters.AddWithValue("@Id",id);
+            if(userId>0)cmd.Parameters.AddWithValue("@UserId",userId);
+            return await cmd.ExecuteNonQueryAsync()==0?NotFound():Ok(new{success=true});
+        }
+        catch(Exception ex){return StatusCode(500,$"Contact delete error: {ex.Message}");}
+    }
+
+    private static void Bind(SqlCommand cmd,ContactRequest x)
+    {
+        cmd.Parameters.AddWithValue("@UserId",x.UserId);
+        cmd.Parameters.AddWithValue("@Name",x.Name?.Trim()??string.Empty);
+        cmd.Parameters.AddWithValue("@Role",x.Role?.Trim()??string.Empty);
+        cmd.Parameters.AddWithValue("@Address",x.Address?.Trim()??string.Empty);
+        cmd.Parameters.AddWithValue("@Phone",x.Phone?.Trim()??string.Empty);
+        cmd.Parameters.AddWithValue("@IsEmergency",x.IsEmergency);
+    }
+}
+public class ContactRequest
+{
+    public int UserId{get;set;}
+    public string Name{get;set;}=string.Empty;
+    public string Role{get;set;}=string.Empty;
+    public string Address{get;set;}=string.Empty;
+    public string Phone{get;set;}=string.Empty;
+    public bool IsEmergency{get;set;}
 }
