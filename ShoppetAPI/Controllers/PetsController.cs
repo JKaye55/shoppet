@@ -1,164 +1,243 @@
 using Microsoft.AspNetCore.Mvc;
-using MySql.Data.MySqlClient;
-using System.Data;
+using Microsoft.Data.SqlClient;
+using System.Globalization;
 
-namespace ShoppetAPI.Controllers
+namespace ShoppetAPI.Controllers;
+
+[Route("api/[controller]")]
+[ApiController]
+public class PetsController : ControllerBase
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class PetsController : ControllerBase
+    private readonly IConfiguration _configuration;
+
+    public PetsController(IConfiguration configuration)
     {
-        private readonly IConfiguration _configuration;
+        _configuration = configuration;
+    }
 
-        public PetsController(IConfiguration configuration)
-        {
-            _configuration = configuration;
-        }
+    private string ConnectionString =>
+        _configuration.GetConnectionString("SharedSqlServer")
+        ?? throw new InvalidOperationException("Connection string 'SharedSqlServer' was not found.");
 
-        [HttpGet]
-        public async Task<IActionResult> GetPets([FromQuery] int? userId = null)
+    [HttpGet]
+    public async Task<IActionResult> GetPets([FromQuery] int? userId = null)
+    {
+        try
         {
-            try
+            var pets = new List<object>();
+
+            await using var connection = new SqlConnection(ConnectionString);
+            await connection.OpenAsync();
+
+            var query = """
+                SELECT
+                    Id,
+                    UserId,
+                    PetName,
+                    Species,
+                    Breed,
+                    Age,
+                    WeightKg,
+                    CreatedAt,
+                    CASE
+                        WHEN COL_LENGTH('dbo.PetProfiles', 'PhotoUrl') IS NULL THEN ''
+                        ELSE ISNULL(PhotoUrl, '')
+                    END AS PhotoUrl
+                FROM PetProfiles
+                """;
+
+            if (userId.HasValue)
+                query += " WHERE UserId=@UserId";
+
+            query += " ORDER BY PetName;";
+
+            await using var cmd = new SqlCommand(query, connection);
+            if (userId.HasValue)
+                cmd.Parameters.AddWithValue("@UserId", userId.Value);
+
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
             {
-                string connString = _configuration.GetConnectionString("DefaultConnection")!;
-                var pets = new List<object>();
+                var ageText = reader.IsDBNull(5) ? string.Empty : reader.GetString(5);
+                var ageYears = ParseAgeYears(ageText);
+                var weight = reader.IsDBNull(6)
+                    ? string.Empty
+                    : $"{reader.GetDecimal(6):0.##} kg";
 
-                using (var connection = new MySqlConnection(connString))
+                pets.Add(new
                 {
-                    await connection.OpenAsync();
-                    var query = "SELECT Id, UserId, Name, Species, Breed, AgeYears, Weight, PhotoUrl, CreatedAt FROM pets";
-                    
-                    if (userId.HasValue)
-                    {
-                        query += " WHERE UserId = @userId";
-                    }
-
-                    using (var cmd = new MySqlCommand(query, connection))
-                    {
-                        if (userId.HasValue)
-                        {
-                            cmd.Parameters.AddWithValue("@userId", userId.Value);
-                        }
-
-                        using (var reader = await cmd.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                        {
-                            pets.Add(new
-                            {
-                                Id = reader.GetInt32("Id"),
-                                UserId = reader.GetInt32("UserId"),
-                                Name = reader.GetString("Name"),
-                                Species = reader.GetString("Species"),
-                                Breed = reader.GetString("Breed"),
-                                AgeYears = reader.GetInt32("AgeYears"),
-                                Weight = reader.IsDBNull(reader.GetOrdinal("Weight")) ? "" : reader.GetString("Weight"),
-                                PhotoUrl = reader.IsDBNull(reader.GetOrdinal("PhotoUrl")) ? "" : reader.GetString("PhotoUrl"),
-                                CreatedAt = reader.GetDateTime("CreatedAt")
-                            });
-                        }
-                    }
-                }
+                    Id = reader.GetInt32(0),
+                    UserId = reader.GetInt32(1),
+                    Name = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
+                    Species = reader.IsDBNull(3) ? "Dog" : reader.GetString(3),
+                    Breed = reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
+                    AgeYears = ageYears,
+                    Weight = weight,
+                    CreatedAt = reader.GetDateTime(7),
+                    PhotoUrl = reader.IsDBNull(8) ? string.Empty : reader.GetString(8)
+                });
             }
 
-                return Ok(pets);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Error fetching pets: {ex.Message}");
-            }
+            return Ok(pets);
         }
-
-        [HttpPost]
-        public async Task<IActionResult> CreatePet([FromBody] PetCreateRequest request)
+        catch (Exception ex)
         {
-            try
-            {
-                string connString = _configuration.GetConnectionString("DefaultConnection")!;
-
-                using (var connection = new MySqlConnection(connString))
-                {
-                    await connection.OpenAsync();
-
-                    var query = @"INSERT INTO pets (UserId, Name, Species, Breed, AgeYears, Weight, PhotoUrl, CreatedAt) 
-                                  VALUES (@UserId, @Name, @Species, @Breed, @AgeYears, @Weight, @PhotoUrl, @CreatedAt);
-                                  SELECT LAST_INSERT_ID();";
-
-                    long newId = 0;
-                    using (var cmd = new MySqlCommand(query, connection))
-                    {
-                        cmd.Parameters.AddWithValue("@UserId", request.UserId);
-                        cmd.Parameters.AddWithValue("@Name", request.Name ?? string.Empty);
-                        cmd.Parameters.AddWithValue("@Species", request.Species ?? "Dog");
-                        cmd.Parameters.AddWithValue("@Breed", request.Breed ?? string.Empty);
-                        cmd.Parameters.AddWithValue("@AgeYears", request.AgeYears);
-                        cmd.Parameters.AddWithValue("@Weight", request.Weight ?? string.Empty);
-                        cmd.Parameters.AddWithValue("@PhotoUrl", request.PhotoUrl ?? string.Empty);
-                        cmd.Parameters.AddWithValue("@CreatedAt", DateTime.UtcNow);
-
-                        object result = await cmd.ExecuteScalarAsync();
-                        if (result != null)
-                        {
-                            newId = Convert.ToInt64(result);
-                        }
-                    }
-
-                    // Return the newly created pet object so the mobile app can update its local ID
-                    var createdPet = new
-                    {
-                        Id = (int)newId,
-                        UserId = request.UserId,
-                        Name = request.Name,
-                        Species = request.Species,
-                        Breed = request.Breed,
-                        AgeYears = request.AgeYears,
-                        Weight = request.Weight,
-                        PhotoUrl = request.PhotoUrl
-                    };
-
-                    return Ok(createdPet);
-                }
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Error saving pet: {ex.Message}");
-            }
-        }
-
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeletePet(int id)
-        {
-            try
-            {
-                string connString = _configuration.GetConnectionString("DefaultConnection")!;
-                using (var connection = new MySqlConnection(connString))
-                {
-                    await connection.OpenAsync();
-                    var cmd = new MySqlCommand("DELETE FROM pets WHERE Id = @Id", connection);
-                    cmd.Parameters.AddWithValue("@Id", id);
-                    int rowsAffected = await cmd.ExecuteNonQueryAsync();
-
-                    if (rowsAffected > 0)
-                        return Ok(new { message = "Pet deleted successfully" });
-
-                    return NotFound("Pet not found.");
-                }
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Error deleting pet: {ex.Message}");
-            }
+            return StatusCode(500, $"Error fetching pets: {ex.Message}");
         }
     }
 
-    public class PetCreateRequest
+    [HttpPost]
+    public async Task<IActionResult> CreatePet([FromBody] PetCreateRequest request)
     {
-        public int UserId { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public string Species { get; set; } = string.Empty;
-        public string Breed { get; set; } = string.Empty;
-        public int AgeYears { get; set; }
-        public string Weight { get; set; } = string.Empty;
-        public string PhotoUrl { get; set; } = string.Empty;
+        if (request.UserId <= 0 || string.IsNullOrWhiteSpace(request.Name))
+            return BadRequest("A valid owner and pet name are required.");
+
+        try
+        {
+            await using var connection = new SqlConnection(ConnectionString);
+            await connection.OpenAsync();
+
+            var cardId = "PET-" + Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
+            var weightKg = ParseWeight(request.Weight);
+
+            const string sql = """
+                INSERT INTO PetProfiles
+                    (UserId, PetName, Species, Breed, Age, WeightKg, CardId, CardIssuedAt, PhotoUrl)
+                OUTPUT INSERTED.Id
+                VALUES
+                    (@UserId, @PetName, @Species, @Breed, @Age, @WeightKg, @CardId, SYSDATETIME(), @PhotoUrl);
+                """;
+
+            await using var cmd = new SqlCommand(sql, connection);
+            cmd.Parameters.AddWithValue("@UserId", request.UserId);
+            cmd.Parameters.AddWithValue("@PetName", request.Name.Trim());
+            cmd.Parameters.AddWithValue("@Species", request.Species?.Trim() ?? "Dog");
+            cmd.Parameters.AddWithValue("@Breed", request.Breed?.Trim() ?? string.Empty);
+            cmd.Parameters.AddWithValue("@Age", request.AgeYears > 0 ? request.AgeYears.ToString(CultureInfo.InvariantCulture) : DBNull.Value);
+            cmd.Parameters.AddWithValue("@WeightKg", weightKg.HasValue ? weightKg.Value : DBNull.Value);
+            cmd.Parameters.AddWithValue("@CardId", cardId);
+            cmd.Parameters.AddWithValue("@PhotoUrl", request.PhotoUrl?.Trim() ?? string.Empty);
+
+            var newId = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+
+            return Ok(new
+            {
+                Id = newId,
+                request.UserId,
+                Name = request.Name.Trim(),
+                Species = request.Species?.Trim() ?? "Dog",
+                Breed = request.Breed?.Trim() ?? string.Empty,
+                request.AgeYears,
+                Weight = request.Weight ?? string.Empty,
+                PhotoUrl = request.PhotoUrl ?? string.Empty
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Error saving pet: {ex.Message}");
+        }
     }
+
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> UpdatePet(int id, [FromBody] PetCreateRequest request)
+    {
+        if (request.UserId <= 0)
+            return BadRequest("A valid owner is required.");
+
+        try
+        {
+            await using var connection = new SqlConnection(ConnectionString);
+            await connection.OpenAsync();
+
+            const string sql = """
+                UPDATE PetProfiles
+                SET PetName=@PetName,
+                    Species=@Species,
+                    Breed=@Breed,
+                    Age=@Age,
+                    WeightKg=@WeightKg,
+                    PhotoUrl=@PhotoUrl
+                WHERE Id=@Id AND UserId=@UserId;
+                """;
+
+            await using var cmd = new SqlCommand(sql, connection);
+            cmd.Parameters.AddWithValue("@Id", id);
+            cmd.Parameters.AddWithValue("@UserId", request.UserId);
+            cmd.Parameters.AddWithValue("@PetName", request.Name?.Trim() ?? string.Empty);
+            cmd.Parameters.AddWithValue("@Species", request.Species?.Trim() ?? "Dog");
+            cmd.Parameters.AddWithValue("@Breed", request.Breed?.Trim() ?? string.Empty);
+            cmd.Parameters.AddWithValue("@Age", request.AgeYears > 0 ? request.AgeYears.ToString(CultureInfo.InvariantCulture) : DBNull.Value);
+            cmd.Parameters.AddWithValue("@WeightKg", ParseWeight(request.Weight) is decimal w ? w : DBNull.Value);
+            cmd.Parameters.AddWithValue("@PhotoUrl", request.PhotoUrl?.Trim() ?? string.Empty);
+
+            var rows = await cmd.ExecuteNonQueryAsync();
+            return rows == 0 ? NotFound() : Ok(new { success = true });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Error updating pet: {ex.Message}");
+        }
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> DeletePet(int id, [FromQuery] int userId = 0)
+    {
+        try
+        {
+            await using var connection = new SqlConnection(ConnectionString);
+            await connection.OpenAsync();
+
+            var sql = userId > 0
+                ? "DELETE FROM PetProfiles WHERE Id=@Id AND UserId=@UserId"
+                : "DELETE FROM PetProfiles WHERE Id=@Id";
+
+            await using var cmd = new SqlCommand(sql, connection);
+            cmd.Parameters.AddWithValue("@Id", id);
+            if (userId > 0)
+                cmd.Parameters.AddWithValue("@UserId", userId);
+
+            var rows = await cmd.ExecuteNonQueryAsync();
+            return rows == 0 ? NotFound("Pet not found.") : Ok(new { message = "Pet deleted successfully" });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Error deleting pet: {ex.Message}");
+        }
+    }
+
+    private static int ParseAgeYears(string? age)
+    {
+        if (string.IsNullOrWhiteSpace(age)) return 0;
+        var first = age.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+        return int.TryParse(first, out var value) ? value : 0;
+    }
+
+    private static decimal? ParseWeight(string? weight)
+    {
+        if (string.IsNullOrWhiteSpace(weight)) return null;
+
+        var cleaned = new string(weight
+            .Where(c => char.IsDigit(c) || c == '.' || c == ',')
+            .ToArray())
+            .Replace(',', '.');
+
+        return decimal.TryParse(
+            cleaned,
+            NumberStyles.Number,
+            CultureInfo.InvariantCulture,
+            out var value)
+            ? value
+            : null;
+    }
+}
+
+public class PetCreateRequest
+{
+    public int UserId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Species { get; set; } = string.Empty;
+    public string Breed { get; set; } = string.Empty;
+    public int AgeYears { get; set; }
+    public string Weight { get; set; } = string.Empty;
+    public string PhotoUrl { get; set; } = string.Empty;
 }
