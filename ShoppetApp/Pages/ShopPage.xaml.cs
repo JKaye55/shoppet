@@ -341,7 +341,8 @@ public partial class ShopPage : ContentPage
                 Price = price,
                 Category = category,
                 Condition = condition,
-                Location = location
+                Location = location,
+                ImageUrls = string.IsNullOrEmpty(imageUrls) ? (string?)null : imageUrls
             });
             if (success)
             {
@@ -351,6 +352,7 @@ public partial class ShopPage : ContentPage
                 _editingListing.Category = category;
                 _editingListing.Condition = condition;
                 _editingListing.Location = location;
+                _editingListing.ImageUrls = imageUrls;
             }
         }
         else
