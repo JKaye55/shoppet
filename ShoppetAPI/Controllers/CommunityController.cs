@@ -30,9 +30,6 @@ public class CommunityController : ControllerBase
             await using var connection = new SqlConnection(ConnectionString);
             await connection.OpenAsync();
 
-            if (!await RbacService.IsPetOwnerAsync(connection, request.UserId))
-                return Forbid();
-
             const string query = """
                 SELECT
                     p.Id,
