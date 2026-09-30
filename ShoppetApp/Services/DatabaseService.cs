@@ -545,17 +545,26 @@ namespace ShoppetApp.Services
             {
                 await Database.CreateTableAsync<HealthLog>();
                 await Database.CreateTableAsync<Pet>();
-                int currentUserId = Preferences.Get("LoggedInUserId", 0);
-                
-                var userPets = await Database.Table<Pet>().Where(p => p.UserId == currentUserId).ToListAsync();
-                var userPetIds = userPets.Select(p => p.Id).ToList();
 
-                var allLogs = await Database.Table<HealthLog>().ToListAsync();
-                var logs = allLogs
-                    .Where(h => (h.Status == "Action Required" || h.Status == "Pending") && userPetIds.Contains(h.PetId))
+                var pets = await GetPetsAsync();
+                var result = new List<HealthLog>();
+
+                foreach (var pet in pets)
+                {
+                    var petLogs = await GetHealthLogsAsync(pet.Id);
+                    foreach (var log in petLogs.Where(h =>
+                                 !h.Completed &&
+                                 (h.Status == "Action Required" || h.Status == "Pending")))
+                    {
+                        log.PetName = pet.Name;
+                        log.PetPhotoUrl = pet.PhotoUrl;
+                        result.Add(log);
+                    }
+                }
+
+                return result
+                    .OrderBy(h => DateTime.TryParse(h.DueDate, out var due) ? due : DateTime.MaxValue)
                     .ToList();
-                    
-                return logs ?? new List<HealthLog>();
             }
             catch (Exception ex)
             {
