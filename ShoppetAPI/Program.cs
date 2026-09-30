@@ -1,3 +1,4 @@
+using ShoppetAPI.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -7,6 +8,15 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+try
+{
+    await CommunitySchemaInitializer.EnsureAsync(app.Configuration);
+}
+catch (Exception ex)
+{
+    app.Logger.LogError(ex, "Community SQL Server schema initialization failed.");
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
