@@ -25,7 +25,9 @@ public class MarketplaceController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateListing([FromBody] CreateListingRequest request)
     {
-        if (request.UserId <= 0) return BadRequest("A valid user ID is required.");
+        var validationError = ValidateListing(request);
+        if (validationError is not null) return BadRequest(validationError);
+
         try
         {
             await using var connection = new SqlConnection(ConnectionString);
@@ -48,6 +50,9 @@ public class MarketplaceController : ControllerBase
     [HttpPut("{id:int}")]
     public async Task<IActionResult> EditListing(int id, [FromBody] EditListingRequest request)
     {
+        var validationError = ValidateListing(request);
+        if (validationError is not null) return BadRequest(validationError);
+
         try
         {
             await using var connection = new SqlConnection(ConnectionString);
@@ -133,6 +138,45 @@ public class MarketplaceController : ControllerBase
             });
         }
         return result;
+    }
+
+    private static string? ValidateListing(CreateListingRequest request)
+    {
+        var title = (request.Title ?? string.Empty).Trim();
+        var description = (request.Description ?? string.Empty).Trim();
+        var category = (request.Category ?? string.Empty).Trim();
+        var condition = (request.Condition ?? string.Empty).Trim();
+        var location = (request.Location ?? string.Empty).Trim();
+        var imageUrls = (request.ImageUrls ?? string.Empty).Trim();
+
+        if (request.UserId <= 0) return "A valid user ID is required.";
+        if (title.Length < 2 || title.Length > 80) return "Listing title must be between 2 and 80 characters.";
+        if (description.Length < 10 || description.Length > 500) return "Description must be between 10 and 500 characters.";
+        if (request.Price <= 0 || request.Price > 1_000_000m) return "Price must be greater than zero and no more than 1,000,000.";
+
+        string[] allowedCategories =
+        [
+            "General", "Food & Treats", "Accessories", "Medicine",
+            "Cage & Beds", "Toys", "Grooming", "Other"
+        ];
+        if (!allowedCategories.Contains(category)) return "Marketplace category is not valid.";
+
+        string[] allowedConditions = ["Brand New", "Like New", "Good", "Used"];
+        if (!allowedConditions.Contains(condition)) return "Item condition is not valid.";
+
+        string[] allowedLocations = ["Lipa City", "Tanauan City", "Malvar", "Sto. Tomas", "Other nearby area"];
+        if (!allowedLocations.Contains(location)) return "Meetup area is not valid.";
+
+        if (string.IsNullOrWhiteSpace(imageUrls)) return "At least one item photo is required.";
+
+        var images = imageUrls
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        if (images.Length is < 1 or > 5) return "A listing must contain between 1 and 5 photos.";
+
+        if (images.Any(x => x.Length > 2048)) return "One or more photo references are too long.";
+
+        return null;
     }
 
     private static void AddListingParameters(SqlCommand cmd, int userId, string? title, string? description, decimal price, string? category, string? condition, string? location, string? imageUrls)
