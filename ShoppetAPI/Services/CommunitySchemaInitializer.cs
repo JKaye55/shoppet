@@ -11,6 +11,11 @@ public static class CommunitySchemaInitializer
             return;
 
         const string sql = """
+            IF OBJECT_ID(N'dbo.PetProfiles', N'U') IS NOT NULL
+               AND COL_LENGTH('dbo.PetProfiles', 'PhotoUrl') IS NULL
+                ALTER TABLE dbo.PetProfiles
+                ADD PhotoUrl NVARCHAR(MAX) NULL;
+
             IF OBJECT_ID(N'dbo.CommunityPosts', N'U') IS NULL
             BEGIN
                 CREATE TABLE dbo.CommunityPosts
