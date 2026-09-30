@@ -74,6 +74,7 @@
                         
                 <!-- Prominent photo attachment area: keeps the original Shoppet styling, but makes photo sharing obvious. -->
                 <Border BackgroundColor="{StaticResource CardBg}"
+                        IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}"
                         Stroke="{StaticResource Secondary}"
                         StrokeThickness="1"
                         StrokeDashArray="6,4"
@@ -81,7 +82,7 @@
                         Padding="16"
                         Margin="0,4,0,0">
                     <Border.GestureRecognizers>
-                        <TapGestureRecognizer Command="{Binding AttachPhotoCommand}" IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}" />
+                        <TapGestureRecognizer Command="{Binding AttachPhotoCommand}" />
                     </Border.GestureRecognizers>
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
                         <Border WidthRequest="48" HeightRequest="48"
