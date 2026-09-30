@@ -1,3 +1,4 @@
+using ShoppetAPI.Security;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 
@@ -17,6 +18,10 @@ public class CommunityController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetPosts([FromQuery] int userId = 0)
     {
+        int authenticatedUserId = this.AuthenticatedUserId();
+        if (authenticatedUserId <= 0) return Unauthorized();
+        userId = authenticatedUserId;
+
         try
         {
             var posts = new List<object>();
@@ -67,6 +72,7 @@ public class CommunityController : ControllerBase
     public async Task<IActionResult> CreatePost([FromBody] CreatePostRequest request)
     {
         if(request.UserId<=0) return BadRequest("A valid user ID is required.");
+        if(!this.IsAuthenticatedUser(request.UserId)) return Forbid();
 
         var content=(request.Content??string.Empty).Trim();
         var imageUrls=(request.ImageUrls??string.Empty).Trim();
@@ -103,6 +109,7 @@ public class CommunityController : ControllerBase
     [HttpPost("{postId:int}/like")]
     public async Task<IActionResult> ToggleLike(int postId,[FromBody] LikeRequest request)
     {
+        if(!this.IsAuthenticatedUser(request.UserId)) return Forbid();
         try
         {
             await using var connection=new SqlConnection(ConnectionString);
@@ -134,6 +141,10 @@ public class CommunityController : ControllerBase
     [HttpGet("{postId:int}/comments")]
     public async Task<IActionResult> GetComments(int postId,[FromQuery] int userId=0)
     {
+        int authenticatedUserId = this.AuthenticatedUserId();
+        if (authenticatedUserId <= 0) return Unauthorized();
+        userId = authenticatedUserId;
+
         try
         {
             var comments=new List<object>();
@@ -182,6 +193,7 @@ public class CommunityController : ControllerBase
     public async Task<IActionResult> AddComment(int postId,[FromBody] AddCommentRequest request)
     {
         if(request.UserId<=0 || string.IsNullOrWhiteSpace(request.Content)) return BadRequest("User and comment text are required.");
+        if(!this.IsAuthenticatedUser(request.UserId)) return Forbid();
         var cleanContent=request.Content.Trim();
         if(cleanContent.Length>1000) return BadRequest("Comment cannot exceed 1,000 characters.");
         try
@@ -204,6 +216,7 @@ public class CommunityController : ControllerBase
     [HttpPost("comments/{commentId:int}/like")]
     public async Task<IActionResult> ToggleCommentLike(int commentId,[FromBody] LikeRequest request)
     {
+        if(!this.IsAuthenticatedUser(request.UserId)) return Forbid();
         try
         {
             await using var connection=new SqlConnection(ConnectionString);
@@ -233,6 +246,7 @@ public class CommunityController : ControllerBase
     public async Task<IActionResult> EditPost(int postId,[FromBody] EditPostRequest request)
     {
         if(request.UserId<=0) return BadRequest("A valid user ID is required.");
+        if(!this.IsAuthenticatedUser(request.UserId)) return Forbid();
         var cleanContent=(request.Content??string.Empty).Trim();
         var cleanImages=(request.ImageUrls??string.Empty).Trim();
 
@@ -267,6 +281,7 @@ public class CommunityController : ControllerBase
     public async Task<IActionResult> DeleteComment(int commentId,[FromQuery] int userId)
     {
         if(userId<=0) return BadRequest("A valid user ID is required.");
+        if(!this.IsAuthenticatedUser(userId)) return Forbid();
 
         try
         {
@@ -331,6 +346,7 @@ public class CommunityController : ControllerBase
     public async Task<IActionResult> DeletePost(int postId,[FromQuery] int userId)
     {
         if(userId<=0) return BadRequest("A valid user ID is required.");
+        if(!this.IsAuthenticatedUser(userId)) return Forbid();
 
         try
         {
