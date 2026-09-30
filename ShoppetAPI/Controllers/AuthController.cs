@@ -34,6 +34,18 @@ namespace ShoppetAPI.Controllers
             string fullName = request.FullName.Trim();
             string email = request.Email.Trim().ToLowerInvariant();
 
+            if(fullName.Length<2||fullName.Length>80)
+                return BadRequest("Full name must be between 2 and 80 characters.");
+
+            if(email.Length>254||!System.Net.Mail.MailAddress.TryCreate(email,out _))
+                return BadRequest("Enter a valid email address.");
+
+            if(request.Password.Length<8||request.Password.Length>128||
+               !request.Password.Any(char.IsUpper)||
+               !request.Password.Any(char.IsLower)||
+               !request.Password.Any(char.IsDigit))
+                return BadRequest("Password must be 8–128 characters and include uppercase, lowercase, and a number.");
+
             try
             {
                 await using var connection = new SqlConnection(SharedConnectionString);
@@ -108,6 +120,11 @@ namespace ShoppetAPI.Controllers
             }
 
             string email = request.Email.Trim().ToLowerInvariant();
+
+            if(email.Length>254||!System.Net.Mail.MailAddress.TryCreate(email,out _))
+                return BadRequest("Enter a valid email address.");
+            if(request.Password.Length>128)
+                return BadRequest("Password is too long.");
 
             try
             {
