@@ -8,7 +8,13 @@ namespace ShoppetAPI.Controllers
     public class CommunityController : ControllerBase
     {
         private readonly IConfiguration _configuration;
-        public CommunityController(IConfiguration configuration) => _configuration = configuration;
+        private readonly IWebHostEnvironment _environment;
+
+        public CommunityController(IConfiguration configuration, IWebHostEnvironment environment)
+        {
+            _configuration = configuration;
+            _environment = environment;
+        }
 
         [HttpGet]
         public async Task<IActionResult> GetPosts([FromQuery] int userId = 0)
@@ -57,6 +63,49 @@ namespace ShoppetAPI.Controllers
             catch (Exception ex) { return StatusCode(500, $"Error fetching posts: {ex.Message}"); }
         }
 
+        [HttpPost("media")]
+        [RequestSizeLimit(20_000_000)]
+        public async Task<IActionResult> UploadMedia([FromForm] List<IFormFile> files)
+        {
+            if (files is null || files.Count == 0)
+                return BadRequest("No image files were provided.");
+
+            if (files.Count > 5)
+                return BadRequest("A maximum of 5 images is allowed.");
+
+            var allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ".jpg", ".jpeg", ".png", ".webp"
+            };
+
+            var uploadFolder = Path.Combine(_environment.ContentRootPath, "wwwroot", "uploads", "community");
+            Directory.CreateDirectory(uploadFolder);
+
+            var urls = new List<string>();
+
+            foreach (var file in files)
+            {
+                if (file.Length <= 0) continue;
+                if (file.Length > 8_000_000)
+                    return BadRequest("Each image must be 8 MB or smaller.");
+
+                var extension = Path.GetExtension(file.FileName);
+                if (!allowedExtensions.Contains(extension))
+                    return BadRequest("Only JPG, JPEG, PNG, and WEBP images are supported.");
+
+                var safeName = $"{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
+                var diskPath = Path.Combine(uploadFolder, safeName);
+
+                await using var stream = System.IO.File.Create(diskPath);
+                await file.CopyToAsync(stream);
+
+                var publicUrl = $"{Request.Scheme}://{Request.Host}/uploads/community/{safeName}";
+                urls.Add(publicUrl);
+            }
+
+            return Ok(urls);
+        }
+
         [HttpPost]
         public async Task<IActionResult> CreatePost([FromBody] CreatePostRequest request)
         {
@@ -65,9 +114,15 @@ namespace ShoppetAPI.Controllers
                 string conn = _configuration.GetConnectionString("DefaultConnection")!;
                 using var connection = new MySqlConnection(conn);
                 await connection.OpenAsync();
-                var query = "INSERT INTO communityposts (UserId, AuthorName, PetName, Content, ImageUrl, Timestamp, IsEdited) VALUES (@UserId, '', '', @Content, @ImageUrls, NOW(), 0)";
+                var query = @"INSERT INTO communityposts
+                    (UserId, PetId, AuthorName, PetName, Content, ImageUrl, Timestamp, IsEdited)
+                    VALUES
+                    (@UserId, @PetId, @AuthorName, @PetName, @Content, @ImageUrls, NOW(), 0)";
                 using var cmd = new MySqlCommand(query, connection);
                 cmd.Parameters.AddWithValue("@UserId", request.UserId);
+                cmd.Parameters.AddWithValue("@PetId", request.PetId.HasValue ? request.PetId.Value : DBNull.Value);
+                cmd.Parameters.AddWithValue("@AuthorName", request.AuthorName ?? string.Empty);
+                cmd.Parameters.AddWithValue("@PetName", request.PetName ?? string.Empty);
                 cmd.Parameters.AddWithValue("@Content", request.Content);
                 cmd.Parameters.AddWithValue("@ImageUrls", (object?)request.ImageUrls ?? DBNull.Value);
                 await cmd.ExecuteNonQueryAsync();
