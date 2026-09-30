@@ -13,6 +13,7 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
 {
     private const long MaxPhotoBytes = 5 * 1024 * 1024;
     private readonly DatabaseService _db;
+    private readonly ApiService _api;
 
     [ObservableProperty] public partial int PetId { get; set; }
     [ObservableProperty] public partial string Name { get; set; } = string.Empty;
@@ -37,9 +38,10 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
     public IList<string> SpeciesOptions { get; } = ["Dog", "Cat", "Bird", "Small Pet", "Other"];
     public ObservableCollection<string> AvailableBreeds { get; } = new();
 
-    public PetFormViewModel(DatabaseService db)
+    public PetFormViewModel(DatabaseService db, ApiService api)
     {
         _db = db;
+        _api = api;
         UpdateAvailableBreeds();
     }
 
@@ -276,6 +278,22 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
         IsBusy = true;
         try
         {
+            var photoReference = PhotoUrl ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(photoReference) &&
+                !ShoppetApp.Helpers.MediaUrlHelper.IsServerMedia(photoReference))
+            {
+                var uploaded = await _api.UploadImageAsync(photoReference, "pets");
+                if (string.IsNullOrWhiteSpace(uploaded))
+                {
+                    await Shell.Current.DisplayAlertAsync(
+                        "Photo upload failed",
+                        "The pet photo could not be uploaded. Please try again.",
+                        "OK");
+                    return;
+                }
+                photoReference = uploaded;
+            }
+
             var pet = new Pet
             {
                 Id = PetId,
@@ -284,7 +302,7 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
                 Species = Species,
                 Breed = Breed,
                 Weight = WeightKgValue.ToString("0.##", CultureInfo.InvariantCulture),
-                PhotoUrl = PhotoUrl ?? string.Empty,
+                PhotoUrl = photoReference,
                 AgeYears = (int)Math.Round(AgeYearsValue)
             };
 
