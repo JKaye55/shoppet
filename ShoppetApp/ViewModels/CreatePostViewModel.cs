@@ -130,8 +130,6 @@ namespace ShoppetApp.ViewModels
                         var cacheDir = Path.Combine(FileSystem.CacheDirectory, "community-photos");
                         Directory.CreateDirectory(cacheDir);
                         var cachedPath = Path.Combine(cacheDir, $"{Guid.NewGuid():N}{extension}");
-
-                        stream.Position = 0;
                         await using (var output = File.Create(cachedPath))
                         {
                             await stream.CopyToAsync(output);
