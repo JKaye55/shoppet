@@ -755,13 +755,24 @@ public class ApiService
 
         public async Task<bool> DeletePostAsync(int postId)
         {
-            try { return (await _http.DeleteAsync($"community/{postId}")).IsSuccessStatusCode; }
+            try
+            {
+                var userId = Preferences.Get("LoggedInUserId", 0);
+                return (await _http.DeleteAsync($"community/{postId}?userId={userId}")).IsSuccessStatusCode;
+            }
             catch { return false; }
         }
 
         public async Task<bool> EditPostAsync(int postId, string newContent, string imageUrls, int? petId, string petName)
         {
-            try { return (await _http.PutAsJsonAsync($"community/{postId}", new { Content = newContent, ImageUrls = imageUrls, PetId = petId, PetName = petName })).IsSuccessStatusCode; }
+            try
+            {
+                var userId = Preferences.Get("LoggedInUserId", 0);
+                return (await _http.PutAsJsonAsync(
+                    $"community/{postId}",
+                    new { UserId = userId, Content = newContent, ImageUrls = imageUrls, PetId = petId, PetName = petName }))
+                    .IsSuccessStatusCode;
+            }
             catch { return false; }
         }
 
@@ -830,7 +841,12 @@ public class ApiService
     }
         public async Task<bool> DeleteCommentAsync(int commentId)
         {
-            try { return (await _http.DeleteAsync($"community/comments/{commentId}")).IsSuccessStatusCode; }
+            try
+            {
+                var userId = Preferences.Get("LoggedInUserId", 0);
+                return (await _http.DeleteAsync(
+                    $"community/comments/{commentId}?userId={userId}")).IsSuccessStatusCode;
+            }
             catch { return false; }
         }
 
