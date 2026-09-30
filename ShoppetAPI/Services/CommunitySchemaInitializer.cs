@@ -32,6 +32,40 @@ public static class CommunitySchemaInitializer
                         CONSTRAINT DF_UserAccounts_ShowSocialLinksOnMarketplace DEFAULT(1);
             END;
 
+            IF OBJECT_ID(N'dbo.UserAccounts', N'U') IS NOT NULL
+            BEGIN
+                IF COL_LENGTH('dbo.UserAccounts', 'IsPremium') IS NULL
+                    ALTER TABLE dbo.UserAccounts ADD IsPremium BIT NOT NULL
+                        CONSTRAINT DF_UserAccounts_IsPremium_Mobile DEFAULT(0);
+                IF COL_LENGTH('dbo.UserAccounts', 'PremiumActivatedAt') IS NULL
+                    ALTER TABLE dbo.UserAccounts ADD PremiumActivatedAt DATETIME2 NULL;
+                IF COL_LENGTH('dbo.UserAccounts', 'PremiumReference') IS NULL
+                    ALTER TABLE dbo.UserAccounts ADD PremiumReference NVARCHAR(100) NULL;
+            END;
+
+            IF OBJECT_ID(N'dbo.Transactions', N'U') IS NOT NULL
+            BEGIN
+                IF COL_LENGTH('dbo.Transactions', 'PaymentMethod') IS NULL
+                    ALTER TABLE dbo.Transactions ADD PaymentMethod NVARCHAR(80) NULL;
+                IF COL_LENGTH('dbo.Transactions', 'Status') IS NULL
+                    ALTER TABLE dbo.Transactions ADD Status NVARCHAR(40) NULL;
+            END;
+
+            IF OBJECT_ID(N'dbo.Notifications', N'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.Notifications
+                (
+                    Id INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                    UserId INT NOT NULL,
+                    Title NVARCHAR(160) NOT NULL,
+                    Body NVARCHAR(500) NULL,
+                    Link NVARCHAR(300) NULL,
+                    Icon NVARCHAR(50) NULL,
+                    IsRead BIT NOT NULL CONSTRAINT DF_Notifications_IsRead DEFAULT(0),
+                    CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_Notifications_CreatedAt DEFAULT(SYSDATETIME())
+                );
+            END;
+
             IF OBJECT_ID(N'dbo.PetHealthRecords', N'U') IS NOT NULL
             BEGIN
                 IF COL_LENGTH('dbo.PetHealthRecords', 'Completed') IS NULL
