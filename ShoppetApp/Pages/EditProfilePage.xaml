@@ -128,11 +128,11 @@
                 <BoxView HeightRequest="1" Color="{StaticResource Secondary20}" />
 
                 <VerticalStackLayout Spacing="10">
-                    <Label Text="Marketplace Seller Links"
+                    <Label Text="Marketplace Contact Links"
                            FontFamily="NunitoBold"
                            FontSize="16"
                            TextColor="{StaticResource BodyText}" />
-                    <Label Text="You are still one Pet Owner account. These optional links only help buyers contact you when you list an item."
+                    <Label Text="Your Pet Owner account can both shop and sell. These links are optional and are never required to create a listing."
                            FontSize="12"
                            TextColor="{StaticResource Secondary}" />
 
@@ -174,10 +174,10 @@
 
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Padding="0,6">
                         <VerticalStackLayout Grid.Column="0" Spacing="2">
-                            <Label Text="Show seller links in Marketplace"
+                            <Label Text="Show my contact links in Marketplace"
                                    FontFamily="NunitoSemiBold"
                                    FontSize="13" />
-                            <Label Text="Off by default. Buyers can always use ShoppetCare Messages."
+                            <Label Text="Off by default. Other Pet Owners can still contact you through ShoppetCare Messages."
                                    FontSize="11"
                                    TextColor="{StaticResource Secondary}" />
                         </VerticalStackLayout>
