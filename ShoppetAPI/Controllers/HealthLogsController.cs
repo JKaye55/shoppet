@@ -24,7 +24,8 @@ public class HealthLogsController : ControllerBase
             await conn.OpenAsync();
 
             const string sql = """
-                SELECT Id, PetId, RecordType, Title, NextDueDate,
+                SELECT Id, PetId, RecordType, Title, ISNULL(Notes,''), RecordDate,
+                       NextDueDate, ISNULL(VetName,''),
                        ISNULL(Completed,0), DateAdministered,
                        ISNULL(ValidityInterval,0), ISNULL(ValidityUnit,'Months'),
                        ISNULL(MedicationIntervalHours,0), TimeStarted,
@@ -50,20 +51,23 @@ public class HealthLogsController : ControllerBase
                 {
                     Id = r.GetInt32(0),
                     PetId = r.GetInt32(1),
-                    Type = r.IsDBNull(2) ? "vital" : r.GetString(2),
+                    Type = NormalizeRecordType(r.IsDBNull(2) ? string.Empty : r.GetString(2)),
                     Name = r.IsDBNull(3) ? string.Empty : r.GetString(3),
-                    DueDate = Iso(4),
-                    Completed = r.GetBoolean(5),
-                    DateAdministered = Iso(6),
-                    ValidityInterval = r.GetInt32(7),
-                    ValidityUnit = r.GetString(8),
-                    MedicationIntervalHours = Convert.ToDouble(r.GetDecimal(9)),
-                    TimeStarted = Iso(10),
-                    DosageTotal = r.GetInt32(11),
-                    DosageRemaining = r.GetInt32(12),
-                    CheckupDate = Iso(13),
-                    DocumentPaths = r.GetString(14),
-                    CompletedAt = r.IsDBNull(15) ? (DateTime?)null : r.GetDateTime(15)
+                    Notes = r.GetString(4),
+                    RecordDate = Iso(5),
+                    DueDate = Iso(6),
+                    VetName = r.GetString(7),
+                    Completed = r.GetBoolean(8),
+                    DateAdministered = !r.IsDBNull(9) ? Iso(9) : Iso(5),
+                    ValidityInterval = r.GetInt32(10),
+                    ValidityUnit = r.GetString(11),
+                    MedicationIntervalHours = Convert.ToDouble(r.GetDecimal(12)),
+                    TimeStarted = !r.IsDBNull(13) ? Iso(13) : Iso(5),
+                    DosageTotal = r.GetInt32(14),
+                    DosageRemaining = r.GetInt32(15),
+                    CheckupDate = !r.IsDBNull(16) ? Iso(16) : Iso(5),
+                    DocumentPaths = r.GetString(17),
+                    CompletedAt = r.IsDBNull(18) ? (DateTime?)null : r.GetDateTime(18)
                 });
             }
 
@@ -199,6 +203,14 @@ public class HealthLogsController : ControllerBase
 
     private static DateTime? ParseDate(string? value) =>
         DateTime.TryParse(value, out var dt) ? dt : null;
+
+    private static string NormalizeRecordType(string? value)
+    {
+        var v = (value ?? string.Empty).Trim().ToLowerInvariant();
+        if (v.Contains("vacc")) return "vaccine";
+        if (v.Contains("med")) return "medication";
+        return "vital";
+    }
 }
 
 public class HealthLogRequest
