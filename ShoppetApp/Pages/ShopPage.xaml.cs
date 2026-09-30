@@ -162,29 +162,34 @@ public partial class ShopPage : ContentPage
 
     private void OnDismissModal(object? sender, EventArgs e) => DetailModal.IsVisible = false;
 
-    private async void OnMessageSellerClicked(object? sender, EventArgs e)
+    private async Task MessageCurrentSellerAsync()
     {
-        if (_currentListing != null)
+        if (_currentListing == null) return;
+
+        DetailModal.IsVisible = false;
+        await Shell.Current.GoToAsync("chat", new Dictionary<string, object>
         {
-            DetailModal.IsVisible = false;
-            await Shell.Current.GoToAsync("chat", new Dictionary<string, object>
-            {
-                { "ContactId", _currentListing.UserId.ToString() },
-                { "ContactName", _currentListing.SellerName }
-            });
-        }
+            { "ContactId", _currentListing.UserId.ToString() },
+            { "ContactName", _currentListing.SellerName }
+        });
     }
+
+    private async void OnMessageSellerClicked(object? sender, EventArgs e) =>
+        await MessageCurrentSellerAsync();
+
+    private async void OnMessageSellerTapped(object? sender, TappedEventArgs e) =>
+        await MessageCurrentSellerAsync();
     private void OnModalBodyTapped(object? sender, TappedEventArgs e) { }
 
     // --- Sell Tab: Photo Picker ---
 
-    private async void OnPickPhotoClicked(object? sender, EventArgs e)
+    private async Task PickListingPhotosAsync()
     {
         try
         {
             var result = await FilePicker.Default.PickMultipleAsync(new PickOptions
             {
-                PickerTitle = "Select Photos",
+                PickerTitle = "Choose item photos",
                 FileTypes = FilePickerFileType.Images
             });
 
@@ -194,18 +199,41 @@ public partial class ShopPage : ContentPage
             {
                 if (_pickedPhotoPaths.Count >= 5)
                 {
-                    await DisplayAlertAsync("Limit Reached", "You can only attach up to 5 photos.", "OK");
+                    await DisplayAlertAsync("Photo limit", "You can attach up to 5 photos.", "OK");
                     break;
                 }
-                _pickedPhotoPaths.Add(file.FullPath);
+
+                var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+                if (extension is not ".jpg" and not ".jpeg" and not ".png" and not ".webp")
+                {
+                    await DisplayAlertAsync("Unsupported photo", $"{file.FileName} is not a supported image. Use JPG, PNG, or WebP.", "OK");
+                    continue;
+                }
+
+                await using var stream = await file.OpenReadAsync();
+                if (stream.CanSeek && stream.Length > 5 * 1024 * 1024)
+                {
+                    await DisplayAlertAsync("Photo too large", $"{file.FileName} is larger than 5 MB.", "OK");
+                    continue;
+                }
+
+                if (!_pickedPhotoPaths.Contains(file.FullPath, StringComparer.OrdinalIgnoreCase))
+                    _pickedPhotoPaths.Add(file.FullPath);
             }
+
             RefreshPickedPhotos();
         }
-        catch (Exception ex)
+        catch
         {
-            Console.WriteLine($"Photo pick error: {ex.Message}");
+            await DisplayAlertAsync("Photo error", "The photos could not be selected. Please try again.", "OK");
         }
     }
+
+    private async void OnPickPhotoClicked(object? sender, EventArgs e) =>
+        await PickListingPhotosAsync();
+
+    private async void OnPickPhotoTapped(object? sender, TappedEventArgs e) =>
+        await PickListingPhotosAsync();
 
     private void OnRemovePickedPhoto(object? sender, TappedEventArgs e)
     {
@@ -228,7 +256,7 @@ public partial class ShopPage : ContentPage
     private void OnPostItemClicked(object? sender, EventArgs e)
     {
         _editingListing = null;
-        PostModalTitle.Text = "Post a Pet Item";
+        PostModalTitle.Text = "List a Pet Item";
         ClearPostForm();
         PostModal.IsVisible = true;
     }
@@ -241,7 +269,7 @@ public partial class ShopPage : ContentPage
             PostModalTitle.Text = "Edit Listing";
             EntryTitle.Text = listing.Title;
             EntryPrice.Text = listing.Price.ToString("0.##");
-            EntryLocation.Text = listing.Location;
+            PickerLocation.SelectedItem = listing.Location;
             EditorDescription.Text = listing.Description;
             PickerCategory.SelectedItem = listing.Category;
             PickerCondition.SelectedItem = listing.Condition;
@@ -288,21 +316,51 @@ public partial class ShopPage : ContentPage
 
         var title = EntryTitle.Text?.Trim() ?? "";
         var desc = EditorDescription.Text?.Trim() ?? "";
-        var priceStr = EntryPrice.Text?.Trim() ?? "0";
-        var location = EntryLocation.Text?.Trim() ?? "";
-        var category = PickerCategory.SelectedItem?.ToString() ?? "General";
-        var condition = PickerCondition.SelectedItem?.ToString() ?? "Used";
+        var priceStr = EntryPrice.Text?.Trim() ?? "";
+        var location = PickerLocation.SelectedItem?.ToString()?.Trim() ?? "";
+        var category = PickerCategory.SelectedItem?.ToString()?.Trim() ?? "";
+        var condition = PickerCondition.SelectedItem?.ToString()?.Trim() ?? "";
         var imageUrls = string.Join(",", _pickedPhotoPaths);
 
-        if (string.IsNullOrEmpty(title) || string.IsNullOrEmpty(desc))
+        if (title.Length < 2 || title.Length > 80)
         {
-            await DisplayAlertAsync("Missing Info", "Please fill in Title and Description.", "OK");
+            await DisplayAlertAsync("Check title", "Listing title must be between 2 and 80 characters.", "OK");
             return;
         }
 
-        if (!decimal.TryParse(priceStr, out decimal price) || price < 0)
+        if (desc.Length < 10 || desc.Length > 500)
         {
-            await DisplayAlertAsync("Invalid Price", "Please enter a valid price.", "OK");
+            await DisplayAlertAsync("Check description", "Description must be between 10 and 500 characters.", "OK");
+            return;
+        }
+
+        if (!decimal.TryParse(priceStr, out decimal price) || price <= 0 || price > 1000000)
+        {
+            await DisplayAlertAsync("Check price", "Enter a price greater than ₱0 and no more than ₱1,000,000.", "OK");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(category))
+        {
+            await DisplayAlertAsync("Category required", "Choose a category for the item.", "OK");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(condition))
+        {
+            await DisplayAlertAsync("Condition required", "Choose the item's condition.", "OK");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(location))
+        {
+            await DisplayAlertAsync("Meetup area required", "Choose a general meetup area.", "OK");
+            return;
+        }
+
+        if (_pickedPhotoPaths.Count == 0)
+        {
+            await DisplayAlertAsync("Photo required", "Add at least one clear photo of the item.", "OK");
             return;
         }
 
@@ -355,7 +413,7 @@ public partial class ShopPage : ContentPage
             ClearPostForm();
             await LoadMyListingsAsync();
             await LoadExploreListingsAsync();
-            await DisplayAlertAsync("Success", wasEditing ? "Listing updated!" : "Item posted to Marketplace!", "OK");
+            await DisplayAlertAsync("Saved", wasEditing ? "Your listing was updated." : "Your item is now listed in Marketplace.", "OK");
         }
         else
         {
@@ -367,10 +425,10 @@ public partial class ShopPage : ContentPage
     {
         EntryTitle.Text = "";
         EntryPrice.Text = "";
-        EntryLocation.Text = "";
+        PickerLocation.SelectedItem = null;
         EditorDescription.Text = "";
-        PickerCategory.SelectedItem = "General";
-        PickerCondition.SelectedItem = "Used";
+        PickerCategory.SelectedItem = null;
+        PickerCondition.SelectedItem = null;
         _pickedPhotoPaths.Clear();
         PickedPhotosView.ItemsSource = null;
         PickedPhotosView.IsVisible = false;
