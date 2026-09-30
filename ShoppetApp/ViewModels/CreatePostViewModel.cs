@@ -127,10 +127,20 @@ namespace ShoppetApp.ViewModels
                             continue;
                         }
 
-                        if (AttachedMedia.Any(x => string.Equals(x.FilePath, file.FullPath, StringComparison.OrdinalIgnoreCase)))
+                        var cacheDir = Path.Combine(FileSystem.CacheDirectory, "community-photos");
+                        Directory.CreateDirectory(cacheDir);
+                        var cachedPath = Path.Combine(cacheDir, $"{Guid.NewGuid():N}{extension}");
+
+                        stream.Position = 0;
+                        await using (var output = File.Create(cachedPath))
+                        {
+                            await stream.CopyToAsync(output);
+                        }
+
+                        if (AttachedMedia.Any(x => string.Equals(x.FilePath, cachedPath, StringComparison.OrdinalIgnoreCase)))
                             continue;
 
-                        AttachedMedia.Add(new MediaAttachment { FilePath = file.FullPath, IsVideo = false });
+                        AttachedMedia.Add(new MediaAttachment { FilePath = cachedPath, IsVideo = false });
                     }
                 }
             }
