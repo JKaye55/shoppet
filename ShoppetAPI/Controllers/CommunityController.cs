@@ -263,9 +263,9 @@ public class CommunityController : ControllerBase
                     c.PostId,
                     c.UserId,
                     c.ParentCommentId,
-                    c.Content,
+                    COALESCE(NULLIF(c.Content, ''), c.Body, '') AS Content,
                     c.CreatedAt,
-                    ISNULL(u.FullName, 'Unknown') AS AuthorName,
+                    COALESCE(u.FullName, NULLIF(c.AuthorName, ''), 'Unknown') AS AuthorName,
                     parent_u.FullName AS ParentAuthorName,
                     (SELECT COUNT(*) FROM CommunityCommentLikes l WHERE l.CommentId=c.Id) AS LikeCount,
                     CASE WHEN EXISTS(
@@ -327,10 +327,13 @@ public class CommunityController : ControllerBase
             await connection.OpenAsync();
 
             const string query = """
+                DECLARE @AuthorName NVARCHAR(150) =
+                    ISNULL((SELECT FullName FROM UserAccounts WHERE Id=@UserId), 'Unknown');
+
                 INSERT INTO CommunityComments
-                    (PostId, UserId, ParentCommentId, Content, CreatedAt)
+                    (PostId, UserId, AuthorName, Body, IsGuest, CreatedAt, ParentCommentId, Content)
                 VALUES
-                    (@PostId, @UserId, @ParentCommentId, @Content, SYSDATETIME());
+                    (@PostId, @UserId, @AuthorName, @Content, 0, SYSDATETIME(), @ParentCommentId, @Content);
 
                 SELECT CAST(SCOPE_IDENTITY() AS int);
                 """;
