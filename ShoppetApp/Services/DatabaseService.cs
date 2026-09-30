@@ -409,93 +409,94 @@ namespace ShoppetApp.Services
         // =====================================================
         public async Task<List<Pet>> GetPetsAsync()
         {
+            // SQL Server through ShoppetAPI is the source of truth.
+            // Do not clear or rebuild a local Pet table during reads: an old SQLite
+            // schema can fail silently and make valid server pets appear to vanish.
+            if (ApiService == null)
+                return new List<Pet>();
+
             try
             {
-                if (ApiService != null)
-                {
-                    try {
-                        var apiPets = await ApiService.GetPetsAsync();
-                        if (apiPets != null) {
-                            await Database.CreateTableAsync<Pet>();
-                            await Database.ExecuteAsync("DELETE FROM Pet WHERE Id > 0"); // Clear synced records to prevent lingering duplicates
-                            foreach(var p in apiPets) {
-                                await Database.InsertAsync(p);
-                            }
-                        }
-                    } catch { }
-                }
-
-                await Database.CreateTableAsync<Pet>();
                 int currentUserId = Preferences.Get("LoggedInUserId", 0);
-                var pets = await Database.Table<Pet>().Where(p => p.UserId == currentUserId).ToListAsync();
-                return pets ?? new List<Pet>();
+                if (currentUserId <= 0)
+                    return new List<Pet>();
+
+                var apiPets = await ApiService.GetPetsAsync();
+                return apiPets
+                    .Where(p => p.UserId == currentUserId)
+                    .OrderBy(p => p.Name)
+                    .ToList();
             }
-            catch { return new List<Pet>(); }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"API Error (GetPets): {ex.Message}");
+                return new List<Pet>();
+            }
         }
 
         public async Task<Pet?> GetPetAsync(int id)
         {
-            await Database.CreateTableAsync<Pet>();
-            return await Database.Table<Pet>().Where(p => p.Id == id).FirstOrDefaultAsync();
+            if (id <= 0 || ApiService == null)
+                return null;
+
+            var pets = await GetPetsAsync();
+            return pets.FirstOrDefault(p => p.Id == id);
         }
 
         public async Task<int> SavePetAsync(Pet pet)
         {
-            await Database.CreateTableAsync<Pet>();
-            bool isNew = pet.Id <= 0;
-            if (isNew && pet.Id == 0) {
-                try {
-                    int minId = await Database.ExecuteScalarAsync<int>("SELECT MIN(Id) FROM Pet");
-                    pet.Id = minId >= 0 ? -1 : minId - 1;
-                } catch { pet.Id = -1; }
-            }
-            
-            if (ApiService != null)
+            if (ApiService == null || pet is null)
+                return 0;
+
+            int currentUserId = Preferences.Get("LoggedInUserId", 0);
+            if (currentUserId <= 0)
+                return 0;
+
+            // Ownership always follows the authenticated local session.
+            pet.UserId = currentUserId;
+
+            try
             {
-                try
-                {
-                    var apiSaved = await ApiService.SavePetAsync(pet);
-                    if (apiSaved == null)
-                        return 0;
-
-                    var oldId = pet.Id;
-                    pet.Id = apiSaved.Id;
-                    if (oldId < 0)
-                    {
-                        await Database.ExecuteAsync("DELETE FROM Pet WHERE Id = ?", oldId);
-                    }
-
-                    var existing = await Database.Table<Pet>().Where(x => x.Id == pet.Id).FirstOrDefaultAsync();
-                    return existing == null ? await Database.InsertAsync(pet) : await Database.UpdateAsync(pet);
-                }
-                catch
-                {
+                var apiSaved = await ApiService.SavePetAsync(pet);
+                if (apiSaved == null)
                     return 0;
-                }
-            }
 
-            return isNew ? await Database.InsertAsync(pet) : await Database.UpdateAsync(pet);
+                pet.Id = apiSaved.Id;
+                pet.UserId = apiSaved.UserId;
+                pet.Name = apiSaved.Name;
+                pet.Species = apiSaved.Species;
+                pet.Breed = apiSaved.Breed;
+                pet.AgeYears = apiSaved.AgeYears;
+                pet.Weight = apiSaved.Weight;
+                pet.PhotoUrl = apiSaved.PhotoUrl;
+
+                return pet.Id > 0 ? 1 : 0;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"API Error (SavePet): {ex.Message}");
+                return 0;
+            }
         }
 
         public async Task<int> DeletePetAsync(Pet pet)
         {
-            await Database.CreateTableAsync<Pet>();
+            if (ApiService == null || pet is null || pet.Id <= 0)
+                return 0;
 
-            if (ApiService != null)
+            int currentUserId = Preferences.Get("LoggedInUserId", 0);
+            if (currentUserId <= 0 || pet.UserId != currentUserId)
+                return 0;
+
+            try
             {
-                try
-                {
-                    bool deleted = await ApiService.DeletePetAsync(pet.Id);
-                    if (!deleted)
-                        return 0;
-                }
-                catch
-                {
-                    return 0;
-                }
+                return await ApiService.DeletePetAsync(pet.Id) ? 1 : 0;
             }
-
-            return await Database.DeleteAsync(pet);
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"API Error (DeletePet): {ex.Message}");
+                return 0;
+            }
         }
 
         // --- Health & Food Logs ---
