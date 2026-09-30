@@ -443,7 +443,7 @@ public class BoolToHeartIconConverter : IValueConverter
 
 public class DepthToMarginConverter : IValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
     {
         if (value is int depth)
         {
@@ -452,54 +452,54 @@ public class DepthToMarginConverter : IValueConverter
         return new Microsoft.Maui.Thickness(0, 0, 0, 10);
     }
 
-    public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
+    public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
 }
 
 
 public class BoolToLayoutOptionsConverter : IValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
     {
         return (bool)value ? LayoutOptions.End : LayoutOptions.Start;
     }
-    public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
+    public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
 }
 
 public class IsMineColorConverter : IValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
     {
-        return (bool)value ? Application.Current.Resources["Primary"] : Color.FromArgb("#F0F0F0");
+        return (bool)value ? Application.Current?.Resources["Primary"] ?? Colors.Teal : Color.FromArgb("#F0F0F0");
     }
-    public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
+    public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
 }
 
 public class IsMineTextColorConverter : IValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
     {
-        return (bool)value ? Colors.White : Application.Current.Resources["BodyText"];
+        return (bool)value ? Colors.White : Application.Current?.Resources["BodyText"] ?? Colors.Black;
     }
-    public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
+    public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
 }
 
 public class IsMineTimeColorConverter : IValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
     {
-        return (bool)value ? Color.FromArgb("#DDDDDD") : Application.Current.Resources["NavMuted"];
+        return (bool)value ? Color.FromArgb("#DDDDDD") : Application.Current?.Resources["NavMuted"] ?? Colors.Gray;
     }
-    public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
+    public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
 }
 
 public class InvertedBoolConverter : IValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
     {
         if (value is bool b) return !b;
         return false;
     }
-    public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
+    public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
 }
 
 
