@@ -92,8 +92,9 @@ public partial class ShopPage : ContentPage
 
     private async Task LoadMyListingsAsync()
     {
-        if (_db.CurrentUser == null) return;
-        var listings = await _api.GetMyListingsAsync(_db.CurrentUser.Id);
+        var userId = _db.CurrentUser?.Id ?? Preferences.Get("LoggedInUserId", 0);
+        if (userId <= 0) return;
+        var listings = await _api.GetMyListingsAsync(userId);
         MyListings.Clear();
         foreach (var l in listings) MyListings.Add(l);
         SellEmptyLabel.IsVisible = !listings.Any();
@@ -260,9 +261,10 @@ public partial class ShopPage : ContentPage
         {
             bool confirm = await DisplayAlert("Delete Listing", $"Are you sure you want to delete \"{listing.Title}\"?", "Yes, Delete", "Cancel");
             if (!confirm) return;
-            if (_db.CurrentUser == null) return;
+            var userId = _db.CurrentUser?.Id ?? Preferences.Get("LoggedInUserId", 0);
+            if (userId <= 0) return;
 
-            bool ok = await _api.DeleteListingAsync(listing.Id, _db.CurrentUser.Id);
+            bool ok = await _api.DeleteListingAsync(listing.Id, userId);
             if (ok)
             {
                 MyListings.Remove(listing);
@@ -284,7 +286,13 @@ public partial class ShopPage : ContentPage
 
     private async void OnSaveListingClicked(object sender, EventArgs e)
     {
-        if (_db.CurrentUser == null) return;
+        var userId = _db.CurrentUser?.Id ?? Preferences.Get("LoggedInUserId", 0);
+        var userName = _db.CurrentUser?.FullName ?? Preferences.Get("LoggedInUserName", "User");
+        if (userId <= 0)
+        {
+            await DisplayAlert("Sign in required", "Please sign in before managing marketplace listings.", "OK");
+            return;
+        }
 
         var title = EntryTitle.Text?.Trim() ?? "";
         var desc = EditorDescription.Text?.Trim() ?? "";
@@ -292,7 +300,23 @@ public partial class ShopPage : ContentPage
         var location = EntryLocation.Text?.Trim() ?? "";
         var category = PickerCategory.SelectedItem?.ToString() ?? "General";
         var condition = PickerCondition.SelectedItem?.ToString() ?? "Used";
-        var imageUrls = string.Join(",", _pickedPhotoPaths);
+        var existingUrls = _pickedPhotoPaths
+            .Where(p => p.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                     || p.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        var localPaths = _pickedPhotoPaths.Where(File.Exists).ToList();
+
+        var uploadedUrls = localPaths.Count > 0
+            ? await _api.UploadCommunityMediaAsync(localPaths)
+            : new List<string>();
+
+        if (localPaths.Count > 0 && uploadedUrls.Count != localPaths.Count)
+        {
+            await DisplayAlert("Upload failed", "One or more listing photos could not be uploaded.", "OK");
+            return;
+        }
+
+        var imageUrls = string.Join(",", existingUrls.Concat(uploadedUrls));
 
         if (string.IsNullOrEmpty(title) || string.IsNullOrEmpty(desc))
         {
@@ -311,7 +335,7 @@ public partial class ShopPage : ContentPage
         {
             success = await _api.EditListingAsync(_editingListing.Id, new
             {
-                UserId = _db.CurrentUser.Id,
+                UserId = userId,
                 Title = title,
                 Description = desc,
                 Price = price,
@@ -333,8 +357,8 @@ public partial class ShopPage : ContentPage
         {
             success = await _api.CreateListingAsync(new
             {
-                UserId = _db.CurrentUser.Id,
-                SellerName = _db.CurrentUser.FullName ?? "",
+                UserId = userId,
+                SellerName = userName,
                 Title = title,
                 Description = desc,
                 Price = price,
