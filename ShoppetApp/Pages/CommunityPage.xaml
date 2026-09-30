@@ -44,11 +44,17 @@
 
                                 <!-- Photo Icon -->
                                 <Border Grid.Column="2" BackgroundColor="{StaticResource AppBackground}" WidthRequest="40" HeightRequest="40" StrokeShape="RoundRectangle 20" StrokeThickness="1" Stroke="{StaticResource Secondary30}">
-                                    <Label Text="📷" HorizontalOptions="Center" VerticalOptions="Center" FontSize="18">
-                                        <Label.GestureRecognizers>
+                                    <Path Data="{StaticResource IconCamera}"
+                                          Fill="{StaticResource Primary}"
+                                          WidthRequest="20"
+                                          HeightRequest="20"
+                                          HorizontalOptions="Center"
+                                          VerticalOptions="Center"
+                                          Aspect="Uniform">
+                                        <Path.GestureRecognizers>
                                             <TapGestureRecognizer Command="{Binding GoToCreatePostCommand}" />
-                                        </Label.GestureRecognizers>
-                                    </Label>
+                                        </Path.GestureRecognizers>
+                                    </Path>
                                 </Border>
                             </Grid>
                         </Border>
@@ -107,9 +113,16 @@
                                                         CommandParameter="{Binding .}"
                                                         TextColor="{Binding IsLikedByMe, Converter={StaticResource BoolToLikeColorConverter}}"
                                                         BackgroundColor="Transparent" FontFamily="NunitoBold" />
-                                                <Button Grid.Column="1" Text="🗨 Comment" TextColor="{StaticResource Primary}" BackgroundColor="Transparent" FontFamily="NunitoBold"
-                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:CommunityViewModel}}, Path=GoToPostDetailsCommand}"
-                                                        CommandParameter="{Binding .}" />
+                                                <Border Grid.Column="1" BackgroundColor="Transparent" StrokeThickness="0" Padding="8">
+                                                    <Border.GestureRecognizers>
+                                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:CommunityViewModel}}, Path=GoToPostDetailsCommand}"
+                                                                              CommandParameter="{Binding .}" />
+                                                    </Border.GestureRecognizers>
+                                                    <HorizontalStackLayout Spacing="7" HorizontalOptions="Center">
+                                                        <Path Data="{StaticResource IconMessage}" Fill="{StaticResource Primary}" WidthRequest="18" HeightRequest="18" Aspect="Uniform" />
+                                                        <Label Text="Comment" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" VerticalOptions="Center" />
+                                                    </HorizontalStackLayout>
+                                                </Border>
                                             </Grid>
                                         </VerticalStackLayout>
                                     </Border>
