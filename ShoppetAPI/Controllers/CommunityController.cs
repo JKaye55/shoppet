@@ -62,7 +62,9 @@ public class CommunityController : ControllerBase
                 posts.Add(new
                 {
                     Id = reader.GetInt32(reader.GetOrdinal("Id")),
-                    UserId = reader.GetInt32(reader.GetOrdinal("UserId")),
+                    UserId = reader.IsDBNull(reader.GetOrdinal("UserId"))
+                        ? 0
+                        : reader.GetInt32(reader.GetOrdinal("UserId")),
                     PetId = reader.IsDBNull(reader.GetOrdinal("PetId"))
                         ? (int?)null
                         : reader.GetInt32(reader.GetOrdinal("PetId")),
@@ -333,7 +335,7 @@ public class CommunityController : ControllerBase
                 INSERT INTO CommunityComments
                     (PostId, UserId, AuthorName, Body, IsGuest, CreatedAt, ParentCommentId, Content)
                 VALUES
-                    (@PostId, @UserId, @AuthorName, @Content, 0, SYSDATETIME(), @ParentCommentId, @Content);
+                    (@PostId, @UserId, @AuthorName, LEFT(@Content,300), 0, SYSDATETIME(), @ParentCommentId, @Content);
 
                 SELECT CAST(SCOPE_IDENTITY() AS int);
                 """;
