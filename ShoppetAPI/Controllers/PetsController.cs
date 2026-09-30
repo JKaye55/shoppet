@@ -38,7 +38,11 @@ public class PetsController : ControllerBase
                     Breed,
                     Age,
                     WeightKg,
+                    ISNULL(Diet,'') AS Diet,
                     CreatedAt,
+                    ISNULL(CardId,'') AS CardId,
+                    CardIssuedAt,
+                    ISNULL(CardTheme,'') AS CardTheme,
                     CASE
                         WHEN COL_LENGTH('dbo.PetProfiles', 'PhotoUrl') IS NULL THEN ''
                         ELSE ISNULL(PhotoUrl, '')
@@ -73,8 +77,12 @@ public class PetsController : ControllerBase
                     Breed = reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
                     AgeYears = ageYears,
                     Weight = weight,
-                    CreatedAt = reader.GetDateTime(7),
-                    PhotoUrl = reader.IsDBNull(8) ? string.Empty : reader.GetString(8)
+                    Diet = reader.GetString(7),
+                    CreatedAt = reader.GetDateTime(8),
+                    CardId = reader.GetString(9),
+                    CardIssuedAt = reader.IsDBNull(10) ? (DateTime?)null : reader.GetDateTime(10),
+                    CardTheme = reader.GetString(11),
+                    PhotoUrl = reader.IsDBNull(12) ? string.Empty : reader.GetString(12)
                 });
             }
 
@@ -102,10 +110,10 @@ public class PetsController : ControllerBase
 
             const string sql = """
                 INSERT INTO PetProfiles
-                    (UserId, PetName, Species, Breed, Age, WeightKg, CardId, CardIssuedAt, PhotoUrl)
+                    (UserId, PetName, Species, Breed, Age, WeightKg, Diet, CardId, CardIssuedAt, CardTheme, PhotoUrl)
                 OUTPUT INSERTED.Id
                 VALUES
-                    (@UserId, @PetName, @Species, @Breed, @Age, @WeightKg, @CardId, SYSDATETIME(), @PhotoUrl);
+                    (@UserId, @PetName, @Species, @Breed, @Age, @WeightKg, @Diet, @CardId, SYSDATETIME(), @CardTheme, @PhotoUrl);
                 """;
 
             await using var cmd = new SqlCommand(sql, connection);
@@ -115,7 +123,11 @@ public class PetsController : ControllerBase
             cmd.Parameters.AddWithValue("@Breed", request.Breed?.Trim() ?? string.Empty);
             cmd.Parameters.AddWithValue("@Age", request.AgeYears > 0 ? request.AgeYears.ToString(CultureInfo.InvariantCulture) : DBNull.Value);
             cmd.Parameters.AddWithValue("@WeightKg", weightKg.HasValue ? weightKg.Value : DBNull.Value);
+            cmd.Parameters.AddWithValue("@Diet", request.Diet?.Trim() ?? string.Empty);
             cmd.Parameters.AddWithValue("@CardId", cardId);
+            cmd.Parameters.AddWithValue("@CardTheme", request.CardTheme?.Trim() ?? string.Empty);
+            cmd.Parameters.AddWithValue("@Diet", request.Diet?.Trim() ?? string.Empty);
+            cmd.Parameters.AddWithValue("@CardTheme", request.CardTheme?.Trim() ?? string.Empty);
             cmd.Parameters.AddWithValue("@PhotoUrl", request.PhotoUrl?.Trim() ?? string.Empty);
 
             var newId = Convert.ToInt32(await cmd.ExecuteScalarAsync());
@@ -129,6 +141,10 @@ public class PetsController : ControllerBase
                 Breed = request.Breed?.Trim() ?? string.Empty,
                 request.AgeYears,
                 Weight = request.Weight ?? string.Empty,
+                Diet = request.Diet ?? string.Empty,
+                CardId = cardId,
+                CardIssuedAt = DateTime.Now,
+                CardTheme = request.CardTheme ?? string.Empty,
                 PhotoUrl = request.PhotoUrl ?? string.Empty
             });
         }
@@ -156,6 +172,8 @@ public class PetsController : ControllerBase
                     Breed=@Breed,
                     Age=@Age,
                     WeightKg=@WeightKg,
+                    Diet=@Diet,
+                    CardTheme=@CardTheme,
                     PhotoUrl=@PhotoUrl
                 WHERE Id=@Id AND UserId=@UserId;
                 """;
@@ -275,4 +293,6 @@ public class PetCreateRequest
     public int AgeYears { get; set; }
     public string Weight { get; set; } = string.Empty;
     public string PhotoUrl { get; set; } = string.Empty;
+    public string Diet { get; set; } = string.Empty;
+    public string CardTheme { get; set; } = string.Empty;
 }
