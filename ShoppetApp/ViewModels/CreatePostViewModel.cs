@@ -111,7 +111,7 @@ namespace ShoppetApp.ViewModels
                     {
                         if (AttachedMedia.Count >= 5)
                         {
-                            await Shell.Current.DisplayAlert("Limit Reached", "You can only attach a maximum of 5 photos.", "OK");
+                            await Shell.Current.DisplayAlertAsync("Limit Reached", "You can only attach a maximum of 5 photos.", "OK");
                             break;
                         }
 
@@ -132,7 +132,7 @@ namespace ShoppetApp.ViewModels
 
             if (string.IsNullOrWhiteSpace(Content) && AttachedMedia.Count == 0)
             {
-                await Shell.Current.DisplayAlert("Nothing to post", "Write something or attach a photo first.", "OK");
+                await Shell.Current.DisplayAlertAsync("Nothing to post", "Write something or attach a photo first.", "OK");
                 return;
             }
 
@@ -141,7 +141,7 @@ namespace ShoppetApp.ViewModels
 
             if (userId <= 0)
             {
-                await Shell.Current.DisplayAlert("Sign in required", "Please sign in before creating a post.", "OK");
+                await Shell.Current.DisplayAlertAsync("Sign in required", "Please sign in before creating a post.", "OK");
                 return;
             }
 
@@ -154,7 +154,7 @@ namespace ShoppetApp.ViewModels
 
                 if (AttachedMedia.Count > 0 && uploadedUrls.Count != AttachedMedia.Count)
                 {
-                    await Shell.Current.DisplayAlert("Upload failed", "One or more photos could not be uploaded. Please try again.", "OK");
+                    await Shell.Current.DisplayAlertAsync("Upload failed", "One or more photos could not be uploaded. Please try again.", "OK");
                     return;
                 }
 
@@ -177,7 +177,7 @@ namespace ShoppetApp.ViewModels
                 var success = await _api.CreateCommunityPostAsync(request);
                 if (!success)
                 {
-                    await Shell.Current.DisplayAlert("Post failed", "The post could not be saved. Check the API connection and try again.", "OK");
+                    await Shell.Current.DisplayAlertAsync("Post failed", "The post could not be saved. Check the API connection and try again.", "OK");
                     return;
                 }
 
@@ -190,7 +190,7 @@ namespace ShoppetApp.ViewModels
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Create post failed: {ex}");
-                await Shell.Current.DisplayAlert("Post failed", "Could not reach ShoppetAPI or upload the selected photo.", "OK");
+                await Shell.Current.DisplayAlertAsync("Post failed", "Could not reach ShoppetAPI or upload the selected photo.", "OK");
             }
             finally
             {
