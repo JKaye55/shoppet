@@ -21,7 +21,7 @@
         <!-- Close Button -->
         <Border WidthRequest="40" HeightRequest="40" BackgroundColor="#88000000" StrokeShape="RoundRectangle 20" StrokeThickness="0"
                 HorizontalOptions="End" VerticalOptions="Start" Margin="20,40,20,20">
-            <Label Text="&#x2715;" TextColor="White" FontSize="20" FontFamily="NunitoBold" HorizontalOptions="Center" VerticalOptions="Center" />
+            <Path Data="{StaticResource IconClose}" Fill="White" WidthRequest="20" HeightRequest="20" HorizontalOptions="Center" VerticalOptions="Center" Aspect="Uniform" />
             <Border.GestureRecognizers>
                 <TapGestureRecognizer Tapped="OnCloseTapped" />
             </Border.GestureRecognizers>
