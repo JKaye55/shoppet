@@ -138,6 +138,17 @@ public sealed class SharedDatabaseInitializer
                 ALTER TABLE dbo.FoodLogs ADD CompletedAt datetime2 NULL;",
 
             // ---------------------------------------------------------
+            // TRANSACTION / MOCK PAYMENT COMPATIBILITY
+            // ---------------------------------------------------------
+            @"IF COL_LENGTH('dbo.Transactions', 'RelatedListingId') IS NULL
+                ALTER TABLE dbo.Transactions ADD RelatedListingId int NULL;",
+
+            @"IF COL_LENGTH('dbo.Transactions', 'IsSimulation') IS NULL
+                ALTER TABLE dbo.Transactions
+                ADD IsSimulation bit NOT NULL
+                    CONSTRAINT DF_Transactions_IsSimulation DEFAULT(0);",
+
+            // ---------------------------------------------------------
             // EMERGENCY CONTACTS
             // ---------------------------------------------------------
             @"IF OBJECT_ID('dbo.EmergencyContacts', 'U') IS NULL
