@@ -414,6 +414,52 @@ public class ApiService
                ?? new List<CommunityPost>();
     }
 
+    public async Task<List<string>> UploadCommunityMediaAsync(IEnumerable<string> filePaths)
+    {
+        var paths = filePaths.Where(File.Exists).Take(5).ToList();
+        if (paths.Count == 0) return new List<string>();
+
+        using var form = new MultipartFormDataContent();
+        var streams = new List<Stream>();
+
+        try
+        {
+            foreach (var path in paths)
+            {
+                var stream = File.OpenRead(path);
+                streams.Add(stream);
+
+                var fileContent = new StreamContent(stream);
+                var extension = Path.GetExtension(path).ToLowerInvariant();
+                var mediaType = extension switch
+                {
+                    ".png" => "image/png",
+                    ".webp" => "image/webp",
+                    _ => "image/jpeg"
+                };
+                fileContent.Headers.ContentType =
+                    new System.Net.Http.Headers.MediaTypeHeaderValue(mediaType);
+
+                form.Add(fileContent, "files", Path.GetFileName(path));
+            }
+
+            using var response = await _http.PostAsync("community/media", form);
+            if (!response.IsSuccessStatusCode)
+            {
+                var detail = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"Media upload failed ({(int)response.StatusCode}): {detail}");
+            }
+
+            return await response.Content.ReadFromJsonAsync<List<string>>()
+                   ?? new List<string>();
+        }
+        finally
+        {
+            foreach (var stream in streams)
+                stream.Dispose();
+        }
+    }
+
     public async Task<bool> CreateCommunityPostAsync(object request)
     {
         try
