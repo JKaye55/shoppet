@@ -119,9 +119,10 @@ public class UrlToImageSourceConverter : IValueConverter
         var url = value?.ToString();
         if (string.IsNullOrWhiteSpace(url))
             return null;
-        if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-            return ImageSource.FromUri(new Uri(url));
-        return ImageSource.FromFile(url);
+        var resolved = ShoppetApp.Helpers.MediaUrlHelper.Resolve(url);
+        if (resolved.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            return ImageSource.FromUri(new Uri(resolved));
+        return ImageSource.FromFile(resolved);
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
@@ -150,9 +151,9 @@ public class HealthTypeLabelConverter : IValueConverter
     {
         return value?.ToString()?.ToLowerInvariant() switch
         {
-            "vaccine" => "\uD83D\uDC89 Vaccine",
-            "medication" => "\uD83D\uDC8A Meds",
-            "vital" => "\u2764\uFE0F Vital",
+            "vaccine" => "Vaccine",
+            "medication" => "Medication",
+            "vital" => "Checkup",
             _ => value?.ToString() ?? string.Empty
         };
     }
@@ -253,7 +254,7 @@ public class FeedingIntervalLabelConverter : IValueConverter
         }
 
         if (hours == 0 && minutes == 0)
-            return "�";
+            return "Not scheduled";
 
         if (hours == 0)
             return $"Every {minutes} min";
@@ -378,8 +379,8 @@ public class BoolToLikeTextConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        if (value is bool isLiked) return isLiked ? "\u2764 Liked" : "\u2661 Like";
-        return "\u2661 Like";
+        if (value is bool isLiked) return isLiked ? "Liked" : "Like";
+        return "Like";
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
