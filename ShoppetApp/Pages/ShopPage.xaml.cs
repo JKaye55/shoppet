@@ -205,14 +205,14 @@ public partial class ShopPage : ContentPage
         var userId = Preferences.Get("LoggedInUserId", 0);
         if (userId <= 0)
         {
-            await DisplayAlert("Sign in required", "Please sign in before adding items to your cart.", "OK");
+            await DisplayAlertAsync("Sign in required", "Please sign in before adding items to your cart.", "OK");
             return;
         }
 
         var cart = await _api.AddToCartAsync(new AddToCartRequest(_currentListing.Id, 1));
         if (cart == null)
         {
-            await DisplayAlert("Cart", "The item could not be added. Please try again.", "OK");
+            await DisplayAlertAsync("Cart", "The item could not be added. Please try again.", "OK");
             return;
         }
 
@@ -271,11 +271,11 @@ public partial class ShopPage : ContentPage
             var order = await _api.CheckoutAsync();
             if (order == null)
             {
-                await DisplayAlert("Checkout", "Mock checkout could not be completed.", "OK");
+                await DisplayAlertAsync("Checkout", "Mock checkout could not be completed.", "OK");
                 return;
             }
 
-            await DisplayAlert(
+            await DisplayAlertAsync(
                 "Order Confirmed",
                 $"Mock payment completed. Order #{order.Id} • ₱{order.TotalAmount:N0}",
                 "OK");
@@ -323,7 +323,7 @@ public partial class ShopPage : ContentPage
             {
                 if (_pickedPhotoPaths.Count >= 5)
                 {
-                    await DisplayAlert("Limit Reached", "You can only attach up to 5 photos.", "OK");
+                    await DisplayAlertAsync("Limit Reached", "You can only attach up to 5 photos.", "OK");
                     break;
                 }
                 _pickedPhotoPaths.Add(file.FullPath);
@@ -387,7 +387,7 @@ public partial class ShopPage : ContentPage
     {
         if (sender is Button btn && btn.CommandParameter is MarketplaceListing listing)
         {
-            bool confirm = await DisplayAlert("Delete Listing", $"Are you sure you want to delete \"{listing.Title}\"?", "Yes, Delete", "Cancel");
+            bool confirm = await DisplayAlertAsync("Delete Listing", $"Are you sure you want to delete \"{listing.Title}\"?", "Yes, Delete", "Cancel");
             if (!confirm) return;
             var userId = _db.CurrentUser?.Id ?? Preferences.Get("LoggedInUserId", 0);
             if (userId <= 0) return;
@@ -397,11 +397,11 @@ public partial class ShopPage : ContentPage
             {
                 MyListings.Remove(listing);
                 SellEmptyLabel.IsVisible = !MyListings.Any();
-                await DisplayAlert("Deleted", "Listing removed.", "OK");
+                await DisplayAlertAsync("Deleted", "Listing removed.", "OK");
             }
             else
             {
-                await DisplayAlert("Error", "Could not delete listing. Try again.", "OK");
+                await DisplayAlertAsync("Error", "Could not delete listing. Try again.", "OK");
             }
         }
     }
@@ -418,7 +418,7 @@ public partial class ShopPage : ContentPage
         var userName = _db.CurrentUser?.FullName ?? Preferences.Get("LoggedInUserName", "User");
         if (userId <= 0)
         {
-            await DisplayAlert("Sign in required", "Please sign in before managing marketplace listings.", "OK");
+            await DisplayAlertAsync("Sign in required", "Please sign in before managing marketplace listings.", "OK");
             return;
         }
 
@@ -440,7 +440,7 @@ public partial class ShopPage : ContentPage
 
         if (localPaths.Count > 0 && uploadedUrls.Count != localPaths.Count)
         {
-            await DisplayAlert("Upload failed", "One or more listing photos could not be uploaded.", "OK");
+            await DisplayAlertAsync("Upload failed", "One or more listing photos could not be uploaded.", "OK");
             return;
         }
 
@@ -448,13 +448,13 @@ public partial class ShopPage : ContentPage
 
         if (string.IsNullOrEmpty(title) || string.IsNullOrEmpty(desc))
         {
-            await DisplayAlert("Missing Info", "Please fill in Title and Description.", "OK");
+            await DisplayAlertAsync("Missing Info", "Please fill in Title and Description.", "OK");
             return;
         }
 
         if (!decimal.TryParse(priceStr, out decimal price) || price < 0)
         {
-            await DisplayAlert("Invalid Price", "Please enter a valid price.", "OK");
+            await DisplayAlertAsync("Invalid Price", "Please enter a valid price.", "OK");
             return;
         }
 
@@ -507,11 +507,11 @@ public partial class ShopPage : ContentPage
             ClearPostForm();
             await LoadMyListingsAsync();
             await LoadExploreListingsAsync();
-            await DisplayAlert("Success", wasEditing ? "Listing updated!" : "Item posted to Marketplace!", "OK");
+            await DisplayAlertAsync("Success", wasEditing ? "Listing updated!" : "Item posted to Marketplace!", "OK");
         }
         else
         {
-            await DisplayAlert("Error", "Something went wrong. Please try again.", "OK");
+            await DisplayAlertAsync("Error", "Something went wrong. Please try again.", "OK");
         }
     }
 
