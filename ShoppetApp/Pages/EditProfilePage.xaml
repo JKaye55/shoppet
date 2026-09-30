@@ -45,6 +45,36 @@
                         <Entry Text="{Binding FullName}" TextColor="{StaticResource BodyText}" BackgroundColor="Transparent" FontFamily="Nunito" />
                     </Border>
                 </VerticalStackLayout>
+
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Seller Contact Links"
+                           TextColor="{StaticResource TextColor}"
+                           FontFamily="NunitoBold"
+                           FontSize="14" />
+                    <Label Text="Optional. These can appear on your marketplace listings."
+                           TextColor="{StaticResource NavMuted}"
+                           FontSize="12" />
+
+                    <Border BackgroundColor="{StaticResource CardBg}" StrokeThickness="0" StrokeShape="RoundRectangle 10" Padding="15,0">
+                        <Entry Text="{Binding FacebookUrl}" Placeholder="Facebook or Messenger URL" TextColor="{StaticResource BodyText}" BackgroundColor="Transparent" />
+                    </Border>
+                    <Border BackgroundColor="{StaticResource CardBg}" StrokeThickness="0" StrokeShape="RoundRectangle 10" Padding="15,0">
+                        <Entry Text="{Binding InstagramUrl}" Placeholder="Instagram URL" TextColor="{StaticResource BodyText}" BackgroundColor="Transparent" />
+                    </Border>
+                    <Border BackgroundColor="{StaticResource CardBg}" StrokeThickness="0" StrokeShape="RoundRectangle 10" Padding="15,0">
+                        <Entry Text="{Binding OtherSocialUrl}" Placeholder="Other public contact URL" TextColor="{StaticResource BodyText}" BackgroundColor="Transparent" />
+                    </Border>
+
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <VerticalStackLayout Grid.Column="0" Spacing="2">
+                            <Label Text="Show links on Marketplace" FontFamily="NunitoBold" FontSize="13" TextColor="{StaticResource BodyText}" />
+                            <Label Text="Buyers can open these links from your listing." FontSize="11" TextColor="{StaticResource NavMuted}" />
+                        </VerticalStackLayout>
+                        <Switch Grid.Column="1"
+                                IsToggled="{Binding ShowSocialLinksOnMarketplace}"
+                                OnColor="{StaticResource Primary}" />
+                    </Grid>
+                </VerticalStackLayout>
             </VerticalStackLayout>
         </ScrollView>
         
