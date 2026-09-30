@@ -158,75 +158,58 @@ namespace ShoppetApp.Services
         // =====================================================
         public async Task<List<Pet>> GetPetsAsync()
         {
-            try
-            {
-                if (ApiService != null)
-                {
-                    try {
-                        var apiPets = await ApiService.GetPetsAsync();
-                        if (apiPets != null) {
-                            await Database.CreateTableAsync<Pet>();
-                            await Database.ExecuteAsync("DELETE FROM Pet WHERE Id > 0"); // Clear synced records to prevent lingering duplicates
-                            foreach(var p in apiPets) {
-                                await Database.InsertAsync(p);
-                            }
-                        }
-                    } catch { }
-                }
+            if (ApiService is null)
+                return new List<Pet>();
 
-                await Database.CreateTableAsync<Pet>();
-                int currentUserId = Preferences.Get("LoggedInUserId", 0);
-                var pets = await Database.Table<Pet>().Where(p => p.UserId == currentUserId).ToListAsync();
-                return pets ?? new List<Pet>();
-            }
-            catch { return new List<Pet>(); }
+            var apiPets = await ApiService.GetPetsAsync();
+
+            await Database.CreateTableAsync<Pet>();
+            await Database.DeleteAllAsync<Pet>();
+
+            foreach (var pet in apiPets)
+                await Database.InsertOrReplaceAsync(pet);
+
+            return apiPets;
         }
 
         public async Task<Pet?> GetPetAsync(int id)
         {
-            await Database.CreateTableAsync<Pet>();
-            return await Database.Table<Pet>().Where(p => p.Id == id).FirstOrDefaultAsync();
+            var pets = await GetPetsAsync();
+            return pets.FirstOrDefault(p => p.Id == id);
         }
 
         public async Task<int> SavePetAsync(Pet pet)
         {
-            await Database.CreateTableAsync<Pet>();
-            bool isNew = pet.Id <= 0;
-            if (isNew && pet.Id == 0) {
-                try {
-                    int minId = await Database.ExecuteScalarAsync<int>("SELECT MIN(Id) FROM Pet");
-                    pet.Id = minId >= 0 ? -1 : minId - 1;
-                } catch { pet.Id = -1; }
-            }
-            
-            if (ApiService != null)
-            {
-                try {
-                    var apiSaved = await ApiService.SavePetAsync(pet);
-                    if (apiSaved != null) {
-                        var oldId = pet.Id;
-                        pet.Id = apiSaved.Id;
-                        if (oldId < 0) {
-                            await Database.ExecuteAsync("DELETE FROM Pet WHERE Id = ?", oldId);
-                        }
-                        var existing = await Database.Table<Pet>().Where(x => x.Id == pet.Id).FirstOrDefaultAsync();
-                        return existing == null ? await Database.InsertAsync(pet) : await Database.UpdateAsync(pet);
-                    }
-                } catch { }
-            }
+            if (ApiService is null)
+                return 0;
 
-            return isNew ? await Database.InsertAsync(pet) : await Database.UpdateAsync(pet);
+            var saved = await ApiService.SavePetAsync(pet);
+            if (saved is null)
+                return 0;
+
+            pet.Id = saved.Id;
+            pet.CardId = saved.CardId;
+            pet.CardIssuedAt = saved.CardIssuedAt;
+            pet.CardTheme = saved.CardTheme;
+            pet.CreatedAt = saved.CreatedAt == default ? pet.CreatedAt : saved.CreatedAt;
+
+            await Database.CreateTableAsync<Pet>();
+            await Database.InsertOrReplaceAsync(pet);
+            return pet.Id;
         }
 
         public async Task<int> DeletePetAsync(Pet pet)
         {
+            if (ApiService is null)
+                return 0;
+
+            var deleted = await ApiService.DeletePetAsync(pet.Id);
+            if (!deleted)
+                return 0;
+
             await Database.CreateTableAsync<Pet>();
-            int result = await Database.DeleteAsync(pet);
-            if (ApiService != null)
-            {
-                try { await ApiService.DeletePetAsync(pet.Id); } catch { }
-            }
-            return result;
+            await Database.DeleteAsync(pet);
+            return 1;
         }
 
         // --- Health & Food Logs ---
@@ -243,40 +226,17 @@ namespace ShoppetApp.Services
 
         public async Task<List<HealthLog>> GetHealthLogsAsync(int petId)
         {
-            try
-            {
-                if (ApiService != null)
-                {
-                    try
-                    {
-                        var apiLogs = await ApiService.GetHealthLogsAsync(petId);
-                        if (apiLogs != null)
-                        {
-                            await Database.CreateTableAsync<HealthLog>();
-                            await Database.ExecuteAsync("DELETE FROM HealthLog WHERE Id > 0 AND PetId = ?", petId);
-                            foreach (var log in apiLogs)
-                                await Database.InsertAsync(log);
+            if (ApiService is null)
+                return new List<HealthLog>();
 
-                            // Return the server objects so non-persisted computed fields
-                            // such as Status are preserved for the dashboard UI.
-                            return apiLogs;
-                        }
-                    }
-                    catch { }
-                }
+            var apiLogs = await ApiService.GetHealthLogsAsync(petId);
 
-                await Database.CreateTableAsync<HealthLog>();
-                var local = await Database.Table<HealthLog>().Where(h => h.PetId == petId).ToListAsync();
-                foreach (var log in local)
-                {
-                    if (log.Completed) log.Status = "Completed";
-                    else if (DateTime.TryParse(log.DueDate, out var due))
-                        log.Status = due <= DateTime.Now.AddDays(7) ? "Action Required" : "Pending";
-                    else log.Status = "Pending";
-                }
-                return local;
-            }
-            catch { return new List<HealthLog>(); }
+            await Database.CreateTableAsync<HealthLog>();
+            await Database.ExecuteAsync("DELETE FROM HealthLog WHERE PetId = ?", petId);
+            foreach (var log in apiLogs)
+                await Database.InsertOrReplaceAsync(log);
+
+            return apiLogs;
         }
 
         public async Task<HealthLog?> GetHealthLogAsync(int id)
@@ -373,26 +333,17 @@ namespace ShoppetApp.Services
 
         public async Task<List<FoodLog>> GetFoodLogsAsync(int petId)
         {
-            try
-            {
-                if (ApiService != null)
-                {
-                    try {
-                        var apiLogs = await ApiService.GetFoodLogsAsync(petId);
-                        if (apiLogs != null) {
-                            await Database.CreateTableAsync<FoodLog>();
-                            await Database.ExecuteAsync("DELETE FROM FoodLog WHERE Id > 0 AND PetId = ?", petId);
-                            foreach(var log in apiLogs) {
-                                await Database.InsertAsync(log);
-                            }
-                        }
-                    } catch { }
-                }
+            if (ApiService is null)
+                return new List<FoodLog>();
 
-                await Database.CreateTableAsync<FoodLog>();
-                return await Database.Table<FoodLog>().Where(f => f.PetId == petId).ToListAsync();
-            }
-            catch { return new List<FoodLog>(); }
+            var apiLogs = await ApiService.GetFoodLogsAsync(petId);
+
+            await Database.CreateTableAsync<FoodLog>();
+            await Database.ExecuteAsync("DELETE FROM FoodLog WHERE PetId = ?", petId);
+            foreach (var log in apiLogs)
+                await Database.InsertOrReplaceAsync(log);
+
+            return apiLogs;
         }
 
         public async Task<FoodLog?> GetFoodLogAsync(int id)
