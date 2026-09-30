@@ -237,6 +237,53 @@ public sealed class SharedDatabaseInitializer
               END;",
 
             // ---------------------------------------------------------
+            // C2C MARKETPLACE CART / ORDERS
+            // Pet Owners may both buy and sell using the same account.
+            // ---------------------------------------------------------
+            @"IF OBJECT_ID('dbo.MarketplaceCartItems', 'U') IS NULL
+              BEGIN
+                CREATE TABLE dbo.MarketplaceCartItems
+                (
+                    Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                    UserId int NOT NULL,
+                    ListingId int NOT NULL,
+                    AddedAt datetime2 NOT NULL
+                        CONSTRAINT DF_MarketplaceCartItems_AddedAt DEFAULT(SYSDATETIME()),
+                    CONSTRAINT FK_MarketplaceCartItems_User
+                        FOREIGN KEY (UserId) REFERENCES dbo.UserAccounts(Id) ON DELETE CASCADE,
+                    CONSTRAINT FK_MarketplaceCartItems_Listing
+                        FOREIGN KEY (ListingId) REFERENCES dbo.MarketplaceListings(Id) ON DELETE CASCADE
+                );
+                CREATE UNIQUE INDEX UX_MarketplaceCartItems_User_Listing
+                    ON dbo.MarketplaceCartItems(UserId, ListingId);
+              END;",
+
+            @"IF OBJECT_ID('dbo.MarketplaceOrders', 'U') IS NULL
+              BEGIN
+                CREATE TABLE dbo.MarketplaceOrders
+                (
+                    Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                    BuyerUserId int NOT NULL,
+                    SellerUserId int NOT NULL,
+                    ListingId int NULL,
+                    ItemTitle nvarchar(200) NOT NULL,
+                    Amount decimal(18,2) NOT NULL,
+                    PaymentMethod nvarchar(50) NOT NULL,
+                    PaymentStatus nvarchar(50) NOT NULL,
+                    Status nvarchar(50) NOT NULL,
+                    IsSimulation bit NOT NULL,
+                    OrderedAt datetime2 NOT NULL
+                        CONSTRAINT DF_MarketplaceOrders_OrderedAt DEFAULT(SYSDATETIME()),
+                    CONSTRAINT FK_MarketplaceOrders_Buyer
+                        FOREIGN KEY (BuyerUserId) REFERENCES dbo.UserAccounts(Id),
+                    CONSTRAINT FK_MarketplaceOrders_Seller
+                        FOREIGN KEY (SellerUserId) REFERENCES dbo.UserAccounts(Id)
+                );
+                CREATE INDEX IX_MarketplaceOrders_Buyer ON dbo.MarketplaceOrders(BuyerUserId);
+                CREATE INDEX IX_MarketplaceOrders_Seller ON dbo.MarketplaceOrders(SellerUserId);
+              END;",
+
+            // ---------------------------------------------------------
             // EXISTING SHOP/CART FEATURE - SQL SERVER COMPATIBILITY
             // Kept so evaluated cart/checkout functionality still works.
             // ---------------------------------------------------------
