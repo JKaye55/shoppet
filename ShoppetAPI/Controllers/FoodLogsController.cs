@@ -61,7 +61,8 @@ public class FoodLogsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateFoodLog(int petId, [FromBody] FoodLogRequest request)
     {
-        if (petId <= 0) return BadRequest("A valid pet ID is required.");
+        var validationError = ValidateRequest(petId, request);
+        if (validationError is not null) return BadRequest(validationError);
 
         try
         {
@@ -89,6 +90,9 @@ public class FoodLogsController : ControllerBase
     [HttpPut("{id:int}")]
     public async Task<IActionResult> UpdateFoodLog(int petId, int id, [FromBody] FoodLogRequest request)
     {
+        var validationError = ValidateRequest(petId, request);
+        if (validationError is not null) return BadRequest(validationError);
+
         try
         {
             await using var connection = new SqlConnection(ConnectionString);
@@ -154,6 +158,23 @@ public class FoodLogsController : ControllerBase
                 : NotFound("Food log not found.");
         }
         catch (Exception ex) { return StatusCode(500, $"Error completing food log: {ex.Message}"); }
+    }
+
+    private static string? ValidateRequest(int petId, FoodLogRequest request)
+    {
+        var foodName = (request.FoodName ?? string.Empty).Trim();
+        var notes = (request.Notes ?? string.Empty).Trim();
+
+        if (petId <= 0) return "A valid pet ID is required.";
+        if (foodName.Length < 2 || foodName.Length > 80) return "Food name must be between 2 and 80 characters.";
+        if (request.AmountGrams < 1 || request.AmountGrams > 5000) return "Serving amount must be between 1 and 5,000 grams.";
+        if (request.IntervalHours < 0 || request.IntervalHours > 24) return "Interval hours must be between 0 and 24.";
+        if (request.IntervalMinutes < 0 || request.IntervalMinutes > 59) return "Interval minutes must be between 0 and 59.";
+        if (request.IntervalHours == 0 && request.IntervalMinutes == 0) return "Feeding interval must be at least 1 minute.";
+        if (request.IntervalHours == 24 && request.IntervalMinutes > 0) return "A 24-hour interval cannot include additional minutes.";
+        if (notes.Length > 500) return "Notes cannot exceed 500 characters.";
+
+        return null;
     }
 
     private static void AddParameters(SqlCommand cmd, int petId, FoodLogRequest request)
