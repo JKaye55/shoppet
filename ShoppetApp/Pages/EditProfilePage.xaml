@@ -13,7 +13,7 @@
             <HorizontalStackLayout Spacing="10">
                 <Label Text="&#x25C0; Back" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" FontSize="16" VerticalOptions="Center">
                     <Label.GestureRecognizers>
-                        <TapGestureRecognizer Command="{Binding SaveCommand}" />
+                        <TapGestureRecognizer Command="{Binding GoBackCommand}" />
                     </Label.GestureRecognizers>
                 </Label>
                 <Label Text="Edit Profile" FontFamily="OutfitBold" FontSize="20" TextColor="{StaticResource TextColor}" VerticalOptions="Center" Margin="10,0,0,0"/>
@@ -44,6 +44,39 @@
                     <Border BackgroundColor="{StaticResource CardBg}" StrokeThickness="0" StrokeShape="RoundRectangle 10" Padding="15,0">
                         <Entry Text="{Binding FullName}" TextColor="{StaticResource BodyText}" BackgroundColor="Transparent" FontFamily="Nunito" />
                     </Border>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Digital Pet ID Contact"
+                           TextColor="{StaticResource TextColor}"
+                           FontFamily="NunitoBold"
+                           FontSize="14" />
+                    <Label Text="Your phone number stays private unless you enable the public Pet ID option below."
+                           TextColor="{StaticResource NavMuted}"
+                           FontSize="12" />
+
+                    <Border BackgroundColor="{StaticResource CardBg}" StrokeThickness="0" StrokeShape="RoundRectangle 10" Padding="15,0">
+                        <Entry Text="{Binding MobileNumber}"
+                               Placeholder="Mobile number"
+                               Keyboard="Telephone"
+                               TextColor="{StaticResource BodyText}"
+                               BackgroundColor="Transparent" />
+                    </Border>
+
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <VerticalStackLayout Grid.Column="0" Spacing="2">
+                            <Label Text="Show mobile on public Pet ID"
+                                   FontFamily="NunitoBold"
+                                   FontSize="13"
+                                   TextColor="{StaticResource BodyText}" />
+                            <Label Text="Only enable this if you want the public Pet ID page to show your contact number."
+                                   FontSize="11"
+                                   TextColor="{StaticResource NavMuted}" />
+                        </VerticalStackLayout>
+                        <Switch Grid.Column="1"
+                                IsToggled="{Binding ShowMobileOnPublicPetId}"
+                                OnColor="{StaticResource Primary}" />
+                    </Grid>
                 </VerticalStackLayout>
 
                 <VerticalStackLayout Spacing="10">
