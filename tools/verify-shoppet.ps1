@@ -8,7 +8,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $apiProject = Join-Path $repoRoot "ShoppetAPI\ShoppetAPI.csproj"
 $appProject = Join-Path $repoRoot "ShoppetApp\ShoppetApp.csproj"
 $smokeScript = Join-Path $PSScriptRoot "api-smoke-test.ps1"
-$apiBase = "http://localhost:5020"
+$apiBase = "http://localhost:5021"
 $apiProcess = $null
 $startedApi = $false
 
@@ -68,8 +68,9 @@ try {
         $arguments = @(
             "run",
             "--project", $apiProject,
-            "--launch-profile", "http",
-            "--no-build"
+            "--no-build",
+            "--no-launch-profile",
+            "--urls", $apiBase
         )
 
         $apiProcess = Start-Process dotnet -ArgumentList $arguments -WorkingDirectory $repoRoot -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
