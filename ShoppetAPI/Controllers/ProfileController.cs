@@ -1,3 +1,4 @@
+using ShoppetAPI.Security;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 
@@ -31,6 +32,7 @@ public class ProfileController : ControllerBase
     public async Task<IActionResult> GetProfile(int userId)
     {
         if(userId<=0) return BadRequest("A valid user ID is required.");
+        if(!this.IsAuthenticatedUser(userId)) return Forbid();
         try
         {
             await using var conn=new SqlConnection(ConnectionString);
@@ -64,6 +66,7 @@ public class ProfileController : ControllerBase
     public async Task<IActionResult> UpdateProfile([FromBody]UpdateProfileRequest request)
     {
         if(request.UserId<=0) return BadRequest("A valid user ID is required.");
+        if(!this.IsAuthenticatedUser(request.UserId)) return Forbid();
 
         var fullName=(request.FullName??string.Empty).Trim();
         if(fullName.Length<2||fullName.Length>80) return BadRequest("Full name must be between 2 and 80 characters.");
