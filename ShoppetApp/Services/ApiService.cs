@@ -145,6 +145,45 @@ public class ApiService
         }
     }
 
+    // -- Shared media -----------------------------------------------------------
+
+    public async Task<string?> UploadImageAsync(string localPath, string area)
+    {
+        if (string.IsNullOrWhiteSpace(localPath))
+            return null;
+
+        if (ShoppetApp.Helpers.MediaUrlHelper.IsServerMedia(localPath))
+            return localPath;
+
+        if (!File.Exists(localPath))
+            return null;
+
+        await using var stream = File.OpenRead(localPath);
+        using var form = new MultipartFormDataContent();
+        using var fileContent = new StreamContent(stream);
+        fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(
+            Path.GetExtension(localPath).Equals(".png", StringComparison.OrdinalIgnoreCase)
+                ? "image/png"
+                : Path.GetExtension(localPath).Equals(".webp", StringComparison.OrdinalIgnoreCase)
+                    ? "image/webp"
+                    : "image/jpeg");
+
+        form.Add(fileContent, "file", Path.GetFileName(localPath));
+        form.Add(new StringContent(area), "area");
+
+        using var response = await _http.PostAsync("media/image", form);
+        if (!response.IsSuccessStatusCode)
+            return null;
+
+        var payload = await response.Content.ReadFromJsonAsync<MediaUploadResponse>();
+        return payload?.Path;
+    }
+
+    private sealed class MediaUploadResponse
+    {
+        public string Path { get; set; } = string.Empty;
+    }
+
     // -- Pets ------------------------------------------------------------------
 
     public async Task<List<Pet>> GetPetsAsync()
