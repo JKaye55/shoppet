@@ -178,6 +178,14 @@ public static class CommunitySchemaInitializer
                 );
             END;
 
+            IF OBJECT_ID(N'dbo.CommunityPosts', N'U') IS NOT NULL
+               AND COL_LENGTH('dbo.CommunityPosts', 'ImageUrl') IS NOT NULL
+                ALTER TABLE dbo.CommunityPosts ALTER COLUMN ImageUrl NVARCHAR(MAX) NULL;
+
+            IF OBJECT_ID(N'dbo.MarketplaceListings', N'U') IS NOT NULL
+               AND COL_LENGTH('dbo.MarketplaceListings', 'ImageUrl') IS NOT NULL
+                ALTER TABLE dbo.MarketplaceListings ALTER COLUMN ImageUrl NVARCHAR(MAX) NULL;
+
             IF OBJECT_ID(N'dbo.CommunityPosts', N'U') IS NULL
             BEGIN
                 CREATE TABLE dbo.CommunityPosts
