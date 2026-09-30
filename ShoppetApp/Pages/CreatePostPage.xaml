@@ -81,12 +81,13 @@
                                 BackgroundColor="{StaticResource Secondary30}"
                                 StrokeThickness="0"
                                 StrokeShape="RoundRectangle 14">
-                            <Label Text="＋"
-                                   FontSize="26"
-                                   FontFamily="NunitoBold"
-                                   TextColor="{StaticResource Primary}"
-                                   HorizontalOptions="Center"
-                                   VerticalOptions="Center" />
+                            <Path Data="{StaticResource IconCamera}"
+                                  Fill="{StaticResource Primary}"
+                                  WidthRequest="24"
+                                  HeightRequest="24"
+                                  HorizontalOptions="Center"
+                                  VerticalOptions="Center"
+                                  Aspect="Uniform" />
                         </Border>
                         <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
                             <Label Text="Add photos"
@@ -125,7 +126,7 @@
                                 
                                 <!-- Video Placeholder -->
                                 <VerticalStackLayout IsVisible="{Binding IsVideo}" HorizontalOptions="Center" VerticalOptions="Center">
-                                    <Label Text="▶" TextColor="White" FontSize="24" HorizontalOptions="Center" />
+                                    <Path Data="{StaticResource IconPlay}" Fill="White" WidthRequest="24" HeightRequest="24" HorizontalOptions="Center" Aspect="Uniform" />
                                     <Label Text="Video" TextColor="White" FontSize="12" HorizontalOptions="Center" />
                                 </VerticalStackLayout>
                                 
