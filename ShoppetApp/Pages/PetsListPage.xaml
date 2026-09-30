@@ -81,30 +81,34 @@
                                     </Label>
                                 </VerticalStackLayout>
                                 <HorizontalStackLayout Grid.Column="2" Spacing="4" VerticalOptions="Center">
-                                    <Button Text="✎"
-                                            FontSize="14"
-                                            WidthRequest="36"
-                                            HeightRequest="36"
-                                            CornerRadius="18"
-                                            Padding="0"
+                                    <Border WidthRequest="36" HeightRequest="36"
                                             BackgroundColor="{StaticResource Primary10}"
-                                            TextColor="{StaticResource Primary}"
-                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PetsListViewModel}}, Path=EditPetCommand}"
-                                            CommandParameter="{Binding .}" />
-                                    <Button Text="🗑"
-                                            FontSize="14"
-                                            WidthRequest="36"
-                                            HeightRequest="36"
-                                            CornerRadius="18"
-                                            Padding="0"
+                                            StrokeThickness="0"
+                                            StrokeShape="RoundRectangle 18">
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PetsListViewModel}}, Path=EditPetCommand}"
+                                                                  CommandParameter="{Binding .}" />
+                                        </Border.GestureRecognizers>
+                                        <Path Data="{StaticResource IconEdit}" Fill="{StaticResource Primary}"
+                                              WidthRequest="17" HeightRequest="17"
+                                              HorizontalOptions="Center" VerticalOptions="Center" Aspect="Uniform" />
+                                    </Border>
+                                    <Border WidthRequest="36" HeightRequest="36"
                                             BackgroundColor="{StaticResource StatusOverdueBg}"
-                                            TextColor="{StaticResource StatusOverdue}"
-                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PetsListViewModel}}, Path=DeletePetCommand}"
-                                            CommandParameter="{Binding .}" />
-                                    <Label Text="›"
-                                           FontSize="22"
-                                           TextColor="{StaticResource Secondary}"
-                                           VerticalOptions="Center" />
+                                            StrokeThickness="0"
+                                            StrokeShape="RoundRectangle 18">
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PetsListViewModel}}, Path=DeletePetCommand}"
+                                                                  CommandParameter="{Binding .}" />
+                                        </Border.GestureRecognizers>
+                                        <Path Data="{StaticResource IconDelete}" Fill="{StaticResource StatusOverdue}"
+                                              WidthRequest="17" HeightRequest="17"
+                                              HorizontalOptions="Center" VerticalOptions="Center" Aspect="Uniform" />
+                                    </Border>
+                                    <Path Data="{StaticResource IconArrowRight}"
+                                          Fill="{StaticResource Secondary}"
+                                          WidthRequest="18" HeightRequest="18"
+                                          VerticalOptions="Center" Aspect="Uniform" />
                                 </HorizontalStackLayout>
                             </Grid>
                         </Border>
