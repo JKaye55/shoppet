@@ -5,80 +5,34 @@ using ShoppetApp.Messages;
 using ShoppetApp.Models;
 using ShoppetApp.Services;
 using System.Collections.ObjectModel;
+using System.Globalization;
 
 namespace ShoppetApp.ViewModels;
 
 public partial class PetFormViewModel : ObservableObject, IQueryAttributable
 {
+    private const long MaxPhotoBytes = 5 * 1024 * 1024;
     private readonly DatabaseService _db;
 
     [ObservableProperty] public partial int PetId { get; set; }
     [ObservableProperty] public partial string Name { get; set; } = string.Empty;
     [ObservableProperty] public partial string Breed { get; set; } = string.Empty;
-    [ObservableProperty] public partial string PhotoUrl { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasPhoto))]
+    public partial string PhotoUrl { get; set; } = string.Empty;
+
     [ObservableProperty] public partial bool IsEditMode { get; set; }
+    [ObservableProperty] public partial bool IsBusy { get; set; }
+    [ObservableProperty] public partial double AgeYearsValue { get; set; } = 1;
+    [ObservableProperty] public partial double WeightKgValue { get; set; } = 1;
 
     [ObservableProperty]
     public partial string Species { get; set; } = "Dog";
 
-    partial void OnSpeciesChanged(string value)
-    {
-        UpdateAvailableBreeds();
-    }
-
-    private void UpdateAvailableBreeds()
-    {
-        AvailableBreeds.Clear();
-        var list = Species switch
-        {
-            "Dog" => new[] { "Aspin", "Golden Retriever", "Shih Tzu", "Labrador", "German Shepherd", "Poodle", "Pomeranian", "Chihuahua", "Husky", "Other" },
-            "Cat" => new[] { "Puspin", "Persian", "Siamese", "Maine Coon", "British Shorthair", "Scottish Fold", "Sphynx", "Other" },
-            "Bird" => new[] { "Parakeet", "Cockatiel", "Lovebird", "Canine", "Finch", "Other" },
-            "Small Pet" => new[] { "Hamster", "Guinea Pig", "Rabbit", "Hedgehog", "Ferret", "Other" },
-            _ => new[] { "Mixed / Other" }
-        };
-
-        foreach (var item in list)
-        {
-            AvailableBreeds.Add(item);
-        }
-
-        if (!AvailableBreeds.Contains(Breed))
-        {
-            Breed = AvailableBreeds.FirstOrDefault() ?? string.Empty;
-        }
-    }
-
-    private string _weight = string.Empty;
-    public string Weight
-    {
-        get => _weight;
-        set
-        {
-            var numericValue = string.IsNullOrWhiteSpace(value) ? string.Empty : new string(value.Where(char.IsDigit).ToArray());
-            if (!SetProperty(ref _weight, numericValue) && value != numericValue)
-            {
-                OnPropertyChanged(nameof(Weight));
-            }
-        }
-    }
-
-    private string _ageYearsText = string.Empty;
-    public string AgeYearsText
-    {
-        get => _ageYearsText;
-        set
-        {
-            var numericValue = string.IsNullOrWhiteSpace(value) ? string.Empty : new string(value.Where(char.IsDigit).ToArray());
-            if (!SetProperty(ref _ageYearsText, numericValue) && value != numericValue)
-            {
-                OnPropertyChanged(nameof(AgeYearsText));
-            }
-        }
-    }
-
     public string Title => IsEditMode ? "Edit Pet" : "Add Pet";
     public bool CanDelete => IsEditMode;
+    public bool HasPhoto => !string.IsNullOrWhiteSpace(PhotoUrl);
 
     public IList<string> SpeciesOptions { get; } = ["Dog", "Cat", "Bird", "Small Pet", "Other"];
     public ObservableCollection<string> AvailableBreeds { get; } = new();
@@ -87,6 +41,45 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
     {
         _db = db;
         UpdateAvailableBreeds();
+    }
+
+    partial void OnSpeciesChanged(string value) => UpdateAvailableBreeds();
+
+    private void UpdateAvailableBreeds()
+    {
+        AvailableBreeds.Clear();
+
+        var list = Species switch
+        {
+            "Dog" => new[]
+            {
+                "Aspin", "Golden Retriever", "Shih Tzu", "Labrador",
+                "German Shepherd", "Poodle", "Pomeranian", "Chihuahua",
+                "Siberian Husky", "Mixed / Other"
+            },
+            "Cat" => new[]
+            {
+                "Puspin", "Persian", "Siamese", "Maine Coon",
+                "British Shorthair", "Scottish Fold", "Sphynx", "Mixed / Other"
+            },
+            "Bird" => new[]
+            {
+                "Parakeet", "Cockatiel", "Lovebird", "Canary",
+                "Finch", "Mixed / Other"
+            },
+            "Small Pet" => new[]
+            {
+                "Hamster", "Guinea Pig", "Rabbit", "Hedgehog",
+                "Ferret", "Mixed / Other"
+            },
+            _ => new[] { "Mixed / Other" }
+        };
+
+        foreach (var item in list)
+            AvailableBreeds.Add(item);
+
+        if (!AvailableBreeds.Contains(Breed))
+            Breed = AvailableBreeds.FirstOrDefault() ?? "Mixed / Other";
     }
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
@@ -110,13 +103,21 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
             return;
 
         IsEditMode = true;
-        Name = pet.Name;
-        Species = string.IsNullOrEmpty(pet.Species) ? "Dog" : pet.Species;
+        Name = pet.Name?.Trim() ?? string.Empty;
+        Species = SpeciesOptions.Contains(pet.Species) ? pet.Species : "Other";
         UpdateAvailableBreeds();
-        Breed = pet.Breed;
-        Weight = pet.Weight;
-        PhotoUrl = pet.PhotoUrl;
-        AgeYearsText = pet.AgeYears.ToString();
+
+        Breed = AvailableBreeds.Contains(pet.Breed)
+            ? pet.Breed
+            : "Mixed / Other";
+
+        AgeYearsValue = Math.Clamp(pet.AgeYears, 0, 40);
+
+        if (double.TryParse(pet.Weight, NumberStyles.Any, CultureInfo.InvariantCulture, out var weight))
+            WeightKgValue = Math.Clamp(weight, 0.1, 200);
+
+        PhotoUrl = pet.PhotoUrl ?? string.Empty;
+
         OnPropertyChanged(nameof(Title));
         OnPropertyChanged(nameof(CanDelete));
     }
@@ -127,98 +128,222 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     private async Task PickPhotoAsync()
     {
+        if (IsBusy) return;
+
         try
         {
             var results = await MediaPicker.Default.PickPhotosAsync(
-                new MediaPickerOptions { Title = "Please pick a photo" });
-            var result = results.FirstOrDefault();
+                new MediaPickerOptions { Title = "Choose a pet photo" });
 
-            if (result != null)
+            var result = results.FirstOrDefault();
+            if (result is null) return;
+
+            var extension = Path.GetExtension(result.FileName).ToLowerInvariant();
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+            if (!allowedExtensions.Contains(extension))
             {
-                var newFile = Path.Combine(FileSystem.AppDataDirectory, result.FileName);
-                using (var stream = await result.OpenReadAsync())
-                using (var newStream = File.OpenWrite(newFile))
-                {
-                    await stream.CopyToAsync(newStream);
-                }
-                PhotoUrl = newFile;
+                await Shell.Current.DisplayAlertAsync(
+                    "Unsupported photo",
+                    "Please choose a JPG, PNG, or WebP image.",
+                    "OK");
+                return;
             }
+
+            var photoDirectory = Path.Combine(FileSystem.AppDataDirectory, "pet-photos");
+            Directory.CreateDirectory(photoDirectory);
+
+            var destination = Path.Combine(photoDirectory, $"{Guid.NewGuid():N}{extension}");
+
+            using (var source = await result.OpenReadAsync())
+            using (var output = File.Create(destination))
+            {
+                await source.CopyToAsync(output);
+            }
+
+            var fileInfo = new FileInfo(destination);
+            if (fileInfo.Length > MaxPhotoBytes)
+            {
+                File.Delete(destination);
+                await Shell.Current.DisplayAlertAsync(
+                    "Photo too large",
+                    "Choose a photo smaller than 5 MB.",
+                    "OK");
+                return;
+            }
+
+            PhotoUrl = destination;
         }
-        catch (Exception ex)
+        catch (FeatureNotSupportedException)
         {
-            await Shell.Current.DisplayAlertAsync("Error", $"Photo picker failed: {ex.Message}", "OK");
+            await Shell.Current.DisplayAlertAsync(
+                "Photo unavailable",
+                "Photo selection is not available on this device.",
+                "OK");
         }
+        catch (PermissionException)
+        {
+            await Shell.Current.DisplayAlertAsync(
+                "Permission needed",
+                "Allow photo access in your device settings, then try again.",
+                "OK");
+        }
+        catch
+        {
+            await Shell.Current.DisplayAlertAsync(
+                "Photo error",
+                "The photo could not be selected. Please try another image.",
+                "OK");
+        }
+    }
+
+    [RelayCommand]
+    private async Task RemovePhotoAsync()
+    {
+        if (!HasPhoto) return;
+
+        var confirm = await Shell.Current.DisplayAlertAsync(
+            "Remove photo?",
+            "The pet profile will use the default photo.",
+            "Remove",
+            "Cancel");
+
+        if (confirm)
+            PhotoUrl = string.Empty;
     }
 
     [RelayCommand]
     private async Task SaveAsync()
     {
-        if (string.IsNullOrWhiteSpace(Name))
+        if (IsBusy) return;
+
+        var cleanName = (Name ?? string.Empty).Trim();
+
+        if (cleanName.Length < 2 || cleanName.Length > 40)
         {
-            await Shell.Current.DisplayAlertAsync("Validation", "Pet name is required.", "OK");
+            await Shell.Current.DisplayAlertAsync(
+                "Check pet name",
+                "Pet name must be between 2 and 40 characters.",
+                "OK");
             return;
         }
 
-        _ = int.TryParse(AgeYearsText, out var age);
-        if (age > 25)
+        if (!SpeciesOptions.Contains(Species))
         {
-            await Shell.Current.DisplayAlertAsync("Validation", "Age cannot exceed 25 years.", "OK");
+            await Shell.Current.DisplayAlertAsync(
+                "Choose a species",
+                "Please select a species from the list.",
+                "OK");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(Breed) || !AvailableBreeds.Contains(Breed))
+        {
+            await Shell.Current.DisplayAlertAsync(
+                "Choose a breed",
+                "Please select a breed from the list.",
+                "OK");
+            return;
+        }
+
+        if (AgeYearsValue < 0 || AgeYearsValue > 40)
+        {
+            await Shell.Current.DisplayAlertAsync(
+                "Check age",
+                "Age must be between 0 and 40 years.",
+                "OK");
+            return;
+        }
+
+        if (WeightKgValue < 0.1 || WeightKgValue > 200)
+        {
+            await Shell.Current.DisplayAlertAsync(
+                "Check weight",
+                "Weight must be between 0.1 and 200 kg.",
+                "OK");
             return;
         }
 
         int currentUserId = Preferences.Get("LoggedInUserId", 0);
-        if (currentUserId == 0)
+        if (currentUserId <= 0)
         {
-            await Shell.Current.DisplayAlertAsync("Error", "User session not found. Please log in again.", "OK");
+            await Shell.Current.DisplayAlertAsync(
+                "Session expired",
+                "Please sign in again before saving this pet.",
+                "OK");
             return;
         }
 
-        var pet = new Pet
+        IsBusy = true;
+        try
         {
-            Id = PetId,
-            UserId = currentUserId,
-            Name = Name.Trim(),
-            Species = Species,
-            Breed = string.IsNullOrEmpty(Breed) ? "Mixed" : Breed.Trim(),
-            Weight = Weight.Trim(),
-            PhotoUrl = PhotoUrl ?? string.Empty,
-            AgeYears = age
-        };
+            var pet = new Pet
+            {
+                Id = PetId,
+                UserId = currentUserId,
+                Name = cleanName,
+                Species = Species,
+                Breed = Breed,
+                Weight = WeightKgValue.ToString("0.##", CultureInfo.InvariantCulture),
+                PhotoUrl = PhotoUrl ?? string.Empty,
+                AgeYears = (int)Math.Round(AgeYearsValue)
+            };
 
-        int result = await _db.SavePetAsync(pet);
-        if (result > 0)
-        {
-            WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
-            await Shell.Current.GoToAsync("..");
+            int result = await _db.SavePetAsync(pet);
+            if (result > 0)
+            {
+                WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
+                await Shell.Current.GoToAsync("..");
+            }
+            else
+            {
+                await Shell.Current.DisplayAlertAsync(
+                    "Could not save",
+                    "ShoppetCare could not save this pet. Please check your connection and try again.",
+                    "OK");
+            }
         }
-        else
+        finally
         {
-            await Shell.Current.DisplayAlertAsync("Error", "Failed to save pet to the server.", "OK");
+            IsBusy = false;
         }
     }
 
     [RelayCommand]
     private async Task DeleteAsync()
     {
-        if (PetId <= 0) return;
+        if (PetId <= 0 || IsBusy) return;
+
         var pet = await _db.GetPetAsync(PetId);
         if (pet is null) return;
 
-        bool confirm = await Shell.Current.DisplayAlertAsync("Delete Pet", $"Remove {pet.Name}?", "Delete", "Cancel");
+        bool confirm = await Shell.Current.DisplayAlertAsync(
+            "Delete pet?",
+            $"Delete {pet.Name} and remove this pet profile from your account?",
+            "Delete",
+            "Cancel");
+
         if (!confirm) return;
 
-        int result = await _db.DeletePetAsync(pet);
-        if (result > 0)
+        IsBusy = true;
+        try
         {
-            WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
-            await Shell.Current.GoToAsync("..");
+            int result = await _db.DeletePetAsync(pet);
+            if (result > 0)
+            {
+                WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
+                await Shell.Current.GoToAsync("..");
+            }
+            else
+            {
+                await Shell.Current.DisplayAlertAsync(
+                    "Could not delete",
+                    "The pet could not be deleted from the server.",
+                    "OK");
+            }
         }
-        else
+        finally
         {
-            await Shell.Current.DisplayAlertAsync(
-                "Error",
-                "Failed to delete pet from the server.",
-                "OK");
+            IsBusy = false;
         }
     }
 }
