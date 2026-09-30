@@ -72,21 +72,25 @@ namespace ShoppetAPI.Controllers
 
                 string passwordHash =
                     _passwordHasher.HashPassword(user, request.Password);
+                string apiToken = Guid.NewGuid().ToString("N");
+                DateTime tokenExpiresAt = DateTime.UtcNow.AddDays(7);
 
                 await using var insertCmd = new SqlCommand(@"
                     INSERT INTO UserAccounts
-                        (FullName, Email, PasswordHash, Role, MobileNumber)
+                        (FullName, Email, PasswordHash, Role, MobileNumber, ApiToken, ApiTokenExpiresAt)
                     OUTPUT
                         INSERTED.Id,
                         INSERTED.CreatedAt
                     VALUES
-                        (@FullName, @Email, @PasswordHash, @Role, NULL);",
+                        (@FullName, @Email, @PasswordHash, @Role, NULL, @ApiToken, @ApiTokenExpiresAt);",
                     connection);
 
                 insertCmd.Parameters.AddWithValue("@FullName", fullName);
                 insertCmd.Parameters.AddWithValue("@Email", email);
                 insertCmd.Parameters.AddWithValue("@PasswordHash", passwordHash);
                 insertCmd.Parameters.AddWithValue("@Role", "Pet Owner");
+                insertCmd.Parameters.AddWithValue("@ApiToken", apiToken);
+                insertCmd.Parameters.AddWithValue("@ApiTokenExpiresAt", tokenExpiresAt);
 
                 await using var reader = await insertCmd.ExecuteReaderAsync();
                 if (!await reader.ReadAsync())
@@ -101,7 +105,7 @@ namespace ShoppetAPI.Controllers
                     Email = email,
                     Role = "Pet Owner",
                     ProfilePicture = string.Empty,
-                    Token = Guid.NewGuid().ToString("N")
+                    Token = apiToken
                 });
             }
             catch (Exception ex)
@@ -251,6 +255,21 @@ namespace ShoppetAPI.Controllers
                     await upgradeCmd.ExecuteNonQueryAsync();
                 }
 
+                string apiToken = Guid.NewGuid().ToString("N");
+                DateTime tokenExpiresAt = DateTime.UtcNow.AddDays(7);
+
+                await using (var tokenCmd = new SqlCommand(@"
+                    UPDATE UserAccounts
+                    SET ApiToken=@ApiToken,
+                        ApiTokenExpiresAt=@ApiTokenExpiresAt
+                    WHERE Id=@Id;", connection))
+                {
+                    tokenCmd.Parameters.AddWithValue("@ApiToken", apiToken);
+                    tokenCmd.Parameters.AddWithValue("@ApiTokenExpiresAt", tokenExpiresAt);
+                    tokenCmd.Parameters.AddWithValue("@Id", userId);
+                    await tokenCmd.ExecuteNonQueryAsync();
+                }
+
                 return Ok(new AuthResponse
                 {
                     UserId = userId,
@@ -261,7 +280,7 @@ namespace ShoppetAPI.Controllers
                         : role,
                     MobileNumber = mobileNumber,
                     ProfilePicture = string.Empty,
-                    Token = Guid.NewGuid().ToString("N")
+                    Token = apiToken
                 });
             }
             catch (Exception ex)
