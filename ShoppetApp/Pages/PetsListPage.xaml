@@ -112,6 +112,33 @@
                                VerticalOptions="Center"
                                HorizontalOptions="Center" />
 
+            <Border IsVisible="{Binding HasLoadError}"
+                    Margin="24"
+                    Padding="20"
+                    BackgroundColor="{StaticResource CardBg}"
+                    Stroke="{StaticResource StatusOverdue}"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 20"
+                    VerticalOptions="Center">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Pets could not be loaded"
+                           FontFamily="NunitoBold"
+                           FontSize="18"
+                           TextColor="{StaticResource BodyText}"
+                           HorizontalTextAlignment="Center"/>
+                    <Label Text="{Binding LoadErrorMessage}"
+                           FontSize="13"
+                           TextColor="{StaticResource NavMuted}"
+                           HorizontalTextAlignment="Center"/>
+                    <Button Text="Try again"
+                            Command="{Binding RetryCommand}"
+                            BackgroundColor="{StaticResource Primary}"
+                            TextColor="White"
+                            FontFamily="NunitoBold"
+                            CornerRadius="18"/>
+                </VerticalStackLayout>
+            </Border>
+
             <VerticalStackLayout IsVisible="{Binding Pets.Count, Converter={StaticResource CountToBoolConverter}, ConverterParameter=invert}"
                                  VerticalOptions="Center"
                                  HorizontalOptions="Center"
