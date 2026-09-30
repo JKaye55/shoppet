@@ -13,6 +13,21 @@ public partial class PetPassportViewModel : ObservableObject, IQueryAttributable
     private readonly ApiService _api;
 
     [ObservableProperty] private Pet? _pet;
+
+    partial void OnPetChanged(Pet? value)
+    {
+        OnPropertyChanged(nameof(PublicPetIdUrl));
+        OnPropertyChanged(nameof(QrImageUrl));
+        OnPropertyChanged(nameof(HasPetId));
+    }
+
+    public bool HasPetId => Pet is not null && !string.IsNullOrWhiteSpace(Pet.CardId);
+    public string PublicPetIdUrl => HasPetId
+        ? $"https://shoppetcare.com/pet/card/{Pet!.CardId}"
+        : string.Empty;
+    public string QrImageUrl => string.IsNullOrWhiteSpace(PublicPetIdUrl)
+        ? string.Empty
+        : $"https://quickchart.io/qr?size=220&text={Uri.EscapeDataString(PublicPetIdUrl)}";
     [ObservableProperty] private ObservableCollection<HealthLog> _healthLogs = [];
     [ObservableProperty] private ObservableCollection<FoodLog> _foodLogs = [];
     [ObservableProperty] private bool _isBusy;
@@ -69,6 +84,25 @@ public partial class PetPassportViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     private async Task GoBackAsync() =>
         await Shell.Current.GoToAsync("..");
+
+    [RelayCommand]
+    private async Task CopyPetIdAsync()
+    {
+        if (!HasPetId) return;
+        await Clipboard.Default.SetTextAsync(PublicPetIdUrl);
+        await Shell.Current.DisplayAlertAsync("Digital Pet ID", "Public Pet ID link copied.", "OK");
+    }
+
+    [RelayCommand]
+    private async Task SharePetIdAsync()
+    {
+        if (!HasPetId) return;
+        await Share.Default.RequestAsync(new ShareTextRequest
+        {
+            Title = $"{Pet!.Name}'s Digital Pet ID",
+            Text = $"ShoppetCare Digital Pet ID\n{Pet.CardId}\n{PublicPetIdUrl}"
+        });
+    }
 
     [RelayCommand]
     private async Task EditPetAsync()
