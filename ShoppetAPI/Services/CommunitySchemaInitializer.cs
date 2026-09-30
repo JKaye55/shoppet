@@ -72,6 +72,43 @@ public static class CommunitySchemaInitializer
                 );
             END;
 
+            IF OBJECT_ID(N'dbo.CommunityComments', N'U') IS NOT NULL
+            BEGIN
+                IF COL_LENGTH('dbo.CommunityComments', 'UserId') IS NULL
+                    ALTER TABLE dbo.CommunityComments ADD UserId INT NULL;
+
+                IF COL_LENGTH('dbo.CommunityComments', 'ParentCommentId') IS NULL
+                    ALTER TABLE dbo.CommunityComments ADD ParentCommentId INT NULL;
+
+                IF COL_LENGTH('dbo.CommunityComments', 'Content') IS NULL
+                    ALTER TABLE dbo.CommunityComments ADD Content NVARCHAR(1000) NULL;
+
+                IF COL_LENGTH('dbo.CommunityComments', 'AuthorName') IS NULL
+                    ALTER TABLE dbo.CommunityComments ADD AuthorName NVARCHAR(150) NULL;
+
+                IF COL_LENGTH('dbo.CommunityComments', 'CreatedAt') IS NULL
+                    ALTER TABLE dbo.CommunityComments
+                    ADD CreatedAt DATETIME2 NOT NULL
+                        CONSTRAINT DF_CommunityComments_CreatedAt_Mobile DEFAULT(SYSDATETIME());
+
+                IF COL_LENGTH('dbo.CommunityComments', 'Body') IS NOT NULL
+                    EXEC(N'UPDATE dbo.CommunityComments
+                           SET Content = Body
+                           WHERE (Content IS NULL OR LTRIM(RTRIM(Content)) = '''')
+                             AND Body IS NOT NULL;');
+            END;
+
+            IF OBJECT_ID(N'dbo.CommunityLikes', N'U') IS NOT NULL
+            BEGIN
+                IF COL_LENGTH('dbo.CommunityLikes', 'UserId') IS NULL
+                    ALTER TABLE dbo.CommunityLikes ADD UserId INT NULL;
+
+                IF COL_LENGTH('dbo.CommunityLikes', 'CreatedAt') IS NULL
+                    ALTER TABLE dbo.CommunityLikes
+                    ADD CreatedAt DATETIME2 NOT NULL
+                        CONSTRAINT DF_CommunityLikes_CreatedAt_Mobile DEFAULT(SYSDATETIME());
+            END;
+
             IF OBJECT_ID(N'dbo.CommunityCommentLikes', N'U') IS NULL
             BEGIN
                 CREATE TABLE dbo.CommunityCommentLikes
