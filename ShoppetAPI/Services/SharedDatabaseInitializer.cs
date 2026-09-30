@@ -52,6 +52,12 @@ public sealed class SharedDatabaseInitializer
                 ADD ShowMobileOnPublicPetId bit NOT NULL
                     CONSTRAINT DF_UserAccounts_ShowMobileOnPublicPetId DEFAULT(0);",
 
+            @"IF COL_LENGTH('dbo.UserAccounts', 'ApiToken') IS NULL
+                ALTER TABLE dbo.UserAccounts ADD ApiToken nvarchar(128) NULL;",
+
+            @"IF COL_LENGTH('dbo.UserAccounts', 'ApiTokenExpiresAt') IS NULL
+                ALTER TABLE dbo.UserAccounts ADD ApiTokenExpiresAt datetime2 NULL;",
+
             // ---------------------------------------------------------
             // PET PROFILE MOBILE COMPATIBILITY
             // ---------------------------------------------------------
