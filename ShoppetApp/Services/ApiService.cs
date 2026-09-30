@@ -410,8 +410,21 @@ public class ApiService
             throw new HttpRequestException($"Community API returned {(int)response.StatusCode}: {detail}");
         }
 
-        return await response.Content.ReadFromJsonAsync<List<CommunityPost>>()
-               ?? new List<CommunityPost>();
+        var posts = await response.Content.ReadFromJsonAsync<List<CommunityPost>>()
+                    ?? new List<CommunityPost>();
+
+#if ANDROID
+        foreach (var post in posts)
+        {
+            if (!string.IsNullOrWhiteSpace(post.ImageUrls))
+                post.ImageUrls = post.ImageUrls.Replace(
+                    "http://localhost:5020",
+                    "http://10.0.2.2:5020",
+                    StringComparison.OrdinalIgnoreCase);
+        }
+#endif
+
+        return posts;
     }
 
     public async Task<List<string>> UploadCommunityMediaAsync(IEnumerable<string> filePaths)
