@@ -47,22 +47,35 @@ namespace ShoppetApp.ViewModels
             IsBusy = true;
             try
             {
-                                if (_db.CurrentUser != null)
-                {
-                    FullName = _db.CurrentUser.FullName;
+                var userId = _db.CurrentUser?.Id ?? Preferences.Get("LoggedInUserId", 0);
+                var savedName = _db.CurrentUser?.FullName ?? Preferences.Get("LoggedInUserName", "User");
+                var role = _db.CurrentUser?.Role ?? Preferences.Get("LoggedInUserRole", "Pet Owner");
 
-                    // RBAC Role check
-                    IsAdmin = _db.CurrentUser.Role == "Admin";
-                    IsBusinessOwner = _db.CurrentUser.Role == "BusinessOwner";
-                    
-                    var profile = await _api.GetProfileAsync(Preferences.Get("LoggedInUserId", 0));
+                FullName = savedName;
+                IsAdmin = role.Equals("Admin", StringComparison.OrdinalIgnoreCase)
+                       || role.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase)
+                       || role.Equals("Super Admin", StringComparison.OrdinalIgnoreCase);
+                IsBusinessOwner = role.Equals("BusinessOwner", StringComparison.OrdinalIgnoreCase);
+
+                if (userId > 0)
+                {
+                    var profile = await _api.GetProfileAsync(userId);
                     if (profile != null)
                     {
                         FullName = profile.FullName;
+                        Preferences.Set("LoggedInUserName", FullName);
+
                         if (!string.IsNullOrEmpty(profile.ProfilePicture))
                         {
-                            var bytes = Convert.FromBase64String(profile.ProfilePicture);
-                            ProfileImageSource = ImageSource.FromStream(() => new MemoryStream(bytes));
+                            try
+                            {
+                                var bytes = Convert.FromBase64String(profile.ProfilePicture);
+                                ProfileImageSource = ImageSource.FromStream(() => new MemoryStream(bytes));
+                            }
+                            catch
+                            {
+                                ProfileImageSource = null;
+                            }
                         }
                     }
                 }
