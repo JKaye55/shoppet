@@ -66,17 +66,22 @@ public partial class MessagesViewModel : ObservableObject
     
     async partial void OnSearchQueryChanged(string value)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        var cleanQuery=(value??string.Empty).Trim();
+
+        if (cleanQuery.Length < 2)
         {
             IsSearching = false;
             SearchResults.Clear();
             return;
         }
+
+        if (cleanQuery.Length > 80)
+            return;
         
         IsSearching = true;
         try
         {
-            var results = await _api.SearchUsersAsync(value);
+            var results = await _api.SearchUsersAsync(cleanQuery);
             SearchResults.Clear();
             foreach (var user in results)
             {
