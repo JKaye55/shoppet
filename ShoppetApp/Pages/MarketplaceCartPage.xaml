@@ -26,7 +26,20 @@
                        VerticalOptions="Center" />
             </HorizontalStackLayout>
 
+            <VerticalStackLayout Grid.Column="1" Spacing="0" HorizontalOptions="Center" VerticalOptions="Center">
+                <Label Text="Marketplace Activity"
+                       FontFamily="NunitoBold"
+                       FontSize="18"
+                       TextColor="{StaticResource BodyText}"
+                       HorizontalOptions="Center" />
+                <Label Text="Purchases and sales from your Pet Owner account"
+                       FontSize="10"
+                       TextColor="{StaticResource Secondary}"
+                       HorizontalOptions="Center" />
+            </VerticalStackLayout>
+
             <Label Grid.Column="1"
+                   IsVisible="False"
                    Text="Marketplace Activity"
                    FontFamily="NunitoBold"
                    FontSize="18"
