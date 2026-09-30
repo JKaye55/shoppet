@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using MySql.Data.MySqlClient;
+using Microsoft.Data.SqlClient;
 
 namespace ShoppetAPI.Controllers
 {
@@ -8,16 +8,29 @@ namespace ShoppetAPI.Controllers
     public class ProfileController : ControllerBase
     {
         private readonly IConfiguration _config;
-        public ProfileController(IConfiguration config) => _config = config;
 
-        public class UpdateProfileRequest
+        public ProfileController(IConfiguration config)
+        {
+            _config = config;
+        }
+
+        private string SharedConnectionString =>
+            _config.GetConnectionString("SharedSqlServer")
+            ?? throw new InvalidOperationException(
+                "Connection string 'SharedSqlServer' was not found.");
+
+        public sealed class UpdateProfileRequest
         {
             public int UserId { get; set; }
             public string FullName { get; set; } = string.Empty;
+
+            // Kept in the request contract so the current MAUI UI does not
+            // break while ProfilePicture is added to the shared SQL schema
+            // in the next profile/social integration phase.
             public string ProfilePictureBase64 { get; set; } = string.Empty;
         }
 
-        [HttpGet("{userId}")]
+        [HttpGet("{userId:int}")]
         public async Task<IActionResult> GetProfile(int userId)
         {
             if (userId <= 0)
@@ -25,67 +38,84 @@ namespace ShoppetAPI.Controllers
 
             try
             {
-                using var conn = new MySqlConnection(_config.GetConnectionString("DefaultConnection"));
+                await using var conn = new SqlConnection(SharedConnectionString);
                 await conn.OpenAsync();
-                                var query = @"
-                    SELECT FullName, ProfilePicture
-                    FROM users 
-                    WHERE Id = @UserId";
-                using var cmd = new MySqlCommand(query, conn);
+
+                await using var cmd = new SqlCommand(@"
+                    SELECT
+                        FullName,
+                        Email,
+                        MobileNumber
+                    FROM UserAccounts
+                    WHERE Id = @UserId;", conn);
+
                 cmd.Parameters.AddWithValue("@UserId", userId);
-                using var reader = await cmd.ExecuteReaderAsync();
-                if (await reader.ReadAsync())
+
+                await using var reader = await cmd.ExecuteReaderAsync();
+                if (!await reader.ReadAsync())
+                    return NotFound();
+
+                return Ok(new
                 {
-                    return Ok(new {
-                        FullName = reader["FullName"].ToString(),
-                        ProfilePicture = reader["ProfilePicture"]?.ToString() ?? string.Empty
-                    });
-                }
-                return NotFound();
+                    FullName = reader.IsDBNull(reader.GetOrdinal("FullName"))
+                        ? string.Empty
+                        : reader.GetString(reader.GetOrdinal("FullName")),
+                    Email = reader.IsDBNull(reader.GetOrdinal("Email"))
+                        ? string.Empty
+                        : reader.GetString(reader.GetOrdinal("Email")),
+                    MobileNumber = reader.IsDBNull(reader.GetOrdinal("MobileNumber"))
+                        ? string.Empty
+                        : reader.GetString(reader.GetOrdinal("MobileNumber")),
+                    ProfilePicture = string.Empty
+                });
             }
-            catch (Exception ex) { return StatusCode(500, ex.Message); }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Profile read error: {ex.Message}");
+            }
         }
 
         [HttpPut("update")]
-        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest req)
+        public async Task<IActionResult> UpdateProfile(
+            [FromBody] UpdateProfileRequest request)
         {
-            if (req.UserId <= 0)
+            if (request.UserId <= 0)
                 return BadRequest("A valid user ID is required.");
 
-            if (string.IsNullOrWhiteSpace(req.FullName))
+            if (string.IsNullOrWhiteSpace(request.FullName))
                 return BadRequest("Full name is required.");
 
             try
             {
-                using var conn = new MySqlConnection(_config.GetConnectionString("DefaultConnection"));
+                await using var conn = new SqlConnection(SharedConnectionString);
                 await conn.OpenAsync();
-                
-                try
-                {
-                    // Update users table directly
-                    var q1 = "UPDATE users SET FullName = @FullName, ProfilePicture = @Pic WHERE Id = @UserId";
-                    using var c1 = new MySqlCommand(q1, conn);
-                    c1.Parameters.AddWithValue("@FullName", req.FullName);
-                    c1.Parameters.AddWithValue("@Pic", req.ProfilePictureBase64);
-                    c1.Parameters.AddWithValue("@UserId", req.UserId);
-                    int rows = await c1.ExecuteNonQueryAsync();
 
-                    if (rows == 0)
-                        return NotFound("User not found.");
+                await using var cmd = new SqlCommand(@"
+                    UPDATE UserAccounts
+                    SET FullName = @FullName
+                    WHERE Id = @UserId;", conn);
 
-                    return Ok(new { success = true });
-                }
-                catch
+                cmd.Parameters.AddWithValue(
+                    "@FullName",
+                    request.FullName.Trim());
+                cmd.Parameters.AddWithValue(
+                    "@UserId",
+                    request.UserId);
+
+                int rows = await cmd.ExecuteNonQueryAsync();
+                if (rows == 0)
+                    return NotFound("User not found.");
+
+                return Ok(new
                 {
-                    throw;
-                }
+                    success = true,
+                    FullName = request.FullName.Trim()
+                });
             }
-            catch (Exception ex) { return StatusCode(500, ex.Message); }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Profile update error: {ex.Message}");
+            }
         }
     }
 }
-
-
-
-
-
