@@ -74,7 +74,7 @@
                         Padding="16"
                         Margin="0,4,0,0">
                     <Border.GestureRecognizers>
-                        <TapGestureRecognizer Command="{Binding AttachPhotoCommand}" />
+                        <TapGestureRecognizer Command="{Binding AttachPhotoCommand}" IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}" />
                     </Border.GestureRecognizers>
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
                         <Border WidthRequest="48" HeightRequest="48"
@@ -166,7 +166,7 @@
                     CornerRadius="10" 
                     Padding="20,5"
                     HeightRequest="40"
-                    Command="{Binding PostCommand}" />
+                    Command="{Binding PostCommand}" IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}" />
         </Grid>
 
         <!-- Modal Overlay -->
