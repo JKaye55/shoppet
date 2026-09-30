@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using ShoppetAPI.Services;
 
 namespace ShoppetAPI.Controllers;
 
@@ -28,6 +29,9 @@ public class CommunityController : ControllerBase
             var posts = new List<object>();
             await using var connection = new SqlConnection(ConnectionString);
             await connection.OpenAsync();
+
+            if (!await RbacService.IsPetOwnerAsync(connection, request.UserId))
+                return Forbid();
 
             const string query = """
                 SELECT
@@ -192,6 +196,10 @@ public class CommunityController : ControllerBase
         {
             await using var connection = new SqlConnection(ConnectionString);
             await connection.OpenAsync();
+
+            if (!await RbacService.IsPetOwnerAsync(connection, request.UserId))
+                return Forbid();
+
             await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync();
 
             var isLiked = false;
@@ -328,6 +336,9 @@ public class CommunityController : ControllerBase
             await using var connection = new SqlConnection(ConnectionString);
             await connection.OpenAsync();
 
+            if (!await RbacService.IsPetOwnerAsync(connection, request.UserId))
+                return Forbid();
+
             const string query = """
                 DECLARE @AuthorName NVARCHAR(150) =
                     ISNULL((SELECT FullName FROM UserAccounts WHERE Id=@UserId), 'Unknown');
@@ -368,6 +379,9 @@ public class CommunityController : ControllerBase
             await using var connection = new SqlConnection(ConnectionString);
             await connection.OpenAsync();
 
+            if (!await RbacService.IsPetOwnerAsync(connection, request.UserId))
+                return Forbid();
+
             const string checkSql =
                 "SELECT Id FROM CommunityCommentLikes WHERE CommentId=@CommentId AND UserId=@UserId";
 
@@ -396,7 +410,7 @@ public class CommunityController : ControllerBase
     }
 
     [HttpDelete("{postId:int}")]
-    public async Task<IActionResult> DeletePost(int postId, [FromQuery] int userId = 0)
+    public async Task<IActionResult> DeletePost(int postId, [FromQuery] int userId)
     {
         try
         {
@@ -404,17 +418,20 @@ public class CommunityController : ControllerBase
             await connection.OpenAsync();
             await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync();
 
-            if (userId > 0)
+            var role = await RbacService.GetActiveRoleAsync(connection, userId, transaction);
+            if (role is null) return Unauthorized();
+
+            await using (var ownership = new SqlCommand(
+                "SELECT UserId FROM CommunityPosts WHERE Id=@Id",
+                connection,
+                transaction))
             {
-                await using var ownership = new SqlCommand(
-                    "SELECT UserId FROM CommunityPosts WHERE Id=@Id",
-                    connection,
-                    transaction);
                 ownership.Parameters.AddWithValue("@Id", postId);
                 var owner = await ownership.ExecuteScalarAsync();
 
                 if (owner is null) return NotFound();
-                if (Convert.ToInt32(owner) != userId) return Forbid();
+                if (!RbacService.IsAdmin(role) && Convert.ToInt32(owner) != userId)
+                    return Forbid();
             }
 
             var commands = new[]
@@ -450,6 +467,9 @@ public class CommunityController : ControllerBase
             await using var connection = new SqlConnection(ConnectionString);
             await connection.OpenAsync();
 
+            var role = await RbacService.GetActiveRoleAsync(connection, request.UserId);
+            if (role is null) return Unauthorized();
+
             const string sql = """
                 UPDATE CommunityPosts
                 SET Caption=@Content,
@@ -457,10 +477,13 @@ public class CommunityController : ControllerBase
                     PetId=@PetId,
                     IsEdited=1
                 WHERE Id=@Id
+                  AND (@IsAdmin=1 OR UserId=@UserId)
                 """;
 
             await using var cmd = new SqlCommand(sql, connection);
             cmd.Parameters.AddWithValue("@Id", postId);
+            cmd.Parameters.AddWithValue("@UserId", request.UserId);
+            cmd.Parameters.AddWithValue("@IsAdmin", RbacService.IsAdmin(role) ? 1 : 0);
             cmd.Parameters.AddWithValue("@Content", request.Content?.Trim() ?? string.Empty);
             cmd.Parameters.AddWithValue(
                 "@ImageUrls",
@@ -479,13 +502,28 @@ public class CommunityController : ControllerBase
     }
 
     [HttpDelete("comments/{commentId:int}")]
-    public async Task<IActionResult> DeleteComment(int commentId)
+    public async Task<IActionResult> DeleteComment(int commentId, [FromQuery] int userId)
     {
         try
         {
             await using var connection = new SqlConnection(ConnectionString);
             await connection.OpenAsync();
             await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync();
+
+            var role = await RbacService.GetActiveRoleAsync(connection, userId, transaction);
+            if (role is null) return Unauthorized();
+
+            await using (var ownership = new SqlCommand(
+                "SELECT UserId FROM CommunityComments WHERE Id=@Id",
+                connection,
+                transaction))
+            {
+                ownership.Parameters.AddWithValue("@Id", commentId);
+                var owner = await ownership.ExecuteScalarAsync();
+                if (owner is null) return NotFound();
+                if (!RbacService.IsAdmin(role) && Convert.ToInt32(owner) != userId)
+                    return Forbid();
+            }
 
             await using (var likes = new SqlCommand(
                 """
@@ -519,6 +557,7 @@ public class CommunityController : ControllerBase
 
 public class EditPostRequest
 {
+    public int UserId { get; set; }
     public string Content { get; set; } = string.Empty;
     public string? ImageUrls { get; set; }
     public int? PetId { get; set; }
