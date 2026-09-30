@@ -157,6 +157,11 @@ public partial class ShopPage : ContentPage
         var currentUserId = Preferences.Get("LoggedInUserId", 0);
         BtnMessageSeller.IsVisible = listing.UserId != currentUserId;
 
+        BtnFacebook.IsVisible = listing.HasFacebook;
+        BtnInstagram.IsVisible = listing.HasInstagram;
+        BtnOtherSocial.IsVisible = listing.HasOtherSocial;
+        SellerSocialPanel.IsVisible = listing.UserId != currentUserId && listing.HasAnySocial;
+
         DetailModal.IsVisible = true;
     }
 
@@ -179,6 +184,36 @@ public partial class ShopPage : ContentPage
 
     private async void OnMessageSellerTapped(object? sender, TappedEventArgs e) =>
         await MessageCurrentSellerAsync();
+    private async Task OpenSellerLinkAsync(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return;
+
+        if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp))
+        {
+            await DisplayAlertAsync("Invalid link", "This seller link is not a valid web address.", "OK");
+            return;
+        }
+
+        try
+        {
+            await Launcher.Default.OpenAsync(uri);
+        }
+        catch
+        {
+            await DisplayAlertAsync("Cannot open link", "ShoppetCare could not open this seller link.", "OK");
+        }
+    }
+
+    private async void OnFacebookClicked(object? sender, EventArgs e) =>
+        await OpenSellerLinkAsync(_currentListing?.FacebookUrl);
+
+    private async void OnInstagramClicked(object? sender, EventArgs e) =>
+        await OpenSellerLinkAsync(_currentListing?.InstagramUrl);
+
+    private async void OnOtherSocialClicked(object? sender, EventArgs e) =>
+        await OpenSellerLinkAsync(_currentListing?.OtherSocialUrl);
+
     private void OnModalBodyTapped(object? sender, TappedEventArgs e) { }
 
     // --- Sell Tab: Photo Picker ---
