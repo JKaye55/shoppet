@@ -49,7 +49,7 @@ namespace ShoppetApp.ViewModels
                 {
                     AttachedMedia.Add(new MediaAttachment { FilePath = img, IsVideo = false });
                 }
-                LoadPetsAsync();
+                _ = LoadPetsAsync();
             }
         }
 
@@ -107,7 +107,7 @@ namespace ShoppetApp.ViewModels
 
                 if (localPaths.Count > 0 && uploadedUrls.Count != localPaths.Count)
                 {
-                    await Shell.Current.DisplayAlert("Upload failed", "One or more photos could not be uploaded.", "OK");
+                    await Shell.Current.DisplayAlertAsync("Upload failed", "One or more photos could not be uploaded.", "OK");
                     return;
                 }
 
@@ -131,12 +131,12 @@ namespace ShoppetApp.ViewModels
                     PostToEdit.PetName = petName;
                     PostToEdit.ImageUrls = imageUrls;
                     
-                    await Shell.Current.DisplayAlert("Success", "Post updated successfully.", "OK");
+                    await Shell.Current.DisplayAlertAsync("Success", "Post updated successfully.", "OK");
                     await Shell.Current.GoToAsync("..");
                 }
                 else
                 {
-                    await Shell.Current.DisplayAlert("Error", "Failed to update post.", "OK");
+                    await Shell.Current.DisplayAlertAsync("Error", "Failed to update post.", "OK");
                 }
             }
             finally
