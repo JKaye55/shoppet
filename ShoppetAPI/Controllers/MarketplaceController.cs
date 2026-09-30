@@ -145,7 +145,11 @@ public class MarketplaceController : ControllerBase
         cmd.Parameters.AddWithValue("@Condition", condition ?? "Used");
         cmd.Parameters.AddWithValue("@Location", location ?? "");
         cmd.Parameters.AddWithValue("@ImageUrls", (object?)imageUrls ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@ImageUrl", string.IsNullOrWhiteSpace(imageUrls) ? DBNull.Value : imageUrls);
+        string firstImage = string.IsNullOrWhiteSpace(imageUrls)
+            ? string.Empty
+            : imageUrls.Split(',', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim() ?? string.Empty;
+        if (firstImage.Length > 300) firstImage = firstImage[..300];
+        cmd.Parameters.AddWithValue("@ImageUrl", string.IsNullOrWhiteSpace(firstImage) ? DBNull.Value : firstImage);
     }
 }
 
