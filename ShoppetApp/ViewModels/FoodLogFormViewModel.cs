@@ -26,8 +26,8 @@ public partial class FoodLogFormViewModel : ObservableObject, IQueryAttributable
     [NotifyPropertyChangedFor(nameof(IsCustomInterval))]
     public partial string FeedingIntervalPreset { get; set; } = "Every 8 hours";
 
-    [ObservableProperty] public partial int CustomIntervalHours { get; set; } = 8;
-    [ObservableProperty] public partial int CustomIntervalMinutes { get; set; }
+    [ObservableProperty] public partial double CustomIntervalHours { get; set; } = 8;
+    [ObservableProperty] public partial double CustomIntervalMinutes { get; set; }
 
     public IList<string> FeedingIntervalOptions { get; } =
     [
@@ -84,9 +84,9 @@ public partial class FoodLogFormViewModel : ObservableObject, IQueryAttributable
         PetId = log.PetId;
         FoodName = log.FoodName ?? string.Empty;
         AmountGramsValue = Math.Clamp(log.AmountGrams > 0 ? log.AmountGrams : 100, 1, 5000);
-        CustomIntervalHours = Math.Clamp(log.IntervalHours, 0, 24);
-        CustomIntervalMinutes = Math.Clamp(log.IntervalMinutes, 0, 59);
-        FeedingIntervalPreset = (CustomIntervalHours, CustomIntervalMinutes) switch
+        CustomIntervalHours = Math.Clamp((double)log.IntervalHours, 0, 24);
+        CustomIntervalMinutes = Math.Clamp((double)log.IntervalMinutes, 0, 59);
+        FeedingIntervalPreset = ((int)CustomIntervalHours, (int)CustomIntervalMinutes) switch
         {
             (4, 0) => "Every 4 hours",
             (6, 0) => "Every 6 hours",
@@ -137,8 +137,8 @@ public partial class FoodLogFormViewModel : ObservableObject, IQueryAttributable
             return;
         }
 
-        var hours = CustomIntervalHours;
-        var minutes = CustomIntervalMinutes;
+        var hours = (int)Math.Round(CustomIntervalHours);
+        var minutes = (int)Math.Round(CustomIntervalMinutes);
 
         if (hours < 0 || hours > 24 || minutes < 0 || minutes > 59 || (hours == 0 && minutes == 0))
         {
