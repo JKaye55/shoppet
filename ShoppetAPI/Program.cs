@@ -35,6 +35,8 @@ if (!app.Environment.IsDevelopment())
 
 app.UseMiddleware<ApiTokenAuthenticationMiddleware>();
 
+app.UseStaticFiles();
+
 app.UseAuthorization();
 
 app.MapControllers();
