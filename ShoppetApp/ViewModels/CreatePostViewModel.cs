@@ -37,6 +37,9 @@ namespace ShoppetApp.ViewModels
         [ObservableProperty]
         public partial bool IsPetModalVisible { get; set; }
 
+        [ObservableProperty]
+        public partial bool IsBusy { get; set; }
+
         public string UserFullName => _db.CurrentUser?.FullName ?? "User";
         public string UserInitials => string.IsNullOrWhiteSpace(UserFullName) ? "U" : UserFullName.Substring(0, 1).ToUpper();
 
@@ -90,6 +93,8 @@ namespace ShoppetApp.ViewModels
         [RelayCommand]
         private async Task AttachPhotoAsync()
         {
+            if (IsBusy) return;
+
             try
             {
                 var result = await FilePicker.Default.PickMultipleAsync(new PickOptions
@@ -108,6 +113,23 @@ namespace ShoppetApp.ViewModels
                             break;
                         }
 
+                        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+                        if (extension is not ".jpg" and not ".jpeg" and not ".png" and not ".webp")
+                        {
+                            await Shell.Current.DisplayAlertAsync("Unsupported photo", $"{file.FileName} is not a supported image.", "OK");
+                            continue;
+                        }
+
+                        await using var stream = await file.OpenReadAsync();
+                        if (stream.CanSeek && stream.Length > 5 * 1024 * 1024)
+                        {
+                            await Shell.Current.DisplayAlertAsync("Photo too large", $"{file.FileName} is larger than 5 MB.", "OK");
+                            continue;
+                        }
+
+                        if (AttachedMedia.Any(x => string.Equals(x.FilePath, file.FullPath, StringComparison.OrdinalIgnoreCase)))
+                            continue;
+
                         AttachedMedia.Add(new MediaAttachment { FilePath = file.FullPath, IsVideo = false });
                     }
                 }
@@ -121,10 +143,27 @@ namespace ShoppetApp.ViewModels
         [RelayCommand]
         private async Task PostAsync()
         {
-            if (string.IsNullOrWhiteSpace(Content) && AttachedMedia.Count == 0)
-                return;
+            if (IsBusy) return;
 
-            if (_db.CurrentUser == null) return;
+            var cleanContent = (Content ?? string.Empty).Trim();
+
+            if (string.IsNullOrWhiteSpace(cleanContent) && AttachedMedia.Count == 0)
+            {
+                await Shell.Current.DisplayAlertAsync("Add something", "Write a post or attach at least one photo.", "OK");
+                return;
+            }
+
+            if (cleanContent.Length > 2000)
+            {
+                await Shell.Current.DisplayAlertAsync("Post too long", "Community posts can contain up to 2,000 characters.", "OK");
+                return;
+            }
+
+            if (_db.CurrentUser == null)
+            {
+                await Shell.Current.DisplayAlertAsync("Sign in required", "Please sign in before posting.", "OK");
+                return;
+            }
 
             var mediaPaths = string.Join(",", AttachedMedia.Select(m => m.FilePath));
 
@@ -134,18 +173,26 @@ namespace ShoppetApp.ViewModels
                 PetId = SelectedPets.FirstOrDefault() is Pet firstPet ? (int?)firstPet.Id : null,
                 AuthorName = _db.CurrentUser.FullName,
                 PetName = SelectedPets.Count > 0 ? string.Join(" and ", SelectedPets.Cast<Pet>().Select(p => p.Name)) : "",
-                Content = Content,
+                Content = cleanContent,
                 ImageUrls = mediaPaths
             };
 
-            var success = await _api.CreateCommunityPostAsync(request);
-            if (success)
+            IsBusy = true;
+            try
             {
-                await Shell.Current.GoToAsync("..");
+                var success = await _api.CreateCommunityPostAsync(request);
+                if (success)
+                {
+                    await Shell.Current.GoToAsync("..");
+                }
+                else
+                {
+                    await Shell.Current.DisplayAlertAsync("Could not post", "Your post could not be published. Please try again.", "OK");
+                }
             }
-            else
+            finally
             {
-                await Shell.Current.DisplayAlertAsync("Error", "Failed to post story. Try again.", "OK");
+                IsBusy = false;
             }
         }
     }
