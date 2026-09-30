@@ -17,8 +17,8 @@ public partial class SplashPage : ContentPage
         base.OnAppearing();
 
         await Task.WhenAll(
-            SplashContent.FadeTo(1, 500, Easing.SinOut),
-            SplashContent.ScaleTo(1, 500, Easing.SinOut));
+            SplashContent.FadeToAsync(1, 500, Easing.SinOut),
+            SplashContent.ScaleToAsync(1, 500, Easing.SinOut));
 
         await Task.Delay(2000);
 
