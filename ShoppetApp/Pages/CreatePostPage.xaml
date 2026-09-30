@@ -65,7 +65,49 @@
                         AutoSize="TextChanges" 
                         MinimumHeightRequest="150" />
                         
-                <CollectionView ItemsSource="{Binding AttachedMedia}" HeightRequest="120" Margin="0,10,0,0">
+                <!-- Prominent photo attachment area: keeps the original Shoppet styling, but makes photo sharing obvious. -->
+                <Border BackgroundColor="{StaticResource CardBg}"
+                        Stroke="{StaticResource Secondary}"
+                        StrokeThickness="1"
+                        StrokeDashArray="6,4"
+                        StrokeShape="RoundRectangle 16"
+                        Padding="16"
+                        Margin="0,4,0,0">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding AttachPhotoCommand}" />
+                    </Border.GestureRecognizers>
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
+                        <Border WidthRequest="48" HeightRequest="48"
+                                BackgroundColor="{StaticResource Secondary30}"
+                                StrokeThickness="0"
+                                StrokeShape="RoundRectangle 14">
+                            <Label Text="＋"
+                                   FontSize="26"
+                                   FontFamily="NunitoBold"
+                                   TextColor="{StaticResource Primary}"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center" />
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                            <Label Text="Add photos"
+                                   FontFamily="NunitoBold"
+                                   FontSize="15"
+                                   TextColor="{StaticResource BodyText}" />
+                            <Label Text="Tap to choose up to 5 photos from your device"
+                                   FontSize="12"
+                                   TextColor="#777777" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+
+                <Label Text="Selected photos"
+                       FontFamily="NunitoBold"
+                       FontSize="13"
+                       TextColor="{StaticResource BodyText}"
+                       Margin="0,2,0,-4" />
+
+                <CollectionView ItemsSource="{Binding AttachedMedia}" HeightRequest="120" Margin="0,0,0,0"
+                                EmptyView="No photos selected yet.">
                     <CollectionView.ItemsLayout>
                         <LinearItemsLayout Orientation="Horizontal" ItemSpacing="10" />
                     </CollectionView.ItemsLayout>
@@ -105,14 +147,18 @@
         </ScrollView>
 
         <!-- Bottom Action Bar -->
-        <Grid Grid.Row="2" ColumnDefinitions="Auto, *, Auto" Padding="15,10,15,20" BackgroundColor="{StaticResource CardBg}">
-            <Label Grid.Column="0" Text="[◉°]" FontSize="24" VerticalOptions="Center">
-                <Label.GestureRecognizers>
-                    <TapGestureRecognizer Command="{Binding AttachPhotoCommand}" />
-                </Label.GestureRecognizers>
-            </Label>
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="12" Padding="15,10,15,20" BackgroundColor="{StaticResource CardBg}">
+            <Button Grid.Column="0"
+                    Text="Add Photos"
+                    BackgroundColor="{StaticResource Secondary30}"
+                    TextColor="{StaticResource BodyText}"
+                    FontFamily="NunitoBold"
+                    CornerRadius="10"
+                    HeightRequest="40"
+                    HorizontalOptions="Fill"
+                    Command="{Binding AttachPhotoCommand}" />
             
-            <Button Grid.Column="2" Text="Post" 
+            <Button Grid.Column="1" Text="Post" 
                     BackgroundColor="{StaticResource Primary}" 
                     TextColor="White" 
                     FontFamily="NunitoBold" 
