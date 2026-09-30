@@ -171,7 +171,9 @@ public class CartController : ControllerBase
     }
 
     [HttpPost("checkout")]
-    public async Task<IActionResult> Checkout([FromQuery] int userId)
+    public async Task<IActionResult> Checkout(
+        [FromQuery] int userId,
+        [FromQuery] string paymentMethod = "GCash Mock")
     {
         if(userId<=0) return BadRequest("A valid user is required.");
         try
@@ -243,12 +245,14 @@ public class CartController : ControllerBase
                 INSERT INTO Transactions
                     (UserId,Type,Amount,Reference,PaidAt,PaymentMethod,Status)
                 VALUES
-                    (@UserId,'MarketplacePurchase',@Amount,@Reference,SYSDATETIME(),'Mock Payment','Completed');
+                    (@UserId,'MarketplacePurchase',@Amount,@Reference,SYSDATETIME(),@PaymentMethod,'SimulatedPaid');
                 """,conn,tx))
             {
                 payment.Parameters.AddWithValue("@UserId",userId);
                 payment.Parameters.AddWithValue("@Amount",total);
                 payment.Parameters.AddWithValue("@Reference",reference);
+                payment.Parameters.AddWithValue("@PaymentMethod",
+                    string.IsNullOrWhiteSpace(paymentMethod) ? "GCash Mock" : paymentMethod);
                 await payment.ExecuteNonQueryAsync();
             }
 
