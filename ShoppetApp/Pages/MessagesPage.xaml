@@ -35,7 +35,12 @@
         <!-- Search Bar -->
         <Border Grid.Row="1" BackgroundColor="{StaticResource CardBg}" StrokeThickness="0" Padding="15,5,15,15">
             <Border BackgroundColor="{StaticResource AppBackground}" StrokeThickness="0" StrokeShape="RoundRectangle 10" Padding="10,0">
-                <SearchBar Text="{Binding SearchQuery}" Placeholder="Search users..." TextColor="{StaticResource BodyText}" PlaceholderColor="#888" BackgroundColor="Transparent" />
+                <SearchBar Text="{Binding SearchQuery}"
+                           Placeholder="Search Pet Owners..."
+                           MaxLength="80"
+                           TextColor="{StaticResource BodyText}"
+                           PlaceholderColor="#888"
+                           BackgroundColor="Transparent" />
             </Border>
         </Border>
 
@@ -43,7 +48,7 @@
         <CollectionView Grid.Row="2" ItemsSource="{Binding SearchResults}" SelectionMode="None" IsVisible="{Binding IsSearching}">
             <CollectionView.EmptyView>
                 <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="10">
-                    <Label Text="No users found" FontFamily="NunitoBold" FontSize="16" TextColor="{StaticResource NavMuted}" HorizontalOptions="Center" />
+                    <Label Text="No Pet Owners found" FontFamily="NunitoBold" FontSize="16" TextColor="{StaticResource NavMuted}" HorizontalOptions="Center" />
                 </VerticalStackLayout>
             </CollectionView.EmptyView>
             <CollectionView.ItemTemplate>
@@ -62,7 +67,7 @@
                             <!-- Text -->
                             <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Margin="15,0,0,0" Spacing="2">
                                 <Label Text="{Binding FullName}" FontFamily="NunitoBold" FontSize="16" TextColor="{StaticResource BodyText}" />
-                                <Label Text="{Binding Email}" FontFamily="Nunito" FontSize="14" TextColor="#888888" MaxLines="1" LineBreakMode="TailTruncation" />
+                                <Label Text="Pet Owner" FontFamily="Nunito" FontSize="13" TextColor="#888888" />
                             </VerticalStackLayout>
 
                         </Grid>
