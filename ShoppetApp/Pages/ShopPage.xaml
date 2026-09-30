@@ -153,7 +153,7 @@
                                                         <Label Grid.Column="0" Text="{Binding Title}" TextColor="{StaticResource BodyText}" FontFamily="NunitoBold" FontSize="16"/>
                                                         <Label Grid.Column="1" Text="{Binding PriceDisplay}" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" FontSize="15"/>
                                                     </Grid>
-                                                    <Label Text="{Binding Category}" TextColor="#888" FontSize="12"/>
+                                                    <HorizontalStackLayout Spacing="8"><Label Text="{Binding Category}" TextColor="#888" FontSize="12"/><Label Text="{Binding AvailabilityDisplay}" TextColor="{StaticResource Primary}" FontFamily="NunitoSemiBold" FontSize="12"/></HorizontalStackLayout>
                                                     <Label Text="{Binding Description}" TextColor="{StaticResource BodyText}" FontSize="13" LineBreakMode="TailTruncation" MaxLines="2"/>
                                                 </VerticalStackLayout>
                                                 <!-- Actions -->
