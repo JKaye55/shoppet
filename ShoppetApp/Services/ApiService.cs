@@ -149,8 +149,19 @@ public class ApiService
 
     public async Task<List<Pet>> GetPetsAsync()
     {
-        try { return await _http.GetFromJsonAsync<List<Pet>>($"pets?userId={Microsoft.Maui.Storage.Preferences.Get("LoggedInUserId", 0)}") ?? []; }
-        catch { return []; }
+        int userId = Microsoft.Maui.Storage.Preferences.Get("LoggedInUserId", 0);
+        if (userId <= 0)
+            throw new InvalidOperationException("No signed-in Pet Owner was found.");
+
+        using var response = await _http.GetAsync($"pets?userId={userId}");
+        var body = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
+            throw new HttpRequestException($"Pets API returned {(int)response.StatusCode}: {body}");
+
+        return System.Text.Json.JsonSerializer.Deserialize<List<Pet>>(
+            body,
+            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? [];
     }
 
     public async Task<Pet?> SavePetAsync(Pet pet)
