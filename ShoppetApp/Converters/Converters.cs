@@ -460,7 +460,7 @@ public class BoolToLayoutOptionsConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
     {
-        return (bool)value ? LayoutOptions.End : LayoutOptions.Start;
+        return value is bool b && b ? LayoutOptions.End : LayoutOptions.Start;
     }
     public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
 }
@@ -469,7 +469,7 @@ public class IsMineColorConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
     {
-        return (bool)value ? Application.Current?.Resources["Primary"] ?? Colors.Teal : Color.FromArgb("#F0F0F0");
+        return value is bool b && b ? Application.Current?.Resources["Primary"] ?? Colors.Teal : Color.FromArgb("#F0F0F0");
     }
     public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
 }
@@ -478,7 +478,7 @@ public class IsMineTextColorConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
     {
-        return (bool)value ? Colors.White : Application.Current?.Resources["BodyText"] ?? Colors.Black;
+        return value is bool b && b ? Colors.White : Application.Current?.Resources["BodyText"] ?? Colors.Black;
     }
     public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
 }
@@ -487,7 +487,7 @@ public class IsMineTimeColorConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
     {
-        return (bool)value ? Color.FromArgb("#DDDDDD") : Application.Current?.Resources["NavMuted"] ?? Colors.Gray;
+        return value is bool b && b ? Color.FromArgb("#DDDDDD") : Application.Current?.Resources["NavMuted"] ?? Colors.Gray;
     }
     public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
 }
