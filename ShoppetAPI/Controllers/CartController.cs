@@ -193,7 +193,13 @@ public class CartController : ControllerBase
                 while(await r.ReadAsync())
                 {
                     int qty=r.GetInt32(1),stock=r.GetInt32(4); bool available=r.GetBoolean(5);
-                    if(!available||qty>stock){ await r.DisposeAsync(); await tx.RollbackAsync(); return BadRequest($"{r.GetString(2)} no longer has enough stock."); }
+                    if(!available||qty>stock)
+                    {
+                        string productName=r.GetString(2);
+                        await r.DisposeAsync();
+                        await tx.RollbackAsync();
+                        return BadRequest($"{productName} no longer has enough stock.");
+                    }
                     items.Add((r.GetInt32(0),r.GetString(2),qty,r.GetDecimal(3),stock));
                 }
             }
