@@ -372,7 +372,11 @@ public class ApiService
 
     public async Task<CartDto?> GetCartAsync()
     {
-        try { return await _http.GetFromJsonAsync<CartDto>("cart"); }
+        try
+        {
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            return await _http.GetFromJsonAsync<CartDto>($"cart?userId={userId}");
+        }
         catch { return null; }
     }
 
@@ -380,7 +384,9 @@ public class ApiService
     {
         try
         {
-            var res = await _http.PostAsJsonAsync("cart/items", request);
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            var res = await _http.PostAsJsonAsync("cart/items",
+                new { UserId = userId, request.ProductId, request.Quantity });
             if (res.IsSuccessStatusCode) return await res.Content.ReadFromJsonAsync<CartDto>();
         }
         catch { }
@@ -391,7 +397,8 @@ public class ApiService
     {
         try
         {
-            var res = await _http.PutAsJsonAsync($"cart/items/{itemId}", request);
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            var res = await _http.PutAsJsonAsync($"cart/items/{itemId}?userId={userId}", request);
             if (res.IsSuccessStatusCode) return await res.Content.ReadFromJsonAsync<CartDto>();
         }
         catch { }
@@ -402,7 +409,8 @@ public class ApiService
     {
         try
         {
-            var res = await _http.DeleteAsync($"cart/items/{itemId}");
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            var res = await _http.DeleteAsync($"cart/items/{itemId}?userId={userId}");
             if (res.IsSuccessStatusCode) return await res.Content.ReadFromJsonAsync<CartDto>();
         }
         catch { }
@@ -413,7 +421,8 @@ public class ApiService
     {
         try
         {
-            var res = await _http.DeleteAsync("cart");
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            var res = await _http.DeleteAsync($"cart?userId={userId}");
             if (res.IsSuccessStatusCode) return await res.Content.ReadFromJsonAsync<CartDto>();
         }
         catch { }
@@ -424,7 +433,8 @@ public class ApiService
     {
         try
         {
-            var res = await _http.PostAsync("cart/checkout", null);
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            var res = await _http.PostAsync($"cart/checkout?userId={userId}", null);
             if (res.IsSuccessStatusCode) return await res.Content.ReadFromJsonAsync<OrderDto>();
         }
         catch { }
@@ -433,7 +443,11 @@ public class ApiService
 
     public async Task<List<OrderDto>> GetOrdersAsync()
     {
-        try { return await _http.GetFromJsonAsync<List<OrderDto>>("cart/orders") ?? []; }
+        try
+        {
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            return await _http.GetFromJsonAsync<List<OrderDto>>($"cart/orders?userId={userId}") ?? [];
+        }
         catch { return []; }
     }
 
