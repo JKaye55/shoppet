@@ -514,6 +514,104 @@ public class ApiService
         }
     }
 
+    // -- C2C Marketplace Cart / Orders ----------------------------------------
+
+    public async Task<MarketplaceCartDto?> GetMarketplaceCartAsync()
+    {
+        try
+        {
+            int userId = Preferences.Get("LoggedInUserId", 0);
+            if (userId <= 0) return null;
+            return await _http.GetFromJsonAsync<MarketplaceCartDto>(
+                $"marketplace-purchases/cart/{userId}");
+        }
+        catch { return null; }
+    }
+
+    public async Task<MarketplaceCartDto?> AddMarketplaceToCartAsync(int listingId)
+    {
+        try
+        {
+            int userId = Preferences.Get("LoggedInUserId", 0);
+            if (userId <= 0 || listingId <= 0) return null;
+
+            var response = await _http.PostAsJsonAsync(
+                "marketplace-purchases/cart",
+                new { UserId = userId, ListingId = listingId });
+
+            return response.IsSuccessStatusCode
+                ? await response.Content.ReadFromJsonAsync<MarketplaceCartDto>()
+                : null;
+        }
+        catch { return null; }
+    }
+
+    public async Task<MarketplaceCartDto?> RemoveMarketplaceCartItemAsync(int listingId)
+    {
+        try
+        {
+            int userId = Preferences.Get("LoggedInUserId", 0);
+            if (userId <= 0 || listingId <= 0) return null;
+
+            var response = await _http.DeleteAsync(
+                $"marketplace-purchases/cart/{listingId}?userId={userId}");
+
+            return response.IsSuccessStatusCode
+                ? await response.Content.ReadFromJsonAsync<MarketplaceCartDto>()
+                : null;
+        }
+        catch { return null; }
+    }
+
+    public async Task<MarketplaceCheckoutResponse?> CheckoutMarketplaceAsync(
+        string paymentMethod,
+        bool simulateSuccess)
+    {
+        try
+        {
+            int userId = Preferences.Get("LoggedInUserId", 0);
+            if (userId <= 0) return null;
+
+            var response = await _http.PostAsJsonAsync(
+                "marketplace-purchases/checkout",
+                new
+                {
+                    UserId = userId,
+                    PaymentMethod = paymentMethod,
+                    SimulateSuccess = simulateSuccess
+                });
+
+            return response.IsSuccessStatusCode
+                ? await response.Content.ReadFromJsonAsync<MarketplaceCheckoutResponse>()
+                : null;
+        }
+        catch { return null; }
+    }
+
+    public async Task<List<MarketplaceOrderDto>> GetMarketplacePurchasesAsync()
+    {
+        try
+        {
+            int userId = Preferences.Get("LoggedInUserId", 0);
+            if (userId <= 0) return [];
+            return await _http.GetFromJsonAsync<List<MarketplaceOrderDto>>(
+                $"marketplace-purchases/purchases/{userId}") ?? [];
+        }
+        catch { return []; }
+    }
+
+    public async Task<List<MarketplaceOrderDto>> GetMarketplaceSalesAsync()
+    {
+        try
+        {
+            int userId = Preferences.Get("LoggedInUserId", 0);
+            if (userId <= 0) return [];
+            return await _http.GetFromJsonAsync<List<MarketplaceOrderDto>>(
+                $"marketplace-purchases/sales/{userId}") ?? [];
+        }
+        catch { return []; }
+    }
+
     // --- Community API ---
 
     public async Task<List<CommunityPost>> GetCommunityPostsAsync(int userId)
