@@ -67,8 +67,20 @@ public class CommunityController : ControllerBase
     public async Task<IActionResult> CreatePost([FromBody] CreatePostRequest request)
     {
         if(request.UserId<=0) return BadRequest("A valid user ID is required.");
-        if(string.IsNullOrWhiteSpace(request.Content) && string.IsNullOrWhiteSpace(request.ImageUrls))
+
+        var content=(request.Content??string.Empty).Trim();
+        var imageUrls=(request.ImageUrls??string.Empty).Trim();
+
+        if(string.IsNullOrWhiteSpace(content) && string.IsNullOrWhiteSpace(imageUrls))
             return BadRequest("Post content or media is required.");
+        if(content.Length>2000) return BadRequest("Post text cannot exceed 2,000 characters.");
+
+        if(!string.IsNullOrWhiteSpace(imageUrls))
+        {
+            var images=imageUrls.Split(',',StringSplitOptions.RemoveEmptyEntries|StringSplitOptions.TrimEntries);
+            if(images.Length>5) return BadRequest("A post can contain up to 5 photos.");
+            if(images.Any(x=>x.Length>2048)) return BadRequest("One or more photo references are too long.");
+        }
 
         try
         {
@@ -80,8 +92,8 @@ public class CommunityController : ControllerBase
                 VALUES(@UserId,@PetId,@Content,@ImageUrls,0,SYSDATETIME(),0);",connection);
             cmd.Parameters.AddWithValue("@UserId",request.UserId);
             cmd.Parameters.AddWithValue("@PetId",(object?)request.PetId ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@Content",request.Content ?? "");
-            cmd.Parameters.AddWithValue("@ImageUrls",(object?)request.ImageUrls ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Content",content);
+            cmd.Parameters.AddWithValue("@ImageUrls",string.IsNullOrWhiteSpace(imageUrls)?DBNull.Value:imageUrls);
             int id=Convert.ToInt32(await cmd.ExecuteScalarAsync());
             return Ok(new{success=true,id});
         }
@@ -168,6 +180,8 @@ public class CommunityController : ControllerBase
     public async Task<IActionResult> AddComment(int postId,[FromBody] AddCommentRequest request)
     {
         if(request.UserId<=0 || string.IsNullOrWhiteSpace(request.Content)) return BadRequest("User and comment text are required.");
+        var cleanContent=request.Content.Trim();
+        if(cleanContent.Length>1000) return BadRequest("Comment cannot exceed 1,000 characters.");
         try
         {
             await using var connection=new SqlConnection(ConnectionString);
@@ -177,7 +191,7 @@ public class CommunityController : ControllerBase
                 VALUES(@PostId,@UserId,'',@Content,0,SYSDATETIME(),@ParentCommentId);",connection);
             cmd.Parameters.AddWithValue("@PostId",postId);
             cmd.Parameters.AddWithValue("@UserId",request.UserId);
-            cmd.Parameters.AddWithValue("@Content",request.Content);
+            cmd.Parameters.AddWithValue("@Content",cleanContent);
             cmd.Parameters.AddWithValue("@ParentCommentId",(object?)request.ParentCommentId ?? DBNull.Value);
             await cmd.ExecuteNonQueryAsync();
             return Ok(new{success=true});
@@ -216,6 +230,19 @@ public class CommunityController : ControllerBase
     [HttpPut("{postId:int}")]
     public async Task<IActionResult> EditPost(int postId,[FromBody] EditPostRequest request)
     {
+        if(request.UserId<=0) return BadRequest("A valid user ID is required.");
+        var cleanContent=(request.Content??string.Empty).Trim();
+        var cleanImages=(request.ImageUrls??string.Empty).Trim();
+
+        if(string.IsNullOrWhiteSpace(cleanContent) && string.IsNullOrWhiteSpace(cleanImages))
+            return BadRequest("Post content or media is required.");
+        if(cleanContent.Length>2000) return BadRequest("Post text cannot exceed 2,000 characters.");
+        if(!string.IsNullOrWhiteSpace(cleanImages))
+        {
+            var images=cleanImages.Split(',',StringSplitOptions.RemoveEmptyEntries|StringSplitOptions.TrimEntries);
+            if(images.Length>5) return BadRequest("A post can contain up to 5 photos.");
+        }
+
         try
         {
             await using var connection=new SqlConnection(ConnectionString);
@@ -223,10 +250,11 @@ public class CommunityController : ControllerBase
             await using var cmd=new SqlCommand(@"
                 UPDATE CommunityPosts
                 SET Caption=@Content,ImageUrl=@ImageUrls,PetId=@PetId,IsEdited=1
-                WHERE Id=@Id;",connection);
+                WHERE Id=@Id AND UserId=@UserId;",connection);
             cmd.Parameters.AddWithValue("@Id",postId);
-            cmd.Parameters.AddWithValue("@Content",request.Content ?? "");
-            cmd.Parameters.AddWithValue("@ImageUrls",(object?)request.ImageUrls ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@UserId",request.UserId);
+            cmd.Parameters.AddWithValue("@Content",cleanContent);
+            cmd.Parameters.AddWithValue("@ImageUrls",string.IsNullOrWhiteSpace(cleanImages)?DBNull.Value:cleanImages);
             cmd.Parameters.AddWithValue("@PetId",(object?)request.PetId ?? DBNull.Value);
             return await cmd.ExecuteNonQueryAsync()>0 ? Ok(new{success=true}) : NotFound();
         }
@@ -234,20 +262,33 @@ public class CommunityController : ControllerBase
     }
 
     [HttpDelete("comments/{commentId:int}")]
-    public async Task<IActionResult> DeleteComment(int commentId)
+    public async Task<IActionResult> DeleteComment(int commentId,[FromQuery] int userId)
     {
+        if(userId<=0) return BadRequest("A valid user ID is required.");
+
         try
         {
             await using var connection=new SqlConnection(ConnectionString);
             await connection.OpenAsync();
             int? postId=null;
-            await using(var pcmd=new SqlCommand("SELECT PostId FROM CommunityComments WHERE Id=@Id",connection))
+            int? commentOwnerId=null;
+            int? postOwnerId=null;
+            await using(var pcmd=new SqlCommand(@"
+                SELECT c.PostId,c.UserId,p.UserId
+                FROM CommunityComments c
+                JOIN CommunityPosts p ON p.Id=c.PostId
+                WHERE c.Id=@Id;",connection))
             {
                 pcmd.Parameters.AddWithValue("@Id",commentId);
-                var val=await pcmd.ExecuteScalarAsync();
-                if(val is null) return NotFound();
-                postId=Convert.ToInt32(val);
+                await using var ownerReader=await pcmd.ExecuteReaderAsync();
+                if(!await ownerReader.ReadAsync()) return NotFound();
+                postId=ownerReader.GetInt32(0);
+                commentOwnerId=ownerReader.IsDBNull(1)?null:ownerReader.GetInt32(1);
+                postOwnerId=ownerReader.GetInt32(2);
             }
+
+            if(commentOwnerId!=userId && postOwnerId!=userId)
+                return Forbid();
 
             var rows=new List<(int Id,int? ParentId)>();
             await using(var load=new SqlCommand("SELECT Id,ParentCommentId FROM CommunityComments WHERE PostId=@PostId",connection))
@@ -285,12 +326,19 @@ public class CommunityController : ControllerBase
     }
 
     [HttpDelete("{postId:int}")]
-    public async Task<IActionResult> DeletePost(int postId)
+    public async Task<IActionResult> DeletePost(int postId,[FromQuery] int userId)
     {
+        if(userId<=0) return BadRequest("A valid user ID is required.");
+
         try
         {
             await using var connection=new SqlConnection(ConnectionString);
             await connection.OpenAsync();
+            await using var ownerCheck=new SqlCommand("SELECT COUNT(1) FROM CommunityPosts WHERE Id=@Id AND UserId=@UserId",connection);
+            ownerCheck.Parameters.AddWithValue("@Id",postId);
+            ownerCheck.Parameters.AddWithValue("@UserId",userId);
+            if(Convert.ToInt32(await ownerCheck.ExecuteScalarAsync())==0) return Forbid();
+
             await using var tx=(SqlTransaction)await connection.BeginTransactionAsync();
 
             await using(var likes=new SqlCommand("DELETE FROM CommunityLikes WHERE PostId=@Id",connection,tx)){ likes.Parameters.AddWithValue("@Id",postId); await likes.ExecuteNonQueryAsync(); }
@@ -307,6 +355,7 @@ public class CommunityController : ControllerBase
 
 public class EditPostRequest
 {
+    public int UserId { get; set; }
     public string Content { get; set; }="";
     public string? ImageUrls { get; set; }
     public int? PetId { get; set; }
