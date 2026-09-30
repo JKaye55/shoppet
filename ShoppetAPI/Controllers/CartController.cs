@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using ShoppetAPI.Services;
 
 namespace ShoppetAPI.Controllers;
 
@@ -22,6 +23,10 @@ public class CartController : ControllerBase
         {
             await using var conn=new SqlConnection(ConnectionString);
             await conn.OpenAsync();
+
+            if(!await RbacService.IsPetOwnerAsync(conn,userId))
+                return Forbid();
+
             var cartId=await EnsureCartAsync(conn,userId);
 
             var items=new List<object>();
@@ -67,6 +72,25 @@ public class CartController : ControllerBase
         {
             await using var conn=new SqlConnection(ConnectionString);
             await conn.OpenAsync();
+
+            if(!await RbacService.IsPetOwnerAsync(conn,request.UserId))
+                return Forbid();
+
+            await using(var validate=new SqlCommand("""
+                SELECT SellerUserId,ISNULL(Status,'Available')
+                FROM MarketplaceListings
+                WHERE Id=@ListingId;
+                """,conn))
+            {
+                validate.Parameters.AddWithValue("@ListingId",request.ProductId);
+                await using var vr=await validate.ExecuteReaderAsync();
+                if(!await vr.ReadAsync()) return NotFound("Listing not found.");
+                if(vr.GetInt32(0)==request.UserId)
+                    return BadRequest("You cannot add your own listing to cart.");
+                if(vr.GetString(1).Equals("Sold",StringComparison.OrdinalIgnoreCase))
+                    return BadRequest("This listing has already been sold.");
+            }
+
             var cartId=await EnsureCartAsync(conn,request.UserId);
 
             await using var cmd=new SqlCommand("""
@@ -180,6 +204,10 @@ public class CartController : ControllerBase
         {
             await using var conn=new SqlConnection(ConnectionString);
             await conn.OpenAsync();
+
+            if(!await RbacService.IsPetOwnerAsync(conn,userId))
+                return Forbid();
+
             await using var tx=(SqlTransaction)await conn.BeginTransactionAsync();
 
             int? cartId=null;
@@ -191,9 +219,9 @@ public class CartController : ControllerBase
             }
             if(!cartId.HasValue) return BadRequest("Cart is empty.");
 
-            var entries=new List<(int ListingId,int Qty,decimal Price,string Title)>();
+            var entries=new List<(int ListingId,int Qty,decimal Price,string Title,int SellerUserId)>();
             await using(var read=new SqlCommand("""
-                SELECT ci.MarketplaceListingId,ci.Quantity,m.Price,m.Title
+                SELECT ci.MarketplaceListingId,ci.Quantity,m.Price,m.Title,m.SellerUserId
                 FROM MarketplaceCartItems ci
                 JOIN MarketplaceListings m ON m.Id=ci.MarketplaceListingId
                 WHERE ci.CartId=@CartId AND ISNULL(m.Status,'Available')<>'Sold';
@@ -202,9 +230,11 @@ public class CartController : ControllerBase
                 read.Parameters.AddWithValue("@CartId",cartId.Value);
                 await using var r=await read.ExecuteReaderAsync();
                 while(await r.ReadAsync())
-                    entries.Add((r.GetInt32(0),r.GetInt32(1),r.GetDecimal(2),r.GetString(3)));
+                    entries.Add((r.GetInt32(0),r.GetInt32(1),r.GetDecimal(2),r.GetString(3),r.GetInt32(4)));
             }
             if(entries.Count==0) return BadRequest("Cart is empty.");
+            if(entries.Any(x=>x.SellerUserId==userId))
+                return BadRequest("You cannot purchase your own marketplace listing.");
 
             var total=entries.Sum(x=>x.Price*x.Qty);
             int orderId;
