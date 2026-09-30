@@ -29,7 +29,14 @@ public class ApiService
         public class UserProfileDto
         {
             public string FullName { get; set; } = string.Empty;
+            public string Email { get; set; } = string.Empty;
+            public string MobileNumber { get; set; } = string.Empty;
             public string ProfilePicture { get; set; } = string.Empty;
+            public string FacebookUrl { get; set; } = string.Empty;
+            public string InstagramUrl { get; set; } = string.Empty;
+            public string OtherSocialUrl { get; set; } = string.Empty;
+            public bool ShowSocialLinksOnMarketplace { get; set; }
+            public bool ShowMobileOnPublicPetId { get; set; }
         }
 
         public async Task<UserProfileDto?> GetProfileAsync(int userId)
@@ -41,11 +48,31 @@ public class ApiService
             catch { return null; }
         }
 
-        public async Task<bool> UpdateProfileAsync(int userId, string fullName, string profilePicBase64)
+        public async Task<bool> UpdateProfileAsync(
+            int userId,
+            string fullName,
+            string profilePicBase64,
+            string mobileNumber,
+            string facebookUrl,
+            string instagramUrl,
+            string otherSocialUrl,
+            bool showSocialLinksOnMarketplace,
+            bool showMobileOnPublicPetId)
         {
             try
             {
-                var req = new { UserId = userId, FullName = fullName, ProfilePictureBase64 = profilePicBase64 };
+                var req = new
+                {
+                    UserId = userId,
+                    FullName = fullName,
+                    ProfilePictureBase64 = profilePicBase64,
+                    MobileNumber = mobileNumber,
+                    FacebookUrl = facebookUrl,
+                    InstagramUrl = instagramUrl,
+                    OtherSocialUrl = otherSocialUrl,
+                    ShowSocialLinksOnMarketplace = showSocialLinksOnMarketplace,
+                    ShowMobileOnPublicPetId = showMobileOnPublicPetId
+                };
                 var res = await _http.PutAsJsonAsync("Profile/update", req);
                 return res.IsSuccessStatusCode;
             }
