@@ -110,7 +110,7 @@ public partial class AuthViewModel : ObservableObject
                     Preferences.Set("LoggedInUserId", result.Data.UserId);
                     Preferences.Set("LoggedInUserName", result.Data.FullName);
                     Preferences.Set("LoggedInUserEmail", result.Data.Email);
-                    Preferences.Set("LoggedInUserRole", string.IsNullOrEmpty(result.Data.Role) ? "PetOwner" : result.Data.Role);
+                    Preferences.Set("LoggedInUserRole", string.IsNullOrEmpty(result.Data.Role) ? "Pet Owner" : result.Data.Role);
                     Preferences.Set("LoggedInUserProfilePicture", result.Data.ProfilePicture ?? string.Empty);
 
                     _databaseService.CurrentUser = new User
@@ -119,7 +119,7 @@ public partial class AuthViewModel : ObservableObject
                         FullName = result.Data.FullName,
                         Email = result.Data.Email,
                         Password = string.Empty,   // never store plaintext from API
-                        Role = string.IsNullOrEmpty(result.Data.Role) ? "PetOwner" : result.Data.Role
+                        Role = string.IsNullOrEmpty(result.Data.Role) ? "Pet Owner" : result.Data.Role
                     };
                     await NavigationHelper.GoToMainShellAsync();
                 }
@@ -160,7 +160,7 @@ public partial class AuthViewModel : ObservableObject
                     Preferences.Set("LoggedInUserId", result.Data.UserId);
                     Preferences.Set("LoggedInUserName", result.Data.FullName);
                     Preferences.Set("LoggedInUserEmail", result.Data.Email);
-                    Preferences.Set("LoggedInUserRole", string.IsNullOrEmpty(result.Data.Role) ? "PetOwner" : result.Data.Role);
+                    Preferences.Set("LoggedInUserRole", string.IsNullOrEmpty(result.Data.Role) ? "Pet Owner" : result.Data.Role);
                     Preferences.Set("LoggedInUserProfilePicture", result.Data.ProfilePicture ?? string.Empty);
 
                     _databaseService.CurrentUser = new User
@@ -169,7 +169,7 @@ public partial class AuthViewModel : ObservableObject
                         FullName = result.Data.FullName,
                         Email = result.Data.Email,
                         Password = string.Empty,
-                        Role = string.IsNullOrEmpty(result.Data.Role) ? "PetOwner" : result.Data.Role
+                        Role = string.IsNullOrEmpty(result.Data.Role) ? "Pet Owner" : result.Data.Role
                     };
                     await NavigationHelper.GoToMainShellAsync();
                 }
