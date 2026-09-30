@@ -24,4 +24,12 @@ public class Pet
 
     /// <summary>URL or local path</summary>
     public string PhotoUrl { get; set; } = string.Empty;
+    public string Diet { get; set; } = string.Empty;
+    public string CardId { get; set; } = string.Empty;
+    public DateTime? CardIssuedAt { get; set; }
+    public string CardTheme { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+
+    [Ignore]
+    public bool HasDigitalPetId => !string.IsNullOrWhiteSpace(CardId);
 }
