@@ -55,6 +55,35 @@
             </VerticalStackLayout>
         </Grid>
 
+        <Border Grid.Row="1"
+                IsVisible="{Binding HasLoadError}"
+                Margin="24"
+                Padding="20"
+                BackgroundColor="{StaticResource CardBg}"
+                Stroke="{StaticResource StatusOverdue}"
+                StrokeThickness="1"
+                StrokeShape="RoundRectangle 20"
+                VerticalOptions="Center"
+                ZIndex="20">
+            <VerticalStackLayout Spacing="10">
+                <Label Text="Pet data could not be loaded"
+                       FontFamily="NunitoBold"
+                       FontSize="18"
+                       TextColor="{StaticResource BodyText}"
+                       HorizontalTextAlignment="Center"/>
+                <Label Text="{Binding LoadErrorMessage}"
+                       FontSize="13"
+                       TextColor="{StaticResource NavMuted}"
+                       HorizontalTextAlignment="Center"/>
+                <Button Text="Retry"
+                        Command="{Binding RetryCommand}"
+                        BackgroundColor="{StaticResource Primary}"
+                        TextColor="White"
+                        FontFamily="NunitoBold"
+                        CornerRadius="18"/>
+            </VerticalStackLayout>
+        </Border>
+
         <ScrollView Grid.Row="1">
             <VerticalStackLayout Padding="16" Spacing="16">
 
