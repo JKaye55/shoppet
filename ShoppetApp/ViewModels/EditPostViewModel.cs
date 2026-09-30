@@ -110,8 +110,28 @@ namespace ShoppetApp.ViewModels
             IsBusy = true;
             try
             {
-                // Serialize attached media
-                string imageUrls = string.Join(",", AttachedMedia.Select(m => m.FilePath));
+                var mediaPaths = new List<string>();
+                foreach (var media in AttachedMedia)
+                {
+                    if (ShoppetApp.Helpers.MediaUrlHelper.IsServerMedia(media.FilePath))
+                    {
+                        mediaPaths.Add(media.FilePath);
+                        continue;
+                    }
+
+                    var uploaded = await _api.UploadImageAsync(media.FilePath, "community");
+                    if (string.IsNullOrWhiteSpace(uploaded))
+                    {
+                        await Shell.Current.DisplayAlertAsync(
+                            "Photo upload failed",
+                            "One of the selected photos could not be uploaded. Please try again.",
+                            "OK");
+                        return;
+                    }
+                    mediaPaths.Add(uploaded);
+                }
+
+                string imageUrls = string.Join(",", mediaPaths);
                 
                 // Determine PetId and PetName
                 int? petId = null;
