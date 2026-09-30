@@ -40,6 +40,9 @@ public class MessagesController : ControllerBase
         if (req.SenderId == req.ReceiverId) return BadRequest("You cannot message yourself.");
         if (string.IsNullOrWhiteSpace(req.Text)) return BadRequest("Message text is required.");
 
+        var cleanText=req.Text.Trim();
+        if(cleanText.Length>1000) return BadRequest("Messages can contain up to 1,000 characters.");
+
         try
         {
             int u1 = Math.Min(req.SenderId, req.ReceiverId);
@@ -73,7 +76,7 @@ public class MessagesController : ControllerBase
                 SenderId=req.SenderId,
                 ReceiverId=req.ReceiverId,
                 ListingId=req.ListingId,
-                Text=req.Text.Trim(),
+                Text=cleanText,
                 Timestamp=DateTime.UtcNow,
                 IsRead=false
             });
@@ -115,18 +118,22 @@ public class MessagesController : ControllerBase
     [HttpGet("search")]
     public async Task<IActionResult> SearchUsers([FromQuery] string query, [FromQuery] int currentUserId)
     {
-        if (string.IsNullOrWhiteSpace(query)) return Ok(new List<object>());
+        var cleanQuery=(query??string.Empty).Trim();
+        if(cleanQuery.Length<2) return Ok(new List<object>());
+        if(cleanQuery.Length>80) return BadRequest("Search text is too long.");
+        if(currentUserId<=0) return BadRequest("A valid current user ID is required.");
+
         try
         {
             var result = new List<object>();
             await using var conn = new SqlConnection(ConnectionString);
             await conn.OpenAsync();
             await using var cmd = new SqlCommand(@"
-                SELECT TOP 20 Id, FullName, Email, ProfilePicture
+                SELECT TOP 20 Id, FullName, ProfilePicture
                 FROM UserAccounts
                 WHERE FullName LIKE @Query AND Id<>@CurrentUserId
                 ORDER BY FullName;", conn);
-            cmd.Parameters.AddWithValue("@Query", $"%{query}%");
+            cmd.Parameters.AddWithValue("@Query", $"%{cleanQuery}%");
             cmd.Parameters.AddWithValue("@CurrentUserId", currentUserId);
             await using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
@@ -135,8 +142,7 @@ public class MessagesController : ControllerBase
                 {
                     UserId=reader.GetInt32(0),
                     FullName=reader.GetString(1),
-                    Email=reader.GetString(2),
-                    ProfilePicture=reader.IsDBNull(3) ? "" : reader.GetString(3)
+                    ProfilePicture=reader.IsDBNull(2) ? "" : reader.GetString(2)
                 });
             }
             return Ok(result);
