@@ -11,6 +11,7 @@ namespace ShoppetApp.ViewModels;
 public partial class PetFormViewModel : ObservableObject, IQueryAttributable
 {
     private readonly DatabaseService _db;
+    private readonly ApiService _api;
 
     [ObservableProperty] private int _petId;
     [ObservableProperty] private string _name = string.Empty;
@@ -83,9 +84,10 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
     public IList<string> SpeciesOptions { get; } = ["Dog", "Cat", "Bird", "Small Pet", "Other"];
     public ObservableCollection<string> AvailableBreeds { get; } = new();
 
-    public PetFormViewModel(DatabaseService db)
+    public PetFormViewModel(DatabaseService db, ApiService api)
     {
         _db = db;
+        _api = api;
         UpdateAvailableBreeds();
     }
 
@@ -170,6 +172,22 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
             return;
         }
 
+        var sharedPhotoUrl = PhotoUrl ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(sharedPhotoUrl) && File.Exists(sharedPhotoUrl))
+        {
+            try
+            {
+                var uploaded = await _api.UploadCommunityMediaAsync(new[] { sharedPhotoUrl });
+                if (uploaded.Count == 1)
+                    sharedPhotoUrl = uploaded[0];
+            }
+            catch
+            {
+                await Shell.Current.DisplayAlert("Photo upload", "The pet profile could not upload the selected photo.", "OK");
+                return;
+            }
+        }
+
         var pet = new Pet
         {
             Id = PetId,
@@ -178,7 +196,7 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
             Species = Species,
             Breed = string.IsNullOrEmpty(Breed) ? "Mixed" : Breed.Trim(),
             Weight = Weight.Trim(),
-            PhotoUrl = PhotoUrl ?? string.Empty,
+            PhotoUrl = sharedPhotoUrl,
             AgeYears = age
         };
 
