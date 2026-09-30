@@ -53,7 +53,8 @@ public class ContactsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateContact([FromBody] ContactRequest request)
     {
-        if (request.UserId <= 0) return BadRequest("A valid user ID is required.");
+        var validationError = ValidateRequest(request);
+        if (validationError is not null) return BadRequest(validationError);
 
         try
         {
@@ -74,6 +75,9 @@ public class ContactsController : ControllerBase
     [HttpPut("{id:int}")]
     public async Task<IActionResult> UpdateContact(int id, [FromBody] ContactRequest request)
     {
+        var validationError = ValidateRequest(request);
+        if (validationError is not null) return BadRequest(validationError);
+
         try
         {
             await using var connection = new SqlConnection(ConnectionString);
@@ -92,17 +96,34 @@ public class ContactsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> DeleteContact(int id)
+    public async Task<IActionResult> DeleteContact(int id, [FromQuery] int userId)
     {
         try
         {
             await using var connection = new SqlConnection(ConnectionString);
             await connection.OpenAsync();
-            await using var cmd = new SqlCommand("DELETE FROM EmergencyContacts WHERE Id=@Id", connection);
+            await using var cmd = new SqlCommand("DELETE FROM EmergencyContacts WHERE Id=@Id AND UserId=@UserId", connection);
             cmd.Parameters.AddWithValue("@Id", id);
+            cmd.Parameters.AddWithValue("@UserId", userId);
             return await cmd.ExecuteNonQueryAsync() > 0 ? Ok(new { message = "Contact deleted successfully" }) : NotFound("Contact not found.");
         }
         catch (Exception ex) { return StatusCode(500, $"Error deleting contact: {ex.Message}"); }
+    }
+
+    private static string? ValidateRequest(ContactRequest request)
+    {
+        var name=(request.Name??string.Empty).Trim();
+        var role=(request.Role??string.Empty).Trim();
+        var address=(request.Address??string.Empty).Trim();
+        var phone=(request.Phone??string.Empty).Trim();
+        var digits=new string(phone.Where(char.IsDigit).ToArray());
+
+        if(request.UserId<=0) return "A valid user ID is required.";
+        if(name.Length<2||name.Length>80) return "Contact name must be between 2 and 80 characters.";
+        if(!new[]{"Veterinarian","Clinic","Family","Pet Sitter","Groomer","Other"}.Contains(role)) return "Contact role is not valid.";
+        if(digits.Length<7||digits.Length>15) return "Phone number must contain 7 to 15 digits.";
+        if(address.Length>200) return "Address cannot exceed 200 characters.";
+        return null;
     }
 
     private static void AddParameters(SqlCommand cmd, ContactRequest request)
