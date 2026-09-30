@@ -126,8 +126,6 @@ public class PetsController : ControllerBase
             cmd.Parameters.AddWithValue("@Diet", request.Diet?.Trim() ?? string.Empty);
             cmd.Parameters.AddWithValue("@CardId", cardId);
             cmd.Parameters.AddWithValue("@CardTheme", request.CardTheme?.Trim() ?? string.Empty);
-            cmd.Parameters.AddWithValue("@Diet", request.Diet?.Trim() ?? string.Empty);
-            cmd.Parameters.AddWithValue("@CardTheme", request.CardTheme?.Trim() ?? string.Empty);
             cmd.Parameters.AddWithValue("@PhotoUrl", request.PhotoUrl?.Trim() ?? string.Empty);
 
             var newId = Convert.ToInt32(await cmd.ExecuteScalarAsync());
@@ -186,6 +184,8 @@ public class PetsController : ControllerBase
             cmd.Parameters.AddWithValue("@Breed", request.Breed?.Trim() ?? string.Empty);
             cmd.Parameters.AddWithValue("@Age", request.AgeYears > 0 ? request.AgeYears.ToString(CultureInfo.InvariantCulture) : DBNull.Value);
             cmd.Parameters.AddWithValue("@WeightKg", ParseWeight(request.Weight) is decimal w ? w : DBNull.Value);
+            cmd.Parameters.AddWithValue("@Diet", request.Diet?.Trim() ?? string.Empty);
+            cmd.Parameters.AddWithValue("@CardTheme", request.CardTheme?.Trim() ?? string.Empty);
             cmd.Parameters.AddWithValue("@PhotoUrl", request.PhotoUrl?.Trim() ?? string.Empty);
 
             var rows = await cmd.ExecuteNonQueryAsync();
