@@ -19,6 +19,11 @@ public static class CommunitySchemaInitializer
 
             IF OBJECT_ID(N'dbo.UserAccounts', N'U') IS NOT NULL
             BEGIN
+                IF COL_LENGTH('dbo.UserAccounts', 'MobileNumber') IS NULL
+                    ALTER TABLE dbo.UserAccounts ADD MobileNumber NVARCHAR(50) NULL;
+                IF COL_LENGTH('dbo.UserAccounts', 'ShowMobileOnPublicPetId') IS NULL
+                    ALTER TABLE dbo.UserAccounts ADD ShowMobileOnPublicPetId BIT NOT NULL
+                        CONSTRAINT DF_UserAccounts_ShowMobileOnPublicPetId DEFAULT(0);
                 IF COL_LENGTH('dbo.UserAccounts', 'ProfilePicture') IS NULL
                     ALTER TABLE dbo.UserAccounts ADD ProfilePicture NVARCHAR(MAX) NULL;
                 IF COL_LENGTH('dbo.UserAccounts', 'FacebookUrl') IS NULL
