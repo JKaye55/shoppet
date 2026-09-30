@@ -13,6 +13,9 @@ public class HealthLog
     public string Type { get; set; } = "vaccine";
 
     public string Name { get; set; } = string.Empty;
+    public string Notes { get; set; } = string.Empty;
+    public string VetName { get; set; } = string.Empty;
+    public string RecordDate { get; set; } = string.Empty;
 
     /// <summary>Next Appointment / Due Date (ISO 8601 string)</summary>
     public string DueDate { get; set; } = string.Empty;
