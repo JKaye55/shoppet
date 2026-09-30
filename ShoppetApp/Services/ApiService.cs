@@ -471,13 +471,17 @@ public class ApiService
         return null;
     }
 
-    public async Task<OrderDto?> CheckoutAsync()
+    public async Task<OrderDto?> CheckoutAsync(string paymentMethod)
     {
         try
         {
             var userId = Preferences.Get("LoggedInUserId", 0);
-            var res = await _http.PostAsync($"cart/checkout?userId={userId}", null);
-            if (res.IsSuccessStatusCode) return await res.Content.ReadFromJsonAsync<OrderDto>();
+            var method = Uri.EscapeDataString(paymentMethod);
+            var res = await _http.PostAsync(
+                $"cart/checkout?userId={userId}&paymentMethod={method}",
+                null);
+            if (res.IsSuccessStatusCode)
+                return await res.Content.ReadFromJsonAsync<OrderDto>();
         }
         catch { }
         return null;
