@@ -47,6 +47,11 @@ public sealed class SharedDatabaseInitializer
                 ADD ShowSocialLinksOnMarketplace bit NOT NULL
                     CONSTRAINT DF_UserAccounts_ShowSocialLinksOnMarketplace DEFAULT(0);",
 
+            @"IF COL_LENGTH('dbo.UserAccounts', 'ShowMobileOnPublicPetId') IS NULL
+                ALTER TABLE dbo.UserAccounts
+                ADD ShowMobileOnPublicPetId bit NOT NULL
+                    CONSTRAINT DF_UserAccounts_ShowMobileOnPublicPetId DEFAULT(0);",
+
             // ---------------------------------------------------------
             // PET PROFILE MOBILE COMPATIBILITY
             // ---------------------------------------------------------
