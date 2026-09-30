@@ -91,22 +91,48 @@ public partial class ShopPage : ContentPage
 
     private async Task LoadExploreListingsAsync()
     {
-        var listings = await _api.GetMarketplaceListingsAsync(
-            string.IsNullOrEmpty(_currentCategory) ? null : _currentCategory,
-            string.IsNullOrEmpty(_currentSearch) ? null : _currentSearch);
-        _allExploreListings = listings;
-        ExploreGrid.ItemsSource = listings;
-        ExploreEmptyLabel.IsVisible = !listings.Any();
+        MarketplaceLoading.IsVisible = true;
+        MarketplaceLoading.IsRunning = true;
+        ExploreEmptyLabel.IsVisible = false;
+
+        try
+        {
+            var listings = await _api.GetMarketplaceListingsAsync(
+                string.IsNullOrEmpty(_currentCategory) ? null : _currentCategory,
+                string.IsNullOrEmpty(_currentSearch) ? null : _currentSearch);
+
+            _allExploreListings = listings;
+            ExploreGrid.ItemsSource = listings;
+            ExploreEmptyLabel.IsVisible = !listings.Any();
+        }
+        finally
+        {
+            MarketplaceLoading.IsRunning = false;
+            MarketplaceLoading.IsVisible = false;
+        }
     }
 
     private async Task LoadMyListingsAsync()
     {
         var userId = _db.CurrentUser?.Id ?? Preferences.Get("LoggedInUserId", 0);
         if (userId <= 0) return;
-        var listings = await _api.GetMyListingsAsync(userId);
-        MyListings.Clear();
-        foreach (var l in listings) MyListings.Add(l);
-        SellEmptyLabel.IsVisible = !listings.Any();
+
+        MarketplaceLoading.IsVisible = true;
+        MarketplaceLoading.IsRunning = true;
+        SellEmptyLabel.IsVisible = false;
+
+        try
+        {
+            var listings = await _api.GetMyListingsAsync(userId);
+            MyListings.Clear();
+            foreach (var l in listings) MyListings.Add(l);
+            SellEmptyLabel.IsVisible = !listings.Any();
+        }
+        finally
+        {
+            MarketplaceLoading.IsRunning = false;
+            MarketplaceLoading.IsVisible = false;
+        }
     }
 
     // --- Category Filter ---
