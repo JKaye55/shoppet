@@ -34,6 +34,8 @@ public class ApiService
             public string InstagramUrl { get; set; } = string.Empty;
             public string OtherSocialUrl { get; set; } = string.Empty;
             public bool ShowSocialLinksOnMarketplace { get; set; } = true;
+            public string MobileNumber { get; set; } = string.Empty;
+            public bool ShowMobileOnPublicPetId { get; set; }
         }
 
         public async Task<UserProfileDto?> GetProfileAsync(int userId)
@@ -52,7 +54,9 @@ public class ApiService
             string facebookUrl,
             string instagramUrl,
             string otherSocialUrl,
-            bool showSocialLinksOnMarketplace)
+            bool showSocialLinksOnMarketplace,
+            string mobileNumber,
+            bool showMobileOnPublicPetId)
         {
             try
             {
@@ -64,7 +68,9 @@ public class ApiService
                     FacebookUrl = facebookUrl,
                     InstagramUrl = instagramUrl,
                     OtherSocialUrl = otherSocialUrl,
-                    ShowSocialLinksOnMarketplace = showSocialLinksOnMarketplace
+                    ShowSocialLinksOnMarketplace = showSocialLinksOnMarketplace,
+                    MobileNumber = mobileNumber,
+                    ShowMobileOnPublicPetId = showMobileOnPublicPetId
                 };
                 var res = await _http.PutAsJsonAsync("Profile/update", req);
                 return res.IsSuccessStatusCode;
