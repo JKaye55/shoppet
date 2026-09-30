@@ -7,6 +7,7 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $apiProject = Join-Path $repoRoot "ShoppetAPI\ShoppetAPI.csproj"
 $appProject = Join-Path $repoRoot "ShoppetApp\ShoppetApp.csproj"
+$webProject = Join-Path (Split-Path -Parent $repoRoot) "ShoppetCare_VetClinic\Shoppet_VetClinic\Shoppet_VetClinic.csproj"
 $smokeScript = Join-Path $PSScriptRoot "api-smoke-test.ps1"
 $apiBase = "http://localhost:5021"
 $apiProcess = $null
@@ -36,7 +37,7 @@ try {
     Write-Host "============================================================"
     Write-Host ""
 
-    Write-Host "[1/4] Building API..."
+    Write-Host "[1/5] Building API..."
     dotnet build $apiProject
     if ($LASTEXITCODE -ne 0) {
         throw "API build failed."
@@ -44,7 +45,7 @@ try {
 
     if (-not $SkipAndroidBuild) {
         Write-Host ""
-        Write-Host "[2/4] Building Android app..."
+        Write-Host "[2/5] Building Android app..."
         dotnet build $appProject -f net10.0-android
         if ($LASTEXITCODE -ne 0) {
             throw "Android app build failed."
@@ -52,11 +53,23 @@ try {
     }
     else {
         Write-Host ""
-        Write-Host "[2/4] Android build skipped by request."
+        Write-Host "[2/5] Android build skipped by request."
     }
 
     Write-Host ""
-    Write-Host "[3/4] Checking API..."
+    Write-Host "[3/5] Building Web app..."
+    if (Test-Path $webProject) {
+        dotnet build $webProject
+        if ($LASTEXITCODE -ne 0) {
+            throw "Web app build failed."
+        }
+    }
+    else {
+        Write-Host "Web project not found at $webProject - web build skipped."
+    }
+
+    Write-Host ""
+    Write-Host "[4/5] Checking API..."
 
     $apiAlreadyRunning = Wait-ForApi -Seconds 2
     if (-not $apiAlreadyRunning) {
@@ -88,7 +101,7 @@ try {
     Write-Host "API ready at $apiBase"
 
     Write-Host ""
-    Write-Host "[4/4] Running CRUD smoke test..."
+    Write-Host "[5/5] Running full shared-data CRUD smoke test..."
 
     if ($SkipCheckout) {
         & $smokeScript -BaseUrl "$apiBase/api"
