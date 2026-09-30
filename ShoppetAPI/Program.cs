@@ -24,7 +24,12 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+// Android emulator uses http://10.0.2.2:5020 during local development.
+// Do not redirect that local HTTP request to the development HTTPS certificate.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseStaticFiles();
 
