@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:ShoppetApp.Models"
+             x:Class="ShoppetApp.Pages.NotificationsPage"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="{StaticResource AppBackground}">
+    <Grid RowDefinitions="Auto,*">
+        <Grid Padding="18,20,18,12" ColumnDefinitions="Auto,*,Auto">
+            <Button Text="Back" BackgroundColor="Transparent" TextColor="{StaticResource Primary}" Clicked="OnBackClicked"/>
+            <Label Grid.Column="1" Text="Notifications" FontFamily="NunitoExtraBold" FontSize="22" TextColor="{StaticResource BodyText}" HorizontalOptions="Center" VerticalOptions="Center"/>
+            <Button Grid.Column="2" Text="Read all" BackgroundColor="Transparent" TextColor="{StaticResource Primary}" FontSize="12" Clicked="OnReadAllClicked"/>
+        </Grid>
+        <Grid Grid.Row="1">
+            <CollectionView x:Name="NotificationsView" Margin="16,6,16,24" SelectionMode="None">
+                <CollectionView.EmptyView>
+                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="8">
+                        <Label Text="No notifications yet" FontFamily="NunitoBold" FontSize="18" TextColor="{StaticResource BodyText}"/>
+                        <Label Text="Activity and purchase updates will appear here." FontSize="13" TextColor="{StaticResource NavMuted}"/>
+                    </VerticalStackLayout>
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:NotificationItem">
+                        <Border Margin="0,0,0,10" Padding="15" BackgroundColor="{StaticResource CardBg}" Stroke="{StaticResource Secondary20}" StrokeThickness="1" StrokeShape="RoundRectangle 18">
+                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto">
+                                <Label Text="{Binding Title}" FontFamily="NunitoBold" FontSize="15" TextColor="{StaticResource BodyText}"/>
+                                <Border Grid.Column="1" IsVisible="{Binding IsRead, Converter={StaticResource InverseBoolConverter}}" WidthRequest="9" HeightRequest="9" BackgroundColor="{StaticResource Primary}" StrokeThickness="0" StrokeShape="RoundRectangle 5"/>
+                                <Label Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Body}" FontSize="13" TextColor="{StaticResource NavMuted}" Margin="0,4,0,0"/>
+                                <Grid Grid.Row="2" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" Margin="0,8,0,0">
+                                    <Label Text="{Binding TimeDisplay}" FontSize="11" TextColor="{StaticResource NavMuted}"/>
+                                    <Button Grid.Column="1" Text="Mark read" IsVisible="{Binding IsRead, Converter={StaticResource InverseBoolConverter}}" FontSize="11" HeightRequest="32" Padding="10,0" CornerRadius="14" BackgroundColor="{StaticResource Primary10}" TextColor="{StaticResource Primary}" Clicked="OnMarkReadClicked" CommandParameter="{Binding .}"/>
+                                </Grid>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+            <ActivityIndicator x:Name="Loading" IsVisible="False" IsRunning="False" Color="{StaticResource Primary}" VerticalOptions="Center" HorizontalOptions="Center"/>
+        </Grid>
+    </Grid>
+</ContentPage>
