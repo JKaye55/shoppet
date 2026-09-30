@@ -65,7 +65,8 @@ public class PetsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreatePet([FromBody] PetCreateRequest request)
     {
-        if (request.UserId <= 0) return BadRequest("A valid user ID is required.");
+        var validationError = ValidatePetRequest(request);
+        if (validationError is not null) return BadRequest(validationError);
 
         try
         {
@@ -110,6 +111,9 @@ public class PetsController : ControllerBase
     [HttpPut("{id:int}")]
     public async Task<IActionResult> UpdatePet(int id, [FromBody] PetCreateRequest request)
     {
+        var validationError = ValidatePetRequest(request);
+        if (validationError is not null) return BadRequest(validationError);
+
         try
         {
             await using var connection = new SqlConnection(ConnectionString);
@@ -141,6 +145,31 @@ public class PetsController : ControllerBase
             return Ok(new { Id = id, request.UserId, request.Name, request.Species, request.Breed, request.AgeYears, request.Weight, request.PhotoUrl });
         }
         catch (Exception ex) { return StatusCode(500, $"Error updating pet: {ex.Message}"); }
+    }
+
+    private static string? ValidatePetRequest(PetCreateRequest request)
+    {
+        var name = (request.Name ?? string.Empty).Trim();
+        var species = (request.Species ?? string.Empty).Trim();
+        var breed = (request.Breed ?? string.Empty).Trim();
+
+        if (request.UserId <= 0) return "A valid user ID is required.";
+        if (name.Length < 2 || name.Length > 40) return "Pet name must be between 2 and 40 characters.";
+
+        string[] allowedSpecies = ["Dog", "Cat", "Bird", "Small Pet", "Other"];
+        if (!allowedSpecies.Contains(species)) return "Species is not valid.";
+
+        if (breed.Length < 2 || breed.Length > 60) return "Breed must be between 2 and 60 characters.";
+        if (request.AgeYears < 0 || request.AgeYears > 40) return "Age must be between 0 and 40 years.";
+
+        if (!decimal.TryParse(request.Weight, NumberStyles.Any, CultureInfo.InvariantCulture, out var weight)
+            || weight < 0.1m || weight > 200m)
+            return "Weight must be between 0.1 and 200 kg.";
+
+        if (!string.IsNullOrWhiteSpace(request.PhotoUrl) && request.PhotoUrl.Length > 2048)
+            return "Photo reference is too long.";
+
+        return null;
     }
 
     [HttpDelete("{id:int}")]
