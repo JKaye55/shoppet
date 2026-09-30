@@ -140,6 +140,7 @@ namespace ShoppetApp.ViewModels
         private void Logout()
         {
             _api.ClearToken();
+            SecureStorage.Default.Remove("ShoppetApiToken");
             _db.Logout();
             Preferences.Remove("LoggedInUserId");
             Preferences.Remove("LoggedInUserName");
