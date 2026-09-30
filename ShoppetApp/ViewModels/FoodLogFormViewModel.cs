@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using ShoppetApp.Messages;
 using ShoppetApp.Models;
 using ShoppetApp.Services;
+using System.Globalization;
 
 namespace ShoppetApp.ViewModels;
 
@@ -18,55 +19,43 @@ public partial class FoodLogFormViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty] public partial TimeSpan StartTime { get; set; } = DateTime.Now.TimeOfDay;
     [ObservableProperty] public partial bool IsEditMode { get; set; }
     [ObservableProperty] public partial string Notes { get; set; } = string.Empty;
+    [ObservableProperty] public partial bool IsBusy { get; set; }
+    [ObservableProperty] public partial double AmountGramsValue { get; set; } = 100;
 
-    // ── Interval: split into integer Hours + Minutes ──────────────────────────
-    private string _intervalHoursText = string.Empty;
-    public string IntervalHoursText
-    {
-        get => _intervalHoursText;
-        set
-        {
-            var clean = string.IsNullOrWhiteSpace(value)
-                ? string.Empty
-                : new string(value.Where(char.IsDigit).ToArray());
-            if (!SetProperty(ref _intervalHoursText, clean) && value != clean)
-                OnPropertyChanged(nameof(IntervalHoursText));
-        }
-    }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsCustomInterval))]
+    public partial string FeedingIntervalPreset { get; set; } = "Every 8 hours";
 
-    private string _intervalMinutesText = string.Empty;
-    public string IntervalMinutesText
-    {
-        get => _intervalMinutesText;
-        set
-        {
-            var clean = string.IsNullOrWhiteSpace(value)
-                ? string.Empty
-                : new string(value.Where(char.IsDigit).ToArray());
-            if (!SetProperty(ref _intervalMinutesText, clean) && value != clean)
-                OnPropertyChanged(nameof(IntervalMinutesText));
-        }
-    }
+    [ObservableProperty] public partial int CustomIntervalHours { get; set; } = 8;
+    [ObservableProperty] public partial int CustomIntervalMinutes { get; set; }
 
-    // ── Amount ────────────────────────────────────────────────────────────────
-    private string _amountGramsText = string.Empty;
-    public string AmountGramsText
-    {
-        get => _amountGramsText;
-        set
-        {
-            var clean = string.IsNullOrWhiteSpace(value)
-                ? string.Empty
-                : new string(value.Where(c => char.IsDigit(c) || c == '.').ToArray());
-            if (!SetProperty(ref _amountGramsText, clean) && value != clean)
-                OnPropertyChanged(nameof(AmountGramsText));
-        }
-    }
+    public IList<string> FeedingIntervalOptions { get; } =
+    [
+        "Every 4 hours",
+        "Every 6 hours",
+        "Every 8 hours",
+        "Every 12 hours",
+        "Once a day",
+        "Custom"
+    ];
 
+    public bool IsCustomInterval => FeedingIntervalPreset == "Custom";
     public string Title => IsEditMode ? "Edit Food Log" : "Add Food Log";
     public bool CanDelete => IsEditMode;
 
     public FoodLogFormViewModel(ApiService api) => _api = api;
+
+    partial void OnFeedingIntervalPresetChanged(string value)
+    {
+        switch (value)
+        {
+            case "Every 4 hours": CustomIntervalHours = 4; CustomIntervalMinutes = 0; break;
+            case "Every 6 hours": CustomIntervalHours = 6; CustomIntervalMinutes = 0; break;
+            case "Every 8 hours": CustomIntervalHours = 8; CustomIntervalMinutes = 0; break;
+            case "Every 12 hours": CustomIntervalHours = 12; CustomIntervalMinutes = 0; break;
+            case "Once a day": CustomIntervalHours = 24; CustomIntervalMinutes = 0; break;
+        }
+    }
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
@@ -89,126 +78,156 @@ public partial class FoodLogFormViewModel : ObservableObject, IQueryAttributable
         }
 
         var log = (await _api.GetFoodLogsAsync(PetId)).FirstOrDefault(l => l.Id == LogId);
-        if (log is null)
-            return;
+        if (log is null) return;
 
         IsEditMode = true;
         PetId = log.PetId;
-        FoodName = log.FoodName;
-        AmountGramsText = log.AmountGrams > 0 ? log.AmountGrams.ToString("G") : string.Empty;
-        IntervalHoursText = log.IntervalHours > 0 ? log.IntervalHours.ToString() : string.Empty;
-        IntervalMinutesText = log.IntervalMinutes > 0 ? log.IntervalMinutes.ToString() : string.Empty;
+        FoodName = log.FoodName ?? string.Empty;
+        AmountGramsValue = Math.Clamp(log.AmountGrams > 0 ? log.AmountGrams : 100, 1, 5000);
+        CustomIntervalHours = Math.Clamp(log.IntervalHours, 0, 24);
+        CustomIntervalMinutes = Math.Clamp(log.IntervalMinutes, 0, 59);
+        FeedingIntervalPreset = (CustomIntervalHours, CustomIntervalMinutes) switch
+        {
+            (4, 0) => "Every 4 hours",
+            (6, 0) => "Every 6 hours",
+            (8, 0) => "Every 8 hours",
+            (12, 0) => "Every 12 hours",
+            (24, 0) => "Once a day",
+            _ => "Custom"
+        };
         Notes = log.Notes ?? string.Empty;
 
         if (DateTime.TryParse(log.FedDate, out var fedDate))
             FedDate = fedDate.Date;
 
-        // Restore start time from StartTimestamp
         if (!string.IsNullOrEmpty(log.StartTimestamp) &&
-            DateTime.TryParse(log.StartTimestamp, null,
-                System.Globalization.DateTimeStyles.RoundtripKind, out var startDt))
-        {
+            DateTime.TryParse(log.StartTimestamp, null, DateTimeStyles.RoundtripKind, out var startDt))
             StartTime = startDt.TimeOfDay;
-        }
 
         OnPropertyChanged(nameof(Title));
         OnPropertyChanged(nameof(CanDelete));
     }
 
     [RelayCommand]
-    private async Task CloseAsync() =>
-        await Shell.Current.GoToAsync("..");
+    private async Task CloseAsync() => await Shell.Current.GoToAsync("..");
 
     [RelayCommand]
     private async Task SaveAsync()
     {
-        if (string.IsNullOrWhiteSpace(FoodName))
+        if (IsBusy) return;
+
+        var cleanName = (FoodName ?? string.Empty).Trim();
+        var cleanNotes = (Notes ?? string.Empty).Trim();
+
+        if (cleanName.Length < 2 || cleanName.Length > 80)
         {
-            await Shell.Current.DisplayAlertAsync("Validation", "Food name is required.", "OK");
+            await Shell.Current.DisplayAlertAsync("Check food name", "Food name must be between 2 and 80 characters.", "OK");
             return;
         }
 
-        _ = double.TryParse(AmountGramsText, out var grams);
-        _ = int.TryParse(IntervalHoursText, out var hours);
-        _ = int.TryParse(IntervalMinutesText, out var minutes);
-
-        if (minutes >= 60)
+        if (AmountGramsValue < 1 || AmountGramsValue > 5000)
         {
-            await Shell.Current.DisplayAlertAsync("Validation", "Minutes must be between 0 and 59.", "OK");
+            await Shell.Current.DisplayAlertAsync("Check serving amount", "Serving amount must be between 1 and 5,000 grams.", "OK");
             return;
         }
 
-        // Combine FedDate + StartTime into a full datetime for StartTimestamp
+        if (cleanNotes.Length > 500)
+        {
+            await Shell.Current.DisplayAlertAsync("Notes too long", "Notes can contain up to 500 characters.", "OK");
+            return;
+        }
+
+        var hours = CustomIntervalHours;
+        var minutes = CustomIntervalMinutes;
+
+        if (hours < 0 || hours > 24 || minutes < 0 || minutes > 59 || (hours == 0 && minutes == 0))
+        {
+            await Shell.Current.DisplayAlertAsync("Check feeding interval", "Choose an interval between 1 minute and 24 hours.", "OK");
+            return;
+        }
+
+        if (hours == 24 && minutes > 0)
+        {
+            await Shell.Current.DisplayAlertAsync("Check feeding interval", "A 24-hour interval cannot include additional minutes.", "OK");
+            return;
+        }
+
         var startDt = FedDate.Date.Add(StartTime);
-
-        // Preserve existing LastFedTimestamp if editing
         var existingLastFed = string.Empty;
+
         if (LogId > 0)
         {
             var existing = (await _api.GetFoodLogsAsync(PetId)).FirstOrDefault(l => l.Id == LogId);
             existingLastFed = existing?.LastFedTimestamp ?? string.Empty;
         }
 
-        var log = new FoodLog
+        IsBusy = true;
+        try
         {
-            Id = LogId,
-            PetId = PetId,
-            FoodName = FoodName.Trim(),
-            AmountGrams = grams,
-            IntervalHours = hours,
-            IntervalMinutes = minutes,
-            StartTimestamp = startDt.ToString("yyyy/MM/dd, HH:mm:ss"),
-            LastFedTimestamp = existingLastFed,
-            FedDate = FedDate.ToString("yyyy/MM/dd, HH:mm:ss"),
-            Notes = Notes.Trim()
-        };
+            var log = new FoodLog
+            {
+                Id = LogId,
+                PetId = PetId,
+                FoodName = cleanName,
+                AmountGrams = AmountGramsValue,
+                IntervalHours = hours,
+                IntervalMinutes = minutes,
+                StartTimestamp = startDt.ToString("yyyy/MM/dd, HH:mm:ss"),
+                LastFedTimestamp = existingLastFed,
+                FedDate = FedDate.ToString("yyyy/MM/dd, HH:mm:ss"),
+                Notes = cleanNotes
+            };
 
-        var result = await _api.SaveFoodLogAsync(PetId, log);
-        if (result != null)
-        {
-            WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
-            await Shell.Current.GoToAsync("..");
+            var result = await _api.SaveFoodLogAsync(PetId, log);
+            if (result != null)
+            {
+                WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
+                await Shell.Current.GoToAsync("..");
+            }
+            else
+            {
+                await Shell.Current.DisplayAlertAsync("Could not save", "ShoppetCare could not save this feeding record. Please try again.", "OK");
+            }
         }
-        else
+        finally
         {
-            await Shell.Current.DisplayAlertAsync("Error", "Failed to save food log to server.", "OK");
+            IsBusy = false;
         }
     }
 
     [RelayCommand]
     private async Task DeleteAsync()
     {
-        if (LogId <= 0)
-            return;
+        if (LogId <= 0 || IsBusy) return;
 
         var log = (await _api.GetFoodLogsAsync(PetId)).FirstOrDefault(l => l.Id == LogId);
-        if (log is null)
-            return;
+        if (log is null) return;
 
         var confirm = await Shell.Current.DisplayAlertAsync(
-            "Delete Food Log",
-            $"Remove {log.FoodName}?",
+            "Delete feeding record?",
+            $"Delete the feeding record for {log.FoodName}?",
             "Delete",
             "Cancel");
 
-        if (!confirm)
-            return;
+        if (!confirm) return;
 
-        bool deleted = await _api.DeleteFoodLogAsync(PetId, log.Id);
-        if (deleted)
+        IsBusy = true;
+        try
         {
-            WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
-            await Shell.Current.GoToAsync("..");
+            bool deleted = await _api.DeleteFoodLogAsync(PetId, log.Id);
+            if (deleted)
+            {
+                WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
+                await Shell.Current.GoToAsync("..");
+            }
+            else
+            {
+                await Shell.Current.DisplayAlertAsync("Could not delete", "The feeding record could not be deleted from the server.", "OK");
+            }
         }
-        else
+        finally
         {
-            await Shell.Current.DisplayAlertAsync(
-                "Error",
-                "Failed to delete food log from the server.",
-                "OK");
+            IsBusy = false;
         }
     }
 }
-
-
-
