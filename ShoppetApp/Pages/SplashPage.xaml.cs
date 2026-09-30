@@ -32,8 +32,26 @@ public partial class SplashPage : ContentPage
 
         if (savedUserId > 0)
         {
-            // Already logged in! Bypass onboarding/login and go straight to the main app shell
-            NavigationHelper.SetRoot(new AppShell());
+            var token = await SecureStorage.Default.GetAsync("ShoppetApiToken");
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                App.Services.GetRequiredService<Services.ApiService>().SetToken(token);
+                NavigationHelper.SetRoot(App.Services.GetRequiredService<AppShell>());
+            }
+            else
+            {
+                Preferences.Remove("LoggedInUserId");
+                Preferences.Remove("LoggedInUserName");
+                Preferences.Remove("LoggedInUserEmail");
+                Preferences.Remove("LoggedInUserRole");
+                Preferences.Remove("LoggedInUserProfilePicture");
+                var onboarding = App.Services.GetRequiredService<OnboardingPage>();
+                NavigationHelper.SetRoot(new NavigationPage(onboarding)
+                {
+                    BarBackgroundColor = Colors.Transparent,
+                    BarTextColor = Color.FromArgb("#4a7c82")
+                });
+            }
         }
         else
         {
