@@ -1,3 +1,4 @@
+using ShoppetAPI.Security;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using System.Globalization;
@@ -18,6 +19,11 @@ public class PetsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetPets([FromQuery] int? userId = null)
     {
+        int authenticatedUserId = this.AuthenticatedUserId();
+        if (authenticatedUserId <= 0) return Unauthorized();
+        if (userId.HasValue && userId.Value != authenticatedUserId) return Forbid();
+        userId = authenticatedUserId;
+
         try
         {
             var pets = new List<object>();
@@ -65,6 +71,10 @@ public class PetsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreatePet([FromBody] PetCreateRequest request)
     {
+        int authenticatedUserId = this.AuthenticatedUserId();
+        if (authenticatedUserId <= 0) return Unauthorized();
+        if (request.UserId != authenticatedUserId) return Forbid();
+
         var validationError = ValidatePetRequest(request);
         if (validationError is not null) return BadRequest(validationError);
 
@@ -111,6 +121,10 @@ public class PetsController : ControllerBase
     [HttpPut("{id:int}")]
     public async Task<IActionResult> UpdatePet(int id, [FromBody] PetCreateRequest request)
     {
+        int authenticatedUserId = this.AuthenticatedUserId();
+        if (authenticatedUserId <= 0) return Unauthorized();
+        if (request.UserId != authenticatedUserId) return Forbid();
+
         var validationError = ValidatePetRequest(request);
         if (validationError is not null) return BadRequest(validationError);
 
@@ -175,12 +189,16 @@ public class PetsController : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> DeletePet(int id)
     {
+        int authenticatedUserId = this.AuthenticatedUserId();
+        if (authenticatedUserId <= 0) return Unauthorized();
+
         try
         {
             await using var connection = new SqlConnection(ConnectionString);
             await connection.OpenAsync();
-            await using var cmd = new SqlCommand("DELETE FROM PetProfiles WHERE Id=@Id", connection);
+            await using var cmd = new SqlCommand("DELETE FROM PetProfiles WHERE Id=@Id AND UserId=@UserId", connection);
             cmd.Parameters.AddWithValue("@Id", id);
+            cmd.Parameters.AddWithValue("@UserId", authenticatedUserId);
             return await cmd.ExecuteNonQueryAsync() > 0
                 ? Ok(new { message = "Pet deleted successfully" })
                 : NotFound("Pet not found.");
