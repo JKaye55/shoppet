@@ -1,0 +1,290 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:ShoppetApp.Models"
+             xmlns:vm="clr-namespace:ShoppetApp.ViewModels"
+             x:Class="ShoppetApp.Pages.MarketplaceCartPage"
+             x:DataType="vm:MarketplaceCartViewModel"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="{StaticResource AppBackground}">
+
+    <Grid RowDefinitions="Auto,*">
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*" Padding="16,18,16,10">
+            <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                <HorizontalStackLayout.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding GoBackCommand}" />
+                </HorizontalStackLayout.GestureRecognizers>
+                <Path Data="{StaticResource IconBack}"
+                      Fill="{StaticResource Primary}"
+                      WidthRequest="18"
+                      HeightRequest="18"
+                      Aspect="Uniform" />
+                <Label Text="Back"
+                       TextColor="{StaticResource Primary}"
+                       FontFamily="NunitoBold"
+                       FontSize="15"
+                       VerticalOptions="Center" />
+            </HorizontalStackLayout>
+
+            <Label Grid.Column="1"
+                   Text="Cart &amp; Orders"
+                   FontFamily="NunitoBold"
+                   FontSize="18"
+                   TextColor="{StaticResource BodyText}"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center" />
+        </Grid>
+
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="16,6,16,30" Spacing="18">
+
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Your Cart"
+                           FontFamily="NunitoBold"
+                           FontSize="18"
+                           TextColor="{StaticResource BodyText}" />
+                    <Label Text="Marketplace items are one-of-a-kind. Adding an item to your cart does not reserve it until checkout succeeds."
+                           FontSize="12"
+                           TextColor="{StaticResource Secondary}" />
+
+                    <CollectionView ItemsSource="{Binding CartItems}"
+                                    SelectionMode="None">
+                        <CollectionView.EmptyView>
+                            <Label Text="Your marketplace cart is empty."
+                                   FontSize="13"
+                                   TextColor="{StaticResource Secondary}"
+                                   HorizontalOptions="Center"
+                                   Margin="0,20" />
+                        </CollectionView.EmptyView>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:MarketplaceCartItemDto">
+                                <Grid ColumnDefinitions="74,*,Auto"
+                                      ColumnSpacing="12"
+                                      Padding="0,10">
+                                    <Border WidthRequest="74"
+                                            HeightRequest="74"
+                                            BackgroundColor="{StaticResource Secondary10}"
+                                            StrokeThickness="0"
+                                            StrokeShape="RoundRectangle 12">
+                                        <Image Source="{Binding FirstImage}"
+                                               IsVisible="{Binding HasImage}"
+                                               Aspect="AspectFill" />
+                                    </Border>
+
+                                    <VerticalStackLayout Grid.Column="1"
+                                                         Spacing="3"
+                                                         VerticalOptions="Center">
+                                        <Label Text="{Binding Title}"
+                                               FontFamily="NunitoBold"
+                                               FontSize="14"
+                                               TextColor="{StaticResource BodyText}"
+                                               MaxLines="2"
+                                               LineBreakMode="TailTruncation" />
+                                        <Label Text="{Binding SellerName, StringFormat='Seller: {0}'}"
+                                               FontSize="11"
+                                               TextColor="{StaticResource Secondary}" />
+                                        <Label Text="{Binding PriceDisplay}"
+                                               FontFamily="NunitoBold"
+                                               FontSize="14"
+                                               TextColor="{StaticResource Primary}" />
+                                    </VerticalStackLayout>
+
+                                    <Border Grid.Column="2"
+                                            WidthRequest="40"
+                                            HeightRequest="40"
+                                            BackgroundColor="Transparent"
+                                            StrokeThickness="0"
+                                            VerticalOptions="Center">
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MarketplaceCartViewModel}}, Path=RemoveCommand}"
+                                                                  CommandParameter="{Binding .}" />
+                                        </Border.GestureRecognizers>
+                                        <Path Data="{StaticResource IconDelete}"
+                                              Fill="{StaticResource StatusOverdue}"
+                                              WidthRequest="18"
+                                              HeightRequest="18"
+                                              HorizontalOptions="Center"
+                                              VerticalOptions="Center"
+                                              Aspect="Uniform" />
+                                    </Border>
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasCartItems}">
+                        <Label Text="Total"
+                               FontFamily="NunitoBold"
+                               FontSize="15"
+                               TextColor="{StaticResource BodyText}" />
+                        <Label Grid.Column="1"
+                               Text="{Binding TotalDisplay}"
+                               FontFamily="NunitoExtraBold"
+                               FontSize="17"
+                               TextColor="{StaticResource Primary}" />
+                    </Grid>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Spacing="10" IsVisible="{Binding HasCartItems}">
+                    <Label Text="Payment Simulation"
+                           FontFamily="NunitoBold"
+                           FontSize="17"
+                           TextColor="{StaticResource BodyText}" />
+
+                    <Border BackgroundColor="{StaticResource Secondary10}"
+                            StrokeThickness="0"
+                            StrokeShape="RoundRectangle 14"
+                            Padding="12">
+                        <HorizontalStackLayout Spacing="8">
+                            <Path Data="{StaticResource IconShield}"
+                                  Fill="{StaticResource Primary}"
+                                  WidthRequest="19"
+                                  HeightRequest="19"
+                                  Aspect="Uniform" />
+                            <Label Text="Mock Payment — No real money will be processed. Never enter card numbers, CVVs, OTPs, GCash PINs, or banking credentials."
+                                   FontSize="11"
+                                   TextColor="{StaticResource BodyText}"
+                                   LineBreakMode="WordWrap" />
+                        </HorizontalStackLayout>
+                    </Border>
+
+                    <Label Text="Payment Method *"
+                           FontFamily="NunitoSemiBold"
+                           FontSize="13" />
+                    <Border Stroke="{StaticResource Secondary30}"
+                            StrokeThickness="1"
+                            Padding="12,3"
+                            StrokeShape="RoundRectangle 18">
+                        <Picker ItemsSource="{Binding PaymentMethods}"
+                                SelectedItem="{Binding SelectedPaymentMethod}"
+                                HeightRequest="46"
+                                TextColor="{StaticResource BodyText}" />
+                    </Border>
+
+                    <Label Text="Simulation Result *"
+                           FontFamily="NunitoSemiBold"
+                           FontSize="13" />
+                    <Border Stroke="{StaticResource Secondary30}"
+                            StrokeThickness="1"
+                            Padding="12,3"
+                            StrokeShape="RoundRectangle 18">
+                        <Picker ItemsSource="{Binding SimulationResults}"
+                                SelectedItem="{Binding SelectedSimulationResult}"
+                                HeightRequest="46"
+                                TextColor="{StaticResource BodyText}" />
+                    </Border>
+
+                    <Button Text="Run Payment Simulation"
+                            Command="{Binding CheckoutCommand}"
+                            IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}"
+                            HeightRequest="50"
+                            CornerRadius="22"
+                            BackgroundColor="{StaticResource Primary}"
+                            TextColor="White"
+                            FontFamily="NunitoBold" />
+                </VerticalStackLayout>
+
+                <BoxView HeightRequest="1" Color="{StaticResource Secondary20}" />
+
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Purchases"
+                           FontFamily="NunitoBold"
+                           FontSize="17" />
+
+                    <CollectionView ItemsSource="{Binding Purchases}"
+                                    SelectionMode="None">
+                        <CollectionView.EmptyView>
+                            <Label Text="No marketplace purchases yet."
+                                   FontSize="12"
+                                   TextColor="{StaticResource Secondary}"
+                                   Margin="0,10" />
+                        </CollectionView.EmptyView>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:MarketplaceOrderDto">
+                                <Grid ColumnDefinitions="*,Auto"
+                                      Padding="0,9">
+                                    <VerticalStackLayout Spacing="2">
+                                        <Label Text="{Binding ItemTitle}"
+                                               FontFamily="NunitoBold"
+                                               FontSize="13" />
+                                        <Label Text="{Binding SellerName, StringFormat='Seller: {0}'}"
+                                               FontSize="11"
+                                               TextColor="{StaticResource Secondary}" />
+                                        <Label Text="{Binding DateDisplay}"
+                                               FontSize="10"
+                                               TextColor="{StaticResource Secondary}" />
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout Grid.Column="1"
+                                                         HorizontalOptions="End"
+                                                         Spacing="2">
+                                        <Label Text="{Binding AmountDisplay}"
+                                               FontFamily="NunitoBold"
+                                               TextColor="{StaticResource Primary}" />
+                                        <Label Text="{Binding Status}"
+                                               FontSize="10"
+                                               TextColor="{StaticResource Secondary}"
+                                               HorizontalOptions="End" />
+                                    </VerticalStackLayout>
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+
+                <BoxView HeightRequest="1" Color="{StaticResource Secondary20}" />
+
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Sales"
+                           FontFamily="NunitoBold"
+                           FontSize="17" />
+                    <Label Text="Items bought from your listings appear here."
+                           FontSize="11"
+                           TextColor="{StaticResource Secondary}" />
+
+                    <CollectionView ItemsSource="{Binding Sales}"
+                                    SelectionMode="None">
+                        <CollectionView.EmptyView>
+                            <Label Text="No marketplace sales yet."
+                                   FontSize="12"
+                                   TextColor="{StaticResource Secondary}"
+                                   Margin="0,10" />
+                        </CollectionView.EmptyView>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:MarketplaceOrderDto">
+                                <Grid ColumnDefinitions="*,Auto"
+                                      Padding="0,9">
+                                    <VerticalStackLayout Spacing="2">
+                                        <Label Text="{Binding ItemTitle}"
+                                               FontFamily="NunitoBold"
+                                               FontSize="13" />
+                                        <Label Text="{Binding BuyerName, StringFormat='Buyer: {0}'}"
+                                               FontSize="11"
+                                               TextColor="{StaticResource Secondary}" />
+                                        <Label Text="{Binding DateDisplay}"
+                                               FontSize="10"
+                                               TextColor="{StaticResource Secondary}" />
+                                    </VerticalStackLayout>
+                                    <Label Grid.Column="1"
+                                           Text="{Binding AmountDisplay}"
+                                           FontFamily="NunitoBold"
+                                           TextColor="{StaticResource Primary}"
+                                           VerticalOptions="Center" />
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Grid Grid.RowSpan="2"
+              IsVisible="{Binding IsBusy}"
+              BackgroundColor="#33000000"
+              InputTransparent="True">
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center" />
+        </Grid>
+    </Grid>
+</ContentPage>
