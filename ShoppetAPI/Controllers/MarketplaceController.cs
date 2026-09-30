@@ -1,3 +1,4 @@
+using ShoppetAPI.Security;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 
@@ -20,11 +21,16 @@ public class MarketplaceController : ControllerBase
 
     [HttpGet("my/{userId:int}")]
     public async Task<IActionResult> GetMyListings(int userId)
-        => Ok(await LoadListingsAsync(userId, null, null));
+    {
+        if (!this.IsAuthenticatedUser(userId)) return Forbid();
+        return Ok(await LoadListingsAsync(userId, null, null));
+    }
 
     [HttpPost]
     public async Task<IActionResult> CreateListing([FromBody] CreateListingRequest request)
     {
+        if (!this.IsAuthenticatedUser(request.UserId)) return Forbid();
+
         var validationError = ValidateListing(request);
         if (validationError is not null) return BadRequest(validationError);
 
@@ -50,6 +56,8 @@ public class MarketplaceController : ControllerBase
     [HttpPut("{id:int}")]
     public async Task<IActionResult> EditListing(int id, [FromBody] EditListingRequest request)
     {
+        if (!this.IsAuthenticatedUser(request.UserId)) return Forbid();
+
         var validationError = ValidateListing(request);
         if (validationError is not null) return BadRequest(validationError);
 
@@ -73,6 +81,8 @@ public class MarketplaceController : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> DeleteListing(int id, [FromQuery] int userId)
     {
+        if (!this.IsAuthenticatedUser(userId)) return Forbid();
+
         try
         {
             await using var connection = new SqlConnection(ConnectionString);
