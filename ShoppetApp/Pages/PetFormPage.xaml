@@ -45,11 +45,13 @@
                 <Grid>
                     <Image Source="{Binding PhotoUrl, Converter={StaticResource UrlToImageSourceConverter}}"
                            Aspect="AspectFill" />
-                    <Label Text="📷"
-                           FontSize="28"
-                           HorizontalOptions="Center"
-                           VerticalOptions="Center"
-                           TextColor="{StaticResource Secondary}" />
+                    <Path Data="{StaticResource IconCamera}"
+                          Fill="{StaticResource Secondary}"
+                          WidthRequest="30"
+                          HeightRequest="30"
+                          Aspect="Uniform"
+                          HorizontalOptions="Center"
+                          VerticalOptions="Center" />
                     <Border WidthRequest="28"
                             HeightRequest="28"
                             BackgroundColor="{StaticResource Primary}"
@@ -60,11 +62,13 @@
                         <Border.StrokeShape>
                             <RoundRectangle CornerRadius="14" />
                         </Border.StrokeShape>
-                        <Label Text="📷"
-                               FontSize="12"
-                               HorizontalOptions="Center"
-                               VerticalOptions="Center"
-                               TextColor="White" />
+                        <Path Data="{StaticResource IconCamera}"
+                              Fill="White"
+                              WidthRequest="14"
+                              HeightRequest="14"
+                              Aspect="Uniform"
+                              HorizontalOptions="Center"
+                              VerticalOptions="Center" />
                     </Border>
                 </Grid>
             </Border>
