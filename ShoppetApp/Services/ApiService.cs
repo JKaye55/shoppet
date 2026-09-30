@@ -158,7 +158,26 @@ public class ApiService
 
     public async Task<List<HealthLog>> GetHealthLogsAsync(int petId)
     {
-        try { return await _http.GetFromJsonAsync<List<HealthLog>>($"pets/{petId}/healthlogs") ?? []; }
+        try
+        {
+            var logs = await _http.GetFromJsonAsync<List<HealthLog>>($"pets/{petId}/healthlogs") ?? [];
+            foreach (var log in logs)
+            {
+                if (log.Completed)
+                {
+                    log.Status = "Completed";
+                }
+                else if (DateTime.TryParse(log.DueDate, out var due))
+                {
+                    log.Status = due <= DateTime.Now.AddDays(7) ? "Action Required" : "Pending";
+                }
+                else
+                {
+                    log.Status = "Pending";
+                }
+            }
+            return logs;
+        }
         catch { return []; }
     }
 
