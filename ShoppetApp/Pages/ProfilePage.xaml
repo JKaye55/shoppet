@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:controls="clr-namespace:ShoppetApp.Controls"
@@ -31,13 +31,15 @@
                             </Grid>
                         </Border>
 
-                        <HorizontalStackLayout HorizontalOptions="Center" Spacing="10">
+                        <HorizontalStackLayout HorizontalOptions="Center" Spacing="8" VerticalOptions="Center">
                             <Label Text="{Binding FullName}"
                                    FontFamily="NunitoExtraBold"
                                    FontSize="20"
                                    TextColor="{StaticResource SecondaryFg}"
                                    VerticalOptions="Center" />
-
+                            <Border BackgroundColor="#FEF3C7" Stroke="#F59E0B" StrokeThickness="1" StrokeShape="RoundRectangle 8" Padding="6,2" IsVisible="{Binding IsPremium}" VerticalOptions="Center">
+                                <Label Text="🏅 Premium" FontSize="11" FontFamily="NunitoBold" TextColor="#B45309" />
+                            </Border>
                         </HorizontalStackLayout>
                         <Button Text="Edit Profile" Command="{Binding EditProfileCommand}" BackgroundColor="Transparent" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" Padding="0" HeightRequest="30" HorizontalOptions="Center"/>
                         <Button Text="Personal vet reminders" Command="{Binding OpenVetVisitsCommand}" BackgroundColor="{StaticResource Secondary10}" TextColor="{StaticResource Primary}" CornerRadius="20"/>
@@ -170,7 +172,15 @@
                             <BoxView HeightRequest="1" Color="{StaticResource Secondary20}" />
 
                             <Grid ColumnDefinitions="*,Auto" Padding="0,12">
-                                <Label Text="Premium" FontFamily="Nunito" VerticalOptions="Center" />
+                                <VerticalStackLayout Spacing="2" VerticalOptions="Center">
+                                    <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                                        <Label Text="ShoppetCare Premium" FontFamily="NunitoBold" FontSize="14" VerticalOptions="Center" />
+                                        <Border BackgroundColor="#FEF3C7" Stroke="#F59E0B" StrokeThickness="1" StrokeShape="RoundRectangle 8" Padding="5,1" IsVisible="{Binding IsPremium}" VerticalOptions="Center">
+                                            <Label Text="Active" FontSize="10" FontFamily="NunitoBold" TextColor="#B45309" />
+                                        </Border>
+                                    </HorizontalStackLayout>
+                                    <Label Text="₱150 for 2 Months • Web &amp; App Unlimited Features" FontSize="11" TextColor="{StaticResource NavMuted}" />
+                                </VerticalStackLayout>
                                 <Label Text="›" FontSize="18" Grid.Column="1" VerticalOptions="Center" TextColor="{StaticResource Primary}" />
                                 <Grid.GestureRecognizers>
                                     <TapGestureRecognizer Command="{Binding OpenPremiumCommand}" />

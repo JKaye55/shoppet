@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using ShoppetApp.Helpers;
@@ -14,8 +14,9 @@ namespace ShoppetApp.ViewModels
 
         [ObservableProperty] private System.Collections.ObjectModel.ObservableCollection<ContactModel> _contacts = [];
         [ObservableProperty] private bool _isBusy;
-                        [ObservableProperty] private string _fullName = string.Empty;
+        [ObservableProperty] private string _fullName = string.Empty;
         [ObservableProperty] private bool _isAdmin;
+        [ObservableProperty] private bool _isPremium;
         [ObservableProperty] private ImageSource? _profileImageSource;
         private readonly ShoppetApp.Services.ApiService _api;
 
@@ -54,6 +55,7 @@ namespace ShoppetApp.ViewModels
                 IsAdmin = role.Equals("Admin", StringComparison.OrdinalIgnoreCase)
                        || role.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase)
                        || role.Equals("Super Admin", StringComparison.OrdinalIgnoreCase);
+                IsPremium = _db.CurrentUser?.IsPremium ?? Preferences.Get("LoggedInUserIsPremium", false);
 
                 if (userId > 0)
                 {
@@ -61,7 +63,9 @@ namespace ShoppetApp.ViewModels
                     if (profile != null)
                     {
                         FullName = profile.FullName;
+                        IsPremium = profile.IsPremium;
                         Preferences.Set("LoggedInUserName", FullName);
+                        Preferences.Set("LoggedInUserIsPremium", profile.IsPremium);
 
                         if (!string.IsNullOrEmpty(profile.ProfilePicture))
                         {

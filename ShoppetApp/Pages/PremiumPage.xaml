@@ -16,6 +16,7 @@
                     <Label Text="₱150 for 2 Months • mock payment only" FontFamily="NunitoExtraBold" FontSize="20" TextColor="{StaticResource BodyText}"/>
                     <Button x:Name="ActivateButton" Text="Activate Premium (Simulation)" BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="18" HeightRequest="50" FontFamily="NunitoBold" Clicked="OnActivateClicked"/>
                     <Button x:Name="OpenWebButton" Text="Open Web Portal (ShoppetCare Web)" BackgroundColor="Transparent" TextColor="{StaticResource Primary}" BorderColor="{StaticResource Primary}" BorderWidth="1" CornerRadius="18" HeightRequest="46" FontFamily="NunitoBold" Clicked="OnOpenWebPremiumClicked"/>
+                    <Label Text="You can also log in to ShoppetCare Web to manage your ₱150 / 2-month subscription." FontSize="11" TextColor="{StaticResource NavMuted}" HorizontalTextAlignment="Center" Margin="0,4,0,0"/>
                 </VerticalStackLayout>
             </Border>
         </VerticalStackLayout>

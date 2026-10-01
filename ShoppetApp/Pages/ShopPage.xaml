@@ -111,7 +111,10 @@
                                                     <!-- Info -->
                                                     <VerticalStackLayout Padding="8,6" Spacing="2">
                                                         <Label Text="{Binding Title}" TextColor="{StaticResource BodyText}" FontFamily="NunitoBold" FontSize="13" LineBreakMode="TailTruncation" MaxLines="2"/>
-                                                        <Label Text="{Binding SellerName}" TextColor="#888" FontSize="11"/>
+                                                        <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
+                                                            <Label Text="{Binding SellerName}" TextColor="#888" FontSize="11" LineBreakMode="TailTruncation"/>
+                                                            <Label Text="🏅" FontSize="10" TextColor="#B45309" IsVisible="{Binding IsSellerPremium}"/>
+                                                        </HorizontalStackLayout>
                                                         <Label Text="{Binding TimeAgo}" TextColor="#aaa" FontSize="10"/>
                                                     </VerticalStackLayout>
                                                 </VerticalStackLayout>
@@ -212,7 +215,12 @@
                                     <Grid><Label x:Name="DetailSellerInitial" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" FontFamily="NunitoBold" FontSize="16"/><Image x:Name="DetailSellerImage" Aspect="AspectFill"/></Grid>
                                 </Border>
                                 <VerticalStackLayout VerticalOptions="Center">
-                                    <Label x:Name="DetailSellerName" TextColor="{StaticResource BodyText}" FontFamily="NunitoBold" FontSize="14"/>
+                                    <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                                        <Label x:Name="DetailSellerName" TextColor="{StaticResource BodyText}" FontFamily="NunitoBold" FontSize="14"/>
+                                        <Border x:Name="DetailSellerPremiumBadge" BackgroundColor="#FEF3C7" Stroke="#F59E0B" StrokeThickness="1" StrokeShape="RoundRectangle 8" Padding="5,1" IsVisible="False" VerticalOptions="Center">
+                                            <Label Text="🏅 Premium Seller" FontSize="10" FontFamily="NunitoBold" TextColor="#B45309" />
+                                        </Border>
+                                    </HorizontalStackLayout>
                                     <Label x:Name="DetailLocation" TextColor="#888" FontSize="12"/>
                                 </VerticalStackLayout>
                             </HorizontalStackLayout>

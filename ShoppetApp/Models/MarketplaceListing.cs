@@ -20,6 +20,7 @@ namespace ShoppetApp.Models
         public string FacebookUrl { get; set; } = string.Empty;
         public string InstagramUrl { get; set; } = string.Empty;
         public string OtherSocialUrl { get; set; } = string.Empty;
+        public bool IsSellerPremium { get; set; }
 
         public bool HasSocialLinks =>
             !string.IsNullOrWhiteSpace(FacebookUrl) ||

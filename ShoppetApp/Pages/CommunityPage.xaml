@@ -186,11 +186,16 @@
                                         </Border>
 
                                         <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center">
-                                            <Label Text="{Binding AuthorName}"
-                                                   FontFamily="NunitoBold"
-                                                   FontSize="15"
-                                                   TextColor="{StaticResource BodyText}"
-                                                   LineBreakMode="TailTruncation" />
+                                            <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                                                <Label Text="{Binding AuthorName}"
+                                                       FontFamily="NunitoBold"
+                                                       FontSize="15"
+                                                       TextColor="{StaticResource BodyText}"
+                                                       LineBreakMode="TailTruncation" />
+                                                <Border BackgroundColor="#FEF3C7" Stroke="#F59E0B" StrokeThickness="1" StrokeShape="RoundRectangle 8" Padding="5,1" IsVisible="{Binding IsAuthorPremium}" VerticalOptions="Center">
+                                                    <Label Text="🏅 Premium" FontSize="10" FontFamily="NunitoBold" TextColor="#B45309" />
+                                                </Border>
+                                            </HorizontalStackLayout>
                                             <HorizontalStackLayout Spacing="6">
                                                 <Label Text="{Binding TimeAgo}"
                                                        FontSize="12"

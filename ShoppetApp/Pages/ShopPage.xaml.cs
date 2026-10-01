@@ -197,6 +197,7 @@ public partial class ShopPage : ContentPage
         DetailCondition.Text = listing.Condition;
         DetailDescription.Text = listing.Description;
         DetailSellerName.Text = listing.SellerName;
+        DetailSellerPremiumBadge.IsVisible = listing.IsSellerPremium;
         DetailLocation.Text = string.IsNullOrEmpty(listing.Location) ? "Location not specified" : listing.Location;
         DetailTime.Text = listing.TimeAgo;
         DetailSellerInitial.Text = listing.Initials;

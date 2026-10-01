@@ -11,10 +11,12 @@ namespace ShoppetApp.ViewModels;
 public partial class HomeViewModel : ObservableObject, IRecipient<DataChangedMessage>
 {
     private readonly DatabaseService _db;
+    private readonly ApiService _api;
 
     [ObservableProperty] private ObservableCollection<Pet> _pets = [];
     [ObservableProperty] private ObservableCollection<HealthLog> _actionRequiredLogs = [];
     [ObservableProperty] private ObservableCollection<StoryCard> _stories = [];
+    [ObservableProperty] private ObservableCollection<CommunityRanking> _rankings = [];
     [ObservableProperty] private StoryCard? _activeStory;
     [ObservableProperty] private bool _isBusy;
 
@@ -32,9 +34,10 @@ public partial class HomeViewModel : ObservableObject, IRecipient<DataChangedMes
         }
     }
 
-    public HomeViewModel(DatabaseService db)
+    public HomeViewModel(DatabaseService db, ApiService api)
     {
         _db = db;
+        _api = api;
         WeakReferenceMessenger.Default.Register(this);
         InitializeStories();
     }
@@ -102,6 +105,16 @@ public partial class HomeViewModel : ObservableObject, IRecipient<DataChangedMes
 
             var logs = await _db.GetAllActionRequiredLogsAsync();
             ActionRequiredLogs = new ObservableCollection<HealthLog>(logs ?? new List<HealthLog>());
+
+            try
+            {
+                var rankList = await _api.GetCommunityRankingsAsync(5);
+                Rankings = new ObservableCollection<CommunityRanking>(rankList ?? new List<CommunityRanking>());
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[HomeViewModel] Rankings error: {ex.Message}");
+            }
         }
         catch (Exception ex)
         {
@@ -111,6 +124,12 @@ public partial class HomeViewModel : ObservableObject, IRecipient<DataChangedMes
         {
             IsBusy = false;
         }
+    }
+
+    [RelayCommand]
+    private async Task OpenCommunityRankingsAsync()
+    {
+        await Shell.Current.GoToAsync("//community");
     }
 
     [RelayCommand]

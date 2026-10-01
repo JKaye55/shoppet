@@ -1,4 +1,4 @@
-﻿using SQLite;
+using SQLite;
 
 namespace ShoppetApp.Models
 {
@@ -18,5 +18,6 @@ namespace ShoppetApp.Models
         // Seller/buyer are Pet Owner marketplace capabilities, not roles.
         public string Role { get; set; } = "Pet Owner";
         public string ProfilePicture { get; set; } = string.Empty;
+        public bool IsPremium { get; set; }
     }
 }

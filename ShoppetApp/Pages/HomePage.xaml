@@ -258,6 +258,96 @@
                             </VerticalStackLayout>
                         </Border>
                     </VerticalStackLayout>
+
+                    <!-- COMMUNITY RANKINGS LEADERBOARD -->
+                    <VerticalStackLayout Spacing="12"
+                                         IsVisible="{Binding Rankings.Count, Converter={StaticResource CountToBoolConverter}}">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="🏆 Top Community Members"
+                                   FontFamily="NunitoExtraBold"
+                                   FontSize="18"
+                                   TextColor="{StaticResource SecondaryFg}"
+                                   VerticalOptions="Center" />
+                            <Label Text="See All"
+                                   Grid.Column="1"
+                                   FontFamily="NunitoBold"
+                                   FontSize="13"
+                                   TextColor="{StaticResource Primary}"
+                                   VerticalOptions="Center">
+                                <Label.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding OpenCommunityRankingsCommand}" />
+                                </Label.GestureRecognizers>
+                            </Label>
+                        </Grid>
+
+                        <Border Stroke="{StaticResource Secondary10}"
+                                StrokeThickness="1"
+                                BackgroundColor="{StaticResource CardBg}"
+                                Padding="16">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="20" />
+                            </Border.StrokeShape>
+                            <Border.Shadow>
+                                <Shadow Brush="{StaticResource SecondaryFg}" Offset="0,4" Radius="12" Opacity="0.08" />
+                            </Border.Shadow>
+
+                            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Rankings}" Spacing="12">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="models:CommunityRanking">
+                                        <Grid ColumnDefinitions="32,40,*,Auto" ColumnSpacing="10" VerticalOptions="Center">
+                                            <!-- Rank badge / Number -->
+                                            <Label Text="{Binding RankBadge}"
+                                                   FontFamily="NunitoExtraBold"
+                                                   FontSize="18"
+                                                   HorizontalOptions="Center"
+                                                   VerticalOptions="Center" />
+
+                                            <!-- Avatar -->
+                                            <Border Grid.Column="1"
+                                                    WidthRequest="36"
+                                                    HeightRequest="36"
+                                                    StrokeThickness="0"
+                                                    VerticalOptions="Center">
+                                                <Border.StrokeShape>
+                                                    <RoundRectangle CornerRadius="18" />
+                                                </Border.StrokeShape>
+                                                <Image Source="{Binding Avatar, Converter={StaticResource UrlToImageSourceConverter}}"
+                                                       Aspect="AspectFill" />
+                                            </Border>
+
+                                            <!-- User Name + Role/Badge -->
+                                            <VerticalStackLayout Grid.Column="2" Spacing="1" VerticalOptions="Center">
+                                                <Label Text="{Binding FullName}"
+                                                       FontFamily="NunitoBold"
+                                                       FontSize="14"
+                                                       TextColor="{StaticResource SecondaryFg}"
+                                                       LineBreakMode="TailTruncation" />
+                                                <Label Text="{Binding Score, StringFormat='{0} pts · Active Member'}"
+                                                       FontFamily="Nunito"
+                                                       FontSize="11"
+                                                       TextColor="{StaticResource NavMuted}" />
+                                            </VerticalStackLayout>
+
+                                            <!-- Points / Post info -->
+                                            <Border Grid.Column="3"
+                                                    BackgroundColor="{StaticResource Primary10}"
+                                                    Padding="8,4"
+                                                    StrokeThickness="0"
+                                                    VerticalOptions="Center">
+                                                <Border.StrokeShape>
+                                                    <RoundRectangle CornerRadius="12" />
+                                                </Border.StrokeShape>
+                                                <Label Text="{Binding PostCount, StringFormat='{0} posts'}"
+                                                       FontFamily="NunitoBold"
+                                                       FontSize="11"
+                                                       TextColor="{StaticResource Primary}" />
+                                            </Border>
+                                        </Grid>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+                        </Border>
+                    </VerticalStackLayout>
                 </VerticalStackLayout>
             </ScrollView>
         </Grid>

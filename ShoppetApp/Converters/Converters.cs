@@ -119,9 +119,31 @@ public class UrlToImageSourceConverter : IValueConverter
         var url = value?.ToString();
         if (string.IsNullOrWhiteSpace(url))
             return null;
-        if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-            return ImageSource.FromUri(new Uri(url));
-        return ImageSource.FromFile(url);
+
+        var trimmed = url.Trim();
+        bool isAndroid = DeviceInfo.Platform == DevicePlatform.Android;
+        string hostPrefix = isAndroid ? "http://10.0.2.2:5253" : "http://localhost:5253";
+
+        if (trimmed.StartsWith("/"))
+        {
+            trimmed = hostPrefix + trimmed;
+        }
+        else if (isAndroid)
+        {
+            trimmed = trimmed.Replace("http://localhost:", "http://10.0.2.2:")
+                             .Replace("https://localhost:", "https://10.0.2.2:")
+                             .Replace("http://127.0.0.1:", "http://10.0.2.2:")
+                             .Replace("https://127.0.0.1:", "https://10.0.2.2:");
+        }
+
+        if (trimmed.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || 
+            trimmed.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            if (Uri.TryCreate(trimmed, UriKind.Absolute, out var uri))
+                return ImageSource.FromUri(uri);
+        }
+
+        return ImageSource.FromFile(trimmed);
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

@@ -36,6 +36,8 @@ public class ApiService
             public bool ShowSocialLinksOnMarketplace { get; set; } = true;
             public string MobileNumber { get; set; } = string.Empty;
             public bool ShowMobileOnPublicPetId { get; set; }
+            public bool IsPremium { get; set; }
+            public string Role { get; set; } = "Pet Owner";
         }
 
         public async Task<UserProfileDto?> GetProfileAsync(int userId)
