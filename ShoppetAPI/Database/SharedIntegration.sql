@@ -194,3 +194,22 @@ GO
 IF OBJECT_ID('dbo.MarketplaceCartItems','U') IS NOT NULL
     EXEC(N'UPDATE dbo.MarketplaceCartItems SET Quantity=1 WHERE Quantity IS NULL OR Quantity<>1');
 GO
+
+-- Earlier marketplace versions used Active for the same purchasable state.
+UPDATE dbo.MarketplaceListings SET Status='Available' WHERE Status='Active';
+GO
+-- Some existing carts used ListingId before the shared API name was adopted.
+IF OBJECT_ID('dbo.MarketplaceCartItems','U') IS NOT NULL
+   AND COL_LENGTH('dbo.MarketplaceCartItems','MarketplaceListingId') IS NULL
+    ALTER TABLE dbo.MarketplaceCartItems ADD MarketplaceListingId INT NULL;
+GO
+IF COL_LENGTH('dbo.MarketplaceCartItems','ListingId') IS NOT NULL
+BEGIN
+    EXEC(N'UPDATE dbo.MarketplaceCartItems SET MarketplaceListingId=ListingId WHERE MarketplaceListingId IS NULL');
+    ALTER TABLE dbo.MarketplaceCartItems ALTER COLUMN ListingId INT NULL;
+END;
+GO
+IF OBJECT_ID('dbo.MarketplaceCart','U') IS NOT NULL
+   AND COL_LENGTH('dbo.MarketplaceCart','UpdatedAt') IS NULL
+    ALTER TABLE dbo.MarketplaceCart ADD UpdatedAt DATETIME2 NOT NULL DEFAULT(SYSDATETIME());
+GO

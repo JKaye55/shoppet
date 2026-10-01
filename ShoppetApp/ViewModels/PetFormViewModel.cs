@@ -12,6 +12,7 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
 {
     private readonly DatabaseService _db;
     private readonly ApiService _api;
+    private Pet? _loadedPet;
 
     [ObservableProperty] private int _petId;
     [ObservableProperty] private string _name = string.Empty;
@@ -57,7 +58,7 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
         get => _weight;
         set
         {
-            var numericValue = string.IsNullOrWhiteSpace(value) ? string.Empty : new string(value.Where(char.IsDigit).ToArray());
+            var numericValue = string.IsNullOrWhiteSpace(value) ? string.Empty : new string(value.Where(c => char.IsDigit(c) || c == '.').ToArray());
             if (!SetProperty(ref _weight, numericValue) && value != numericValue)
             {
                 OnPropertyChanged(nameof(Weight));
@@ -112,6 +113,7 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
         if (pet is null)
             return;
 
+        _loadedPet = pet;
         IsEditMode = true;
         Name = pet.Name;
         Species = string.IsNullOrEmpty(pet.Species) ? "Dog" : pet.Species;
@@ -161,6 +163,11 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
             return;
         }
 
+        if (!string.IsNullOrWhiteSpace(Weight) && (!decimal.TryParse(Weight, System.Globalization.NumberStyles.AllowDecimalPoint, System.Globalization.CultureInfo.InvariantCulture, out var weightKg) || weightKg < 0))
+        {
+            await Shell.Current.DisplayAlertAsync("Validation", "Enter a valid weight in kilograms, such as 8.5.", "OK");
+            return;
+        }
         _ = int.TryParse(AgeYearsText, out var age);
         if (age > 25)
         {
@@ -181,8 +188,8 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
             try
             {
                 var uploaded = await _api.UploadCommunityMediaAsync(new[] { sharedPhotoUrl });
-                if (uploaded.Count == 1)
-                    sharedPhotoUrl = uploaded[0];
+                if (uploaded.Count != 1) throw new InvalidOperationException("Photo upload did not complete.");
+                sharedPhotoUrl = uploaded[0];
             }
             catch
             {
@@ -201,7 +208,11 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
             Weight = Weight.Trim(),
             PhotoUrl = sharedPhotoUrl,
             Diet = Diet.Trim(),
-            AgeYears = age
+            AgeYears = age,
+            CardId = _loadedPet?.CardId ?? string.Empty,
+            CardTheme = _loadedPet?.CardTheme ?? string.Empty,
+            CardIssuedAt = _loadedPet?.CardIssuedAt,
+            CreatedAt = _loadedPet?.CreatedAt ?? default
         };
 
         int result = await _db.SavePetAsync(pet);
@@ -226,7 +237,11 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
         bool confirm = await Shell.Current.DisplayAlertAsync("Delete Pet", $"Remove {pet.Name}?", "Delete", "Cancel");
         if (!confirm) return;
 
-        await _db.DeletePetAsync(pet);
+        if (await _db.DeletePetAsync(pet) == 0)
+        {
+            await Shell.Current.DisplayAlertAsync("Delete failed", "The server could not delete this pet. Please retry.", "OK");
+            return;
+        }
         WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
         await Shell.Current.GoToAsync("..");
     }

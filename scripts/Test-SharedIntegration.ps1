@@ -2,10 +2,15 @@ param([string]$ApiBaseUrl='http://localhost:5020/api')
 $ErrorActionPreference='Stop'
 $ApiBaseUrl=$ApiBaseUrl.TrimEnd('/')
 function CallApi($method,$path,$token,$body) {
-    $args=@{Method=$method;Uri="$ApiBaseUrl/$path"}
+    $args=@{Method=$method;Uri="$ApiBaseUrl/$path";TimeoutSec=45}
     if($token){$args.Headers=@{Authorization="Bearer $token"}}
     if($null -ne $body){$args.ContentType='application/json';$args.Body=($body|ConvertTo-Json -Depth 10)}
-    Invoke-RestMethod @args
+    try { Invoke-RestMethod @args }
+    catch {
+        Write-Host "Request failed: $method $path" -ForegroundColor Yellow
+        if ($_.ErrorDetails.Message) { Write-Host $_.ErrorDetails.Message -ForegroundColor Yellow }
+        throw
+    }
 }
 function Assert($condition,$label){if(-not $condition){throw "FAIL: $label"};Write-Host "PASS: $label" -ForegroundColor Green}
 function ExpectFailure($code,[scriptblock]$action,$label){$failed=$false;try{& $action|Out-Null}catch{if([int]$_.Exception.Response.StatusCode -ne $code){throw};$failed=$true};Assert $failed $label}
@@ -13,11 +18,17 @@ $id=[guid]::NewGuid().ToString('N').Substring(0,10)
 $password='A happy ShoppetCare demo passphrase'
 $seller=CallApi POST 'auth/register' $null @{FullName="Demo seller $id";Email="seller-$id@example.test";Password=$password}
 $buyer=CallApi POST 'auth/register' $null @{FullName="Demo buyer $id";Email="buyer-$id@example.test";Password=$password}
+$buyerLogin=CallApi POST 'auth/login' $null @{Email=$buyer.Email;Password=$password}
+Assert ($buyerLogin.UserId -eq $buyer.UserId) 'Login returns the registered shared identity'
+$buyer=$buyerLogin
 Assert ($seller.Token.Length -eq 64 -and $buyer.Token.Length -eq 64) 'Random server sessions issued'
 ExpectFailure 401 {CallApi GET 'pets' $null $null} 'Anonymous pet access rejected'
 ExpectFailure 403 {CallApi GET "profile/$($seller.UserId)" $buyer.Token $null} 'Another owner profile is private'
 $pet=CallApi POST 'pets' $buyer.Token @{UserId=$buyer.UserId;Name="Demo pet $id";Species='Dog';Breed='Mixed';AgeYears=2;Weight='8 kg'}
 Assert ($pet.Id -gt 0 -and $pet.CardId) 'Shared pet and digital ID created'
+CallApi PUT "pets/$($pet.Id)" $buyer.Token @{UserId=$buyer.UserId;Name="Updated pet $id";Species='Dog';Breed='Mixed';AgeYears=2;Weight='8.5 kg';Diet='Demo diet'}|Out-Null
+$petRows=@(CallApi GET 'pets' $buyer.Token $null)
+Assert ($petRows[0].Name -eq "Updated pet $id" -and $petRows[0].Weight -eq '8.5 kg' -and $petRows[0].CardId -eq $pet.CardId) 'Pet edits preserve decimal weight and stable card identity'
 ExpectFailure 400 {CallApi POST 'pets' $buyer.Token @{UserId=$buyer.UserId;Name='Second free pet';Species='Dog'}} 'Free account limited to one pet'
 $health=CallApi POST "pets/$($pet.Id)/healthlogs" $buyer.Token @{Type='medication';Name='Demo medicine';Notes='Shared care note';VetName='Demo veterinarian';RecordDate=(Get-Date).ToString('o');DueDate=(Get-Date).AddHours(8).ToString('o');DosageTotal=3;DosageRemaining=2;MedicationIntervalHours=8}
 $healthRows=@(CallApi GET "pets/$($pet.Id)/healthlogs" $buyer.Token $null)
@@ -27,7 +38,8 @@ $food=CallApi POST "pets/$($pet.Id)/foodlogs" $buyer.Token @{FoodName='Demo food
 CallApi POST "pets/$($pet.Id)/foodlogs/$($food.Id)/done" $buyer.Token $null|Out-Null
 $visit=CallApi POST 'vetvisits' $buyer.Token @{UserId=$buyer.UserId;PetId=$pet.Id;ClinicName='Personal vet';VisitAt=(Get-Date).AddDays(1).ToString('o');Purpose='Checkup';Notes='Owner reminder'}
 Assert (@(CallApi GET "vetvisits?userId=$($buyer.UserId)" $buyer.Token $null).Count -eq 1) 'Personal vet reminder saved'
-$post=CallApi POST 'community' $buyer.Token @{UserId=$buyer.UserId;PetId=$pet.Id;Caption="Demo story $id";ImageUrls=''}
+$post=CallApi POST 'community' $buyer.Token @{UserId=$buyer.UserId;PetId=$pet.Id;Content="Demo story $id";ImageUrls=''}
+CallApi PUT "community/$($post.Id)" $buyer.Token @{UserId=$buyer.UserId;PetId=$pet.Id;Content="Updated story $id";ImageUrls=''}|Out-Null
 $comment=CallApi POST "community/$($post.Id)/comments" $seller.Token @{UserId=$seller.UserId;Content='A lovely pet!'}
 CallApi POST "community/$($post.Id)/comments" $buyer.Token @{UserId=$buyer.UserId;ParentCommentId=$comment.Id;Content='Thank you!'}|Out-Null
 CallApi POST "community/comments/$($comment.Id)/like" $buyer.Token @{UserId=$buyer.UserId}|Out-Null
@@ -37,6 +49,13 @@ Assert (@(CallApi GET "messages/chat/$($seller.UserId)/$($buyer.UserId)" $seller
 $contact=CallApi POST 'contacts' $buyer.Token @{UserId=$buyer.UserId;Name='Demo emergency contact';Role='Family';Phone='09000000000';Address='Demo';IsEmergency=$true}
 Assert (@(CallApi GET "contacts?userId=$($buyer.UserId)" $buyer.Token $null).Count -eq 1) 'Emergency contact shared'
 $listing=CallApi POST 'marketplace' $seller.Token @{UserId=$seller.UserId;Title="Demo pet bed $id";Description='Integration demo listing';Price=100;Category='General';Condition='Used';Location='Demo';ImageUrls=''}
+CallApi PUT "marketplace/$($listing.Id)" $seller.Token @{UserId=$seller.UserId;Title="Updated bed $id";Description='Edited integration listing';Price=100;Category='General';Condition='Used';Location='Demo';ImageUrls=''}|Out-Null
+$edited=@(CallApi GET "marketplace/my/$($seller.UserId)" $seller.Token $null)
+Assert ($edited[0].Title -eq "Updated bed $id") 'Listing edit persists'
+CallApi PUT 'profile/update' $seller.Token @{UserId=$seller.UserId;FullName=$seller.FullName;FacebookUrl='https://www.facebook.com/';ShowSocialLinksOnMarketplace=$false}|Out-Null
+$publicListings=@(CallApi GET 'marketplace' $null $null)
+$publicListing=$publicListings | Where-Object { $_.Id -eq $listing.Id } | Select-Object -First 1
+Assert ($null -ne $publicListing -and [string]::IsNullOrEmpty($publicListing.FacebookUrl)) 'Hidden seller social link is not exposed'
 CallApi POST 'cart/items' $buyer.Token @{UserId=$buyer.UserId;ProductId=$listing.Id;Quantity=4}|Out-Null
 CallApi POST 'cart/items' $buyer.Token @{UserId=$buyer.UserId;ProductId=$listing.Id;Quantity=4}|Out-Null
 $cart=CallApi GET "cart?userId=$($buyer.UserId)" $buyer.Token $null

@@ -187,3 +187,7 @@ If the PID no longer exists, it already stopped. Run the startup command in step
 The shared migration now checks each order column independently, supports the existing single-listing order format, retains legacy order lines, and makes obsolete order fields optional for new checkout writes. Existing payment/status values are preserved. The earlier manual repair remains documented as the troubleshooting history; updated startup migration handles these columns automatically.
 
 After pulling both branches, restart one API instance and the Web app. Check startup logs, then run the shared integration script from the mobile repository. This creates demo data and checks the database-backed flows; compilation alone cannot verify your local SQL schema.
+
+## Single-command integration run
+
+Use `scripts/Start-Integration.ps1` in the mobile/API repository to build/start Web and API, wait for database readiness, run acceptance checks and save logs. See [the touchpoint journey](docs/TOUCHPOINT_JOURNEY.md) for the command and presentation evidence sequence. Startup now stops on migration failure instead of serving a partially initialized API.

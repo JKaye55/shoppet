@@ -21,7 +21,8 @@ try
 }
 catch (Exception ex)
 {
-    app.Logger.LogError(ex, "Community SQL Server schema initialization failed.");
+    app.Logger.LogError(ex, "Shared database initialization failed. Startup stopped; see the SQL error above.");
+    throw;
 }
 
 // Configure the HTTP request pipeline.
@@ -42,5 +43,18 @@ app.UseStaticFiles();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapGet("/health/ready", async (IConfiguration config) =>
+{
+    try
+    {
+        await using var connection = new Microsoft.Data.SqlClient.SqlConnection(config.GetConnectionString("SharedSqlServer"));
+        await connection.OpenAsync();
+        await using var command = new Microsoft.Data.SqlClient.SqlCommand("SELECT TOP(0) Id,ApiToken,ApiTokenExpiresAt,IsDisabled FROM dbo.UserAccounts; SELECT TOP(0) Reference,Subtotal,Total FROM dbo.MarketplaceOrders; SELECT TOP(0) Quantity,MarketplaceListingId,CartId FROM dbo.MarketplaceCartItems;", connection);
+        await command.ExecuteNonQueryAsync();
+        return Results.Ok(new { status = "ready" });
+    }
+    catch { return Results.StatusCode(503); }
+});
 
 app.Run();
