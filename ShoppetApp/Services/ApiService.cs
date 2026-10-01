@@ -170,7 +170,16 @@ public class ApiService
                     ? ApiResult<AuthResponse>.Ok(data)
                     : ApiResult<AuthResponse>.Fail("Server returned an empty login response.");
             }
-            return ApiResult<AuthResponse>.Fail("Invalid email or password.");
+            var message = res.StatusCode switch
+            {
+                System.Net.HttpStatusCode.Unauthorized => "Invalid email or password. Check that the API and web use the same database.",
+                System.Net.HttpStatusCode.Forbidden => "This account is disabled or its role cannot sign in. Contact the administrator.",
+                System.Net.HttpStatusCode.BadRequest => "Enter your email and password.",
+                System.Net.HttpStatusCode.NotFound => "Sign-in endpoint not found. Check the API URL in Connection Settings.",
+                _ when (int)res.StatusCode >= 500 => $"The sign-in server returned an error (HTTP {(int)res.StatusCode}). Check the API terminal and database connection.",
+                _ => $"Sign-in failed (HTTP {(int)res.StatusCode}). Check the API connection and try again."
+            };
+            return ApiResult<AuthResponse>.Fail(message);
         }
         catch (Exception ex)
         {
