@@ -89,7 +89,7 @@ public class HealthLogsController : ControllerBase
             await conn.OpenAsync();
             await using var transaction=(SqlTransaction)await conn.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
             await using(var limit=new SqlCommand("SELECT ISNULL(u.IsPremium,0),(SELECT COUNT(1) FROM PetHealthRecords WITH(UPDLOCK,HOLDLOCK) WHERE PetId=@Pet) FROM PetProfiles p JOIN UserAccounts u ON u.Id=p.UserId WHERE p.Id=@Pet",conn,transaction))
-            {limit.Parameters.AddWithValue("@Pet",petId);await using var r=await limit.ExecuteReaderAsync();if(!await r.ReadAsync())return NotFound();if(!r.GetBoolean(0)&&r.GetInt32(1)>=5)return BadRequest("Free accounts can save 5 health records per pet. Premium is ₱49 for lifetime access.");}
+            {limit.Parameters.AddWithValue("@Pet",petId);await using var r=await limit.ExecuteReaderAsync();if(!await r.ReadAsync())return NotFound();if(!r.GetBoolean(0)&&r.GetInt32(1)>=5)return BadRequest("Free accounts can save 5 health records per pet. Premium is ₱150 for 2 months access.");}
             const string sql = """
                 INSERT INTO PetHealthRecords
                 (PetId, RecordType, Title, Notes, RecordDate, NextDueDate, VetName,

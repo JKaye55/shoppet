@@ -12,8 +12,8 @@
             <Border Padding="20" BackgroundColor="{StaticResource CardBg}" Stroke="{StaticResource Secondary20}" StrokeThickness="1" StrokeShape="RoundRectangle 22">
                 <VerticalStackLayout Spacing="10">
                     <Label x:Name="StatusLabel" Text="Checking status..." FontFamily="NunitoBold" FontSize="18" TextColor="{StaticResource Primary}"/>
-                    <Label Text="Lifetime Premium unlocks unlimited pets and health records, plus advanced Pet ID customization. No expiry or recurring charges." FontSize="13" TextColor="{StaticResource BodyText}"/>
-                    <Label Text="₱49 lifetime • mock payment only" FontFamily="NunitoExtraBold" FontSize="20" TextColor="{StaticResource BodyText}"/>
+                    <Label Text="Premium (2 Months) unlocks unlimited pets and health records, plus advanced Pet ID customization and marketplace perks." FontSize="13" TextColor="{StaticResource BodyText}"/>
+                    <Label Text="₱150 for 2 Months • mock payment only" FontFamily="NunitoExtraBold" FontSize="20" TextColor="{StaticResource BodyText}"/>
                     <Button x:Name="ActivateButton" Text="Activate Premium (Simulation)" BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="18" HeightRequest="50" FontFamily="NunitoBold" Clicked="OnActivateClicked"/>
                 </VerticalStackLayout>
             </Border>

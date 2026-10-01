@@ -30,7 +30,7 @@ public class PremiumController : ControllerBase
             IsPremium=r.GetBoolean(0),
             ActivatedAt=r.IsDBNull(1)?(DateTime?)null:r.GetDateTime(1),
             Reference=r.GetString(2),
-            Price=49m
+            Price=150m
         });
     }
 
@@ -70,7 +70,7 @@ public class PremiumController : ControllerBase
             INSERT INTO Transactions
                 (UserId,Type,Amount,Reference,PaidAt,PaymentMethod,Status)
             VALUES
-                (@UserId,'PremiumUpgrade',49,@Reference,SYSDATETIME(),'Mock Payment','SimulatedPaid');
+                (@UserId,'PremiumUpgrade',150,@Reference,SYSDATETIME(),'Mock Payment','SimulatedPaid');
             """,conn,tx))
         {
             log.Parameters.AddWithValue("@UserId",userId);
@@ -81,7 +81,7 @@ public class PremiumController : ControllerBase
         await using(var notify=new SqlCommand("""
             INSERT INTO Notifications(UserId,Title,Body,Link,Icon,IsRead,CreatedAt)
             VALUES(@UserId,'Premium activated',
-                   'Your ShoppetCare Premium demo upgrade is active.',
+                   'Your ShoppetCare Premium (₱150 / 2 Months) upgrade is active.',
                    'premium','',0,SYSDATETIME());
             """,conn,tx))
         {

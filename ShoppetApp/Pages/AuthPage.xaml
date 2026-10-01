@@ -176,6 +176,41 @@
                     TextColor="{StaticResource PrimaryFg}"
                     FontFamily="NunitoBold" />
 
+            <Border BackgroundColor="{StaticResource CardBg}"
+                    StrokeThickness="1"
+                    Stroke="{StaticResource Secondary20}"
+                    Padding="14"
+                    Margin="24,12,24,0"
+                    IsVisible="{Binding IsLogin}">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="16" />
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Quick Fill (No Manual Typing):" FontSize="12" FontFamily="NunitoSemiBold" TextColor="{StaticResource SecondaryFg}" HorizontalOptions="Center"/>
+                    <HorizontalStackLayout Spacing="10" HorizontalOptions="Center">
+                        <Button Text="🐾 Pet Owner"
+                                Command="{Binding AutoFillPetOwnerCommand}"
+                                HeightRequest="36"
+                                Padding="12,0"
+                                FontSize="12"
+                                CornerRadius="14"
+                                BackgroundColor="{StaticResource Secondary10}"
+                                TextColor="{StaticResource Primary}"
+                                FontFamily="NunitoBold"/>
+                        <Button Text="⭐ Demo Account"
+                                Command="{Binding AutoFillDemoUserCommand}"
+                                CommandParameter="demo"
+                                HeightRequest="36"
+                                Padding="12,0"
+                                FontSize="12"
+                                CornerRadius="14"
+                                BackgroundColor="{StaticResource Secondary10}"
+                                TextColor="{StaticResource Primary}"
+                                FontFamily="NunitoBold"/>
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
             <Label Text="{Binding ToggleText}"
                    FontFamily="Nunito"
                    FontSize="14"

@@ -77,6 +77,32 @@ public partial class AuthViewModel : ObservableObject
     private void ToggleConfirmPassword() => IsConfirmPasswordVisible = !IsConfirmPasswordVisible;
 
     [RelayCommand]
+    private void AutoFillPetOwner()
+    {
+        IsLogin = true;
+        Email = "petowner@shoppetcare.local";
+        Password = "ShoppetCarePass123!";
+        ClearErrors();
+    }
+
+    [RelayCommand]
+    private void AutoFillDemoUser(string role)
+    {
+        IsLogin = true;
+        if (role == "admin")
+        {
+            Email = "admin@shoppetcare.local";
+            Password = "ShoppetCareAdmin123!";
+        }
+        else
+        {
+            Email = "demo-owner@shoppetcare.local";
+            Password = "A happy ShoppetCare demo passphrase";
+        }
+        ClearErrors();
+    }
+
+    [RelayCommand]
     private async Task SubmitAsync()
     {
         ClearErrors();

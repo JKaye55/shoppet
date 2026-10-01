@@ -108,7 +108,7 @@ public class PetsController : ControllerBase
 
             await using var transaction=(SqlTransaction)await connection.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
             await using(var check=new SqlCommand("SELECT ISNULL(IsPremium,0),(SELECT COUNT(1) FROM PetProfiles WITH(UPDLOCK,HOLDLOCK) WHERE UserId=@U) FROM UserAccounts WITH(UPDLOCK,HOLDLOCK) WHERE Id=@U",connection,transaction))
-            {check.Parameters.AddWithValue("@U",request.UserId);await using var r=await check.ExecuteReaderAsync();if(!await r.ReadAsync())return NotFound();if(!r.GetBoolean(0)&&r.GetInt32(1)>=1)return BadRequest("Free accounts support 1 pet. Premium is ₱49 for lifetime access.");}
+            {check.Parameters.AddWithValue("@U",request.UserId);await using var r=await check.ExecuteReaderAsync();if(!await r.ReadAsync())return NotFound();if(!r.GetBoolean(0)&&r.GetInt32(1)>=1)return BadRequest("Free accounts support 1 pet. Premium is ₱150 for 2 months access.");}
             var cardId = "PET-" + Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
             var weightKg = ParseWeight(request.Weight);
 

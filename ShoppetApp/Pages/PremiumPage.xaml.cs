@@ -37,7 +37,7 @@ public partial class PremiumPage : ContentPage
     {
         var confirm = await DisplayAlertAsync(
             "Premium Simulation",
-            "Activate the ₱49 Premium upgrade as a mock/demo transaction? No real money will be charged.",
+            "Activate the ₱150 (2 Months Access) Premium upgrade as a mock/demo transaction? No real money will be charged.",
             "Simulate Upgrade",
             "Cancel");
         if (!confirm) return;
