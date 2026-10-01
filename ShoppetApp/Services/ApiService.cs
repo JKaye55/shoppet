@@ -1,5 +1,7 @@
 ﻿using ShoppetApp.Models;
 using ShoppetApp.ViewModels;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Maui.Devices;
 using System.Net.Http.Json;
 
 namespace ShoppetApp.Services;
@@ -14,16 +16,6 @@ public class UserSearchResult
 
 public class ApiService
 {
-    // -- Change this URL to match wherever the API is running ------------------
-    // For Android emulator use:   http://10.0.2.2:5020
-    // For iOS simulator use:      http://localhost:5020
-    // For Windows dev machine:    http://localhost:5020
-#if ANDROID
-    private const string BaseUrl = "http://10.0.2.2:5020/api";
-#else
-    private const string BaseUrl = "http://localhost:5020/api";
-#endif
-
     private readonly HttpClient _http;
     private string? _token;
         public class UserProfileDto
@@ -53,9 +45,41 @@ public class ApiService
         }
 
 
-    public ApiService()
+    public ApiService(IConfiguration configuration)
     {
-        _http = new HttpClient { BaseAddress = new Uri(BaseUrl + "/") };
+        var baseUrl = ResolveApiBaseUrl(configuration).TrimEnd('/');
+        _http = new HttpClient { BaseAddress = new Uri($"{baseUrl}/api/") };
+    }
+
+    private static string ResolveApiBaseUrl(IConfiguration configuration)
+    {
+        if (!string.IsNullOrWhiteSpace(configuration["ShoppetApi:BaseUrl"]))
+        {
+            return configuration["ShoppetApi:BaseUrl"]!;
+        }
+
+        var directEnvironmentBaseUrl = Environment.GetEnvironmentVariable("SHOPPET_API_BASE_URL");
+        if (!string.IsNullOrWhiteSpace(directEnvironmentBaseUrl))
+        {
+            return directEnvironmentBaseUrl;
+        }
+
+        var platformKey = DeviceInfo.Current.Platform switch
+        {
+            DevicePlatform.Android => "AndroidBaseUrl",
+            DevicePlatform.iOS => "IosBaseUrl",
+            DevicePlatform.MacCatalyst => "MacCatalystBaseUrl",
+            DevicePlatform.WinUI => "WindowsBaseUrl",
+            _ => "DefaultBaseUrl"
+        };
+
+        var platformUrl = configuration[$"ShoppetApi:{platformKey}"];
+        if (!string.IsNullOrWhiteSpace(platformUrl))
+        {
+            return platformUrl;
+        }
+
+        return configuration["ShoppetApi:DefaultBaseUrl"] ?? "http://localhost:5020";
     }
 
     // -- Token management ------------------------------------------------------
@@ -647,8 +671,6 @@ public class ApiResult<T>
     public static ApiResult<T> Ok(T data) => new() { Success = true, Data = data };
     public static ApiResult<T> Fail(string error) => new() { Success = false, Error = error };
 }
-
-
 
 
 

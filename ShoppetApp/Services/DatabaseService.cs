@@ -14,22 +14,24 @@ namespace ShoppetApp.Services
             "shoppet.db"
         );
 
-        private readonly string _mysqlConnectionString = "Server=localhost;Database=shoppetdb;Uid=root;Pwd=;";
+        private readonly string _mysqlConnectionString;
 
         public User? CurrentUser { get; set; }
         public ApiService? ApiService { get; set; }
 
         public DatabaseService()
         {
+            _mysqlConnectionString = string.Empty;
             _ = InitializeTablesAsync();
         }
 
-        public DatabaseService(string dbPath)
+        public DatabaseService(string dbPath, string mysqlConnectionString = "")
         {
             if (!string.IsNullOrEmpty(dbPath))
             {
                 _dbPath = dbPath;
             }
+            _mysqlConnectionString = mysqlConnectionString;
             _ = InitializeTablesAsync();
         }
 
@@ -94,6 +96,7 @@ namespace ShoppetApp.Services
         public async Task<List<CommunityPost>> GetCommunityPostsAsync(int viewerUserId = 0)
         {
             var posts = new List<CommunityPost>();
+            if (string.IsNullOrWhiteSpace(_mysqlConnectionString)) return posts;
             try
             {
                 using var connection = new MySqlConnection(_mysqlConnectionString);
@@ -145,6 +148,7 @@ namespace ShoppetApp.Services
 
         public async Task<int> SaveCommunityPostAsync(CommunityPost post)
         {
+            if (string.IsNullOrWhiteSpace(_mysqlConnectionString)) return 0;
             try
             {
                 using var connection = new MySqlConnection(_mysqlConnectionString);
@@ -179,6 +183,7 @@ namespace ShoppetApp.Services
 
         public async Task<bool> UpdateCommunityPostAsync(CommunityPost post)
         {
+            if (string.IsNullOrWhiteSpace(_mysqlConnectionString)) return false;
             try
             {
                 using var connection = new MySqlConnection(_mysqlConnectionString);
@@ -211,6 +216,7 @@ namespace ShoppetApp.Services
 
         public async Task<bool> DeleteCommunityPostAsync(CommunityPost post)
         {
+            if (string.IsNullOrWhiteSpace(_mysqlConnectionString)) return false;
             try
             {
                 using var connection = new MySqlConnection(_mysqlConnectionString);
@@ -250,6 +256,7 @@ namespace ShoppetApp.Services
         /// </summary>
         public async Task<int> ToggleLikeAsync(int postId, int userId)
         {
+            if (string.IsNullOrWhiteSpace(_mysqlConnectionString)) return 0;
             try
             {
                 using var connection = new MySqlConnection(_mysqlConnectionString);
@@ -304,6 +311,7 @@ namespace ShoppetApp.Services
         public async Task<List<CommunityComment>> GetCommentsAsync(int postId)
         {
             var comments = new List<CommunityComment>();
+            if (string.IsNullOrWhiteSpace(_mysqlConnectionString)) return comments;
             try
             {
                 using var connection = new MySqlConnection(_mysqlConnectionString);
@@ -353,6 +361,7 @@ namespace ShoppetApp.Services
         /// </summary>
         public async Task<int> AddCommentAsync(CommunityComment comment)
         {
+            if (string.IsNullOrWhiteSpace(_mysqlConnectionString)) return 0;
             try
             {
                 using var connection = new MySqlConnection(_mysqlConnectionString);
