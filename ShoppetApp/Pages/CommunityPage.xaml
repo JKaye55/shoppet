@@ -14,6 +14,7 @@
         <Grid Grid.Row="1">
             <RefreshView Command="{Binding RefreshCommand}"
                          IsRefreshing="{Binding IsRefreshing}"
+                         IsVisible="{Binding ShowRankingsTab, Converter={StaticResource InverseBoolConverter}}"
                          RefreshColor="{StaticResource Primary}">
                 <CollectionView ItemsSource="{Binding Posts}"
                                 SelectionMode="None"
@@ -108,6 +109,46 @@
                                             CornerRadius="17"
                                             HeightRequest="42"
                                             Padding="16,0" />
+                                </Grid>
+                            </Border>
+
+                            <!-- Feed / Rankings Segmented Switch -->
+                            <Border BackgroundColor="{StaticResource Secondary10}"
+                                    Stroke="{StaticResource Secondary20}"
+                                    StrokeThickness="1"
+                                    StrokeShape="RoundRectangle 16"
+                                    Padding="4">
+                                <Grid ColumnDefinitions="*,*">
+                                    <Border BackgroundColor="{Binding FeedTabBg}"
+                                            StrokeThickness="0"
+                                            StrokeShape="RoundRectangle 13"
+                                            Padding="0,8">
+                                        <Label Text="Community Feed"
+                                               FontFamily="NunitoBold"
+                                               FontSize="13"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center"
+                                               TextColor="{Binding FeedTabText}" />
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding SelectTabCommand}" CommandParameter="Feed" />
+                                        </Border.GestureRecognizers>
+                                    </Border>
+
+                                    <Border Grid.Column="1"
+                                            BackgroundColor="{Binding RankingsTabBg}"
+                                            StrokeThickness="0"
+                                            StrokeShape="RoundRectangle 13"
+                                            Padding="0,8">
+                                        <Label Text="🏆 Rankings"
+                                               FontFamily="NunitoBold"
+                                               FontSize="13"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center"
+                                               TextColor="{Binding RankingsTabText}" />
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding SelectTabCommand}" CommandParameter="Rankings" />
+                                        </Border.GestureRecognizers>
+                                    </Border>
                                 </Grid>
                             </Border>
                         </VerticalStackLayout>
@@ -237,6 +278,146 @@
                                                 HeightRequest="42" />
                                     </Grid>
                                 </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+
+                    <CollectionView.Footer>
+                        <BoxView HeightRequest="110" Color="Transparent" />
+                    </CollectionView.Footer>
+                </CollectionView>
+            </RefreshView>
+
+            <!-- Rankings Leaderboard View -->
+            <RefreshView IsVisible="{Binding ShowRankingsTab}"
+                         Command="{Binding RefreshCommand}"
+                         IsRefreshing="{Binding IsRefreshing}"
+                         RefreshColor="{StaticResource Primary}">
+                <CollectionView ItemsSource="{Binding Rankings}"
+                                SelectionMode="None"
+                                Margin="0"
+                                VerticalScrollBarVisibility="Never">
+                    <CollectionView.ItemsLayout>
+                        <LinearItemsLayout Orientation="Vertical" ItemSpacing="10" />
+                    </CollectionView.ItemsLayout>
+
+                    <CollectionView.Header>
+                        <VerticalStackLayout Padding="18,16,18,14" Spacing="14">
+                            <VerticalStackLayout Spacing="3">
+                                <Label Text="Community Leaderboard"
+                                       FontFamily="NunitoExtraBold"
+                                       FontSize="26"
+                                       TextColor="{StaticResource BodyText}" />
+                                <Label Text="Top pet lovers ranked by posts, comments, and community likes."
+                                       FontFamily="Nunito"
+                                       FontSize="13"
+                                       TextColor="{StaticResource Gray500}" />
+                            </VerticalStackLayout>
+
+                            <!-- Feed / Rankings Segmented Switch -->
+                            <Border BackgroundColor="{StaticResource Secondary10}"
+                                    Stroke="{StaticResource Secondary20}"
+                                    StrokeThickness="1"
+                                    StrokeShape="RoundRectangle 16"
+                                    Padding="4">
+                                <Grid ColumnDefinitions="*,*">
+                                    <Border BackgroundColor="{Binding FeedTabBg}"
+                                            StrokeThickness="0"
+                                            StrokeShape="RoundRectangle 13"
+                                            Padding="0,8">
+                                        <Label Text="Community Feed"
+                                               FontFamily="NunitoBold"
+                                               FontSize="13"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center"
+                                               TextColor="{Binding FeedTabText}" />
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding SelectTabCommand}" CommandParameter="Feed" />
+                                        </Border.GestureRecognizers>
+                                    </Border>
+
+                                    <Border Grid.Column="1"
+                                            BackgroundColor="{Binding RankingsTabBg}"
+                                            StrokeThickness="0"
+                                            StrokeShape="RoundRectangle 13"
+                                            Padding="0,8">
+                                        <Label Text="🏆 Rankings"
+                                               FontFamily="NunitoBold"
+                                               FontSize="13"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center"
+                                               TextColor="{Binding RankingsTabText}" />
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding SelectTabCommand}" CommandParameter="Rankings" />
+                                        </Border.GestureRecognizers>
+                                    </Border>
+                                </Grid>
+                            </Border>
+                        </VerticalStackLayout>
+                    </CollectionView.Header>
+
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="18,0"
+                                    Padding="14"
+                                    BackgroundColor="{StaticResource CardBg}"
+                                    Stroke="{StaticResource Secondary20}"
+                                    StrokeThickness="1"
+                                    StrokeShape="RoundRectangle 18">
+                                <Border.Shadow>
+                                    <Shadow Brush="#10000000" Offset="0,2" Radius="8" Opacity="0.1" />
+                                </Border.Shadow>
+                                <Grid ColumnDefinitions="36,44,*,Auto" ColumnSpacing="10" VerticalOptions="Center">
+                                    <Label Text="{Binding RankBadge}"
+                                           FontSize="18"
+                                           FontFamily="NunitoBold"
+                                           VerticalOptions="Center"
+                                           HorizontalOptions="Center"
+                                           TextColor="{StaticResource Primary}" />
+
+                                    <Border Grid.Column="1"
+                                            WidthRequest="42"
+                                            HeightRequest="42"
+                                            BackgroundColor="{StaticResource Primary}"
+                                            StrokeThickness="0"
+                                            StrokeShape="RoundRectangle 21"
+                                            VerticalOptions="Center">
+                                        <Grid>
+                                            <Label Text="{Binding Initial}"
+                                                   TextColor="White"
+                                                   FontFamily="NunitoBold"
+                                                   FontSize="15"
+                                                   HorizontalOptions="Center"
+                                                   VerticalOptions="Center" />
+                                            <Image Source="{Binding Avatar, Converter={StaticResource Base64ToImageSourceConverter}}"
+                                                   Aspect="AspectFill" />
+                                        </Grid>
+                                    </Border>
+
+                                    <VerticalStackLayout Grid.Column="2" Spacing="2" VerticalOptions="Center">
+                                        <Label Text="{Binding FullName}"
+                                               FontFamily="NunitoBold"
+                                               FontSize="14"
+                                               TextColor="{StaticResource BodyText}"
+                                               LineBreakMode="TailTruncation" />
+                                        <Label Text="{Binding DisplayStats}"
+                                               FontSize="11"
+                                               TextColor="{StaticResource Gray500}" />
+                                    </VerticalStackLayout>
+
+                                    <Border Grid.Column="3"
+                                            BackgroundColor="{StaticResource Primary10}"
+                                            Stroke="{StaticResource Primary20}"
+                                            StrokeThickness="1"
+                                            StrokeShape="RoundRectangle 12"
+                                            Padding="8,4"
+                                            VerticalOptions="Center">
+                                        <Label Text="{Binding Score, StringFormat='{0} pts'}"
+                                               FontFamily="NunitoBold"
+                                               FontSize="11"
+                                               TextColor="{StaticResource Primary}" />
+                                    </Border>
+                                </Grid>
                             </Border>
                         </DataTemplate>
                     </CollectionView.ItemTemplate>

@@ -1,4 +1,4 @@
-﻿using ShoppetApp.Models;
+using ShoppetApp.Models;
 using ShoppetApp.ViewModels;
 using System.Net.Http.Json;
 
@@ -667,6 +667,32 @@ public class ApiService
 #endif
 
         return posts;
+    }
+
+    public async Task<List<CommunityRanking>> GetCommunityRankingsAsync(int limit = 20)
+    {
+        try
+        {
+            using var response = await _http.GetAsync($"community/rankings?limit={limit}");
+            if (!response.IsSuccessStatusCode)
+                return new List<CommunityRanking>();
+
+            var rankings = await response.Content.ReadFromJsonAsync<List<CommunityRanking>>() ?? new List<CommunityRanking>();
+
+#if ANDROID
+            foreach (var r in rankings)
+            {
+                if (!string.IsNullOrWhiteSpace(r.Avatar))
+                    r.Avatar = r.Avatar.Replace("http://localhost:", $"http://{_http.BaseAddress!.Host}:", StringComparison.OrdinalIgnoreCase);
+            }
+#endif
+            return rankings;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching rankings: {ex.Message}");
+            return new List<CommunityRanking>();
+        }
     }
 
     public async Task<List<string>> UploadCommunityMediaAsync(IEnumerable<string> filePaths)

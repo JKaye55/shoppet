@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 
 namespace ShoppetApp.Converters;
 
@@ -539,6 +539,28 @@ public class BoolToBoldConverter : IValueConverter
     {
         if (value is bool b && b) return FontAttributes.Bold;
         return FontAttributes.None;
+    }
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
+}
+
+public class BoolToObjectConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (parameter is string paramStr && paramStr.Contains('|'))
+        {
+            var parts = paramStr.Split('|');
+            bool isTrue = value is bool b && b;
+            var choice = isTrue ? parts[0] : parts[1];
+
+            if (targetType == typeof(Color))
+            {
+                if (choice.Equals("Transparent", StringComparison.OrdinalIgnoreCase)) return Colors.Transparent;
+                return Color.FromArgb(choice);
+            }
+            return choice;
+        }
+        return value;
     }
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
 }

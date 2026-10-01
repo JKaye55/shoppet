@@ -12,6 +12,12 @@ public partial class CommunityViewModel : ObservableObject
     private readonly DatabaseService _db;
 
     [ObservableProperty] private ObservableCollection<CommunityPost> _posts = new();
+    [ObservableProperty] private ObservableCollection<CommunityRanking> _rankings = new();
+    [ObservableProperty] private bool _showRankingsTab;
+    [ObservableProperty] private Color _feedTabBg = Color.FromArgb("#FFFFFF");
+    [ObservableProperty] private Color _feedTabText = Color.FromArgb("#173D3D");
+    [ObservableProperty] private Color _rankingsTabBg = Colors.Transparent;
+    [ObservableProperty] private Color _rankingsTabText = Color.FromArgb("#788782");
     [ObservableProperty] private bool _isRefreshing;
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _hasError;
@@ -20,10 +26,12 @@ public partial class CommunityViewModel : ObservableObject
     [ObservableProperty] private string _userProfilePicture = string.Empty;
 
     public bool HasPosts => Posts.Count > 0;
-    public bool IsEmpty => !IsLoading && !HasError && Posts.Count == 0;
+    public bool HasRankings => Rankings.Count > 0;
+    public bool IsEmpty => !IsLoading && !HasError && Posts.Count == 0 && !ShowRankingsTab;
 
     partial void OnIsLoadingChanged(bool value) => OnPropertyChanged(nameof(IsEmpty));
     partial void OnHasErrorChanged(bool value) => OnPropertyChanged(nameof(IsEmpty));
+    partial void OnShowRankingsTabChanged(bool value) => OnPropertyChanged(nameof(IsEmpty));
 
     public CommunityViewModel(ApiService api, DatabaseService db)
     {
@@ -34,6 +42,21 @@ public partial class CommunityViewModel : ObservableObject
             OnPropertyChanged(nameof(HasPosts));
             OnPropertyChanged(nameof(IsEmpty));
         };
+        Rankings.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(HasRankings));
+        };
+    }
+
+    [RelayCommand]
+    public void SelectTab(string tab)
+    {
+        bool isRankings = string.Equals(tab, "Rankings", StringComparison.OrdinalIgnoreCase);
+        ShowRankingsTab = isRankings;
+        FeedTabBg = isRankings ? Colors.Transparent : Color.FromArgb("#FFFFFF");
+        FeedTabText = isRankings ? Color.FromArgb("#788782") : Color.FromArgb("#173D3D");
+        RankingsTabBg = isRankings ? Color.FromArgb("#FFFFFF") : Colors.Transparent;
+        RankingsTabText = isRankings ? Color.FromArgb("#173D3D") : Color.FromArgb("#788782");
     }
 
     [RelayCommand]
@@ -56,11 +79,21 @@ public partial class CommunityViewModel : ObservableObject
 
             UserProfilePicture = _db.CurrentUser?.ProfilePicture ?? string.Empty;
 
-            var data = await _api.GetCommunityPostsAsync(userId);
+            var dataTask = _api.GetCommunityPostsAsync(userId);
+            var rankingsTask = _api.GetCommunityRankingsAsync(15);
+
+            await Task.WhenAll(dataTask, rankingsTask);
+
+            var data = await dataTask;
+            var rankList = await rankingsTask;
 
             Posts.Clear();
             foreach (var post in data.OrderByDescending(p => p.Timestamp))
                 Posts.Add(post);
+
+            Rankings.Clear();
+            foreach (var r in rankList)
+                Rankings.Add(r);
         }
         catch (Exception ex)
         {
