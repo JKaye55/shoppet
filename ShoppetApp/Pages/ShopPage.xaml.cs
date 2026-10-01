@@ -1,4 +1,4 @@
-﻿using ShoppetApp.Models;
+using ShoppetApp.Models;
 using ShoppetApp.Services;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -35,6 +35,22 @@ public partial class ShopPage : ContentPage
             await LoadMyListingsAsync();
         else
             await LoadExploreListingsAsync();
+    }
+
+    private async void OnMarketplaceRefresh(object? sender, EventArgs e)
+    {
+        try
+        {
+            if (_isSellTab)
+                await LoadMyListingsAsync();
+            else
+                await LoadExploreListingsAsync();
+        }
+        finally
+        {
+            if (sender is RefreshView rv)
+                rv.IsRefreshing = false;
+        }
     }
 
     // --- Tab switching ---
