@@ -187,5 +187,10 @@ GO
 IF COL_LENGTH('dbo.UserAccounts','IsDisabled') IS NULL ALTER TABLE dbo.UserAccounts ADD IsDisabled BIT NOT NULL DEFAULT(0);
 GO
 
-IF OBJECT_ID('dbo.MarketplaceCartItems','U') IS NOT NULL UPDATE dbo.MarketplaceCartItems SET Quantity=1 WHERE Quantity<>1;
+IF OBJECT_ID('dbo.MarketplaceCartItems','U') IS NOT NULL
+   AND COL_LENGTH('dbo.MarketplaceCartItems','Quantity') IS NULL
+    ALTER TABLE dbo.MarketplaceCartItems ADD Quantity INT NOT NULL DEFAULT(1);
+GO
+IF OBJECT_ID('dbo.MarketplaceCartItems','U') IS NOT NULL
+    EXEC(N'UPDATE dbo.MarketplaceCartItems SET Quantity=1 WHERE Quantity IS NULL OR Quantity<>1');
 GO
