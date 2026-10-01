@@ -213,3 +213,24 @@ IF OBJECT_ID('dbo.MarketplaceCart','U') IS NOT NULL
    AND COL_LENGTH('dbo.MarketplaceCart','UpdatedAt') IS NULL
     ALTER TABLE dbo.MarketplaceCart ADD UpdatedAt DATETIME2 NOT NULL DEFAULT(SYSDATETIME());
 GO
+
+IF OBJECT_ID('dbo.MarketplaceCartItems','U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('dbo.MarketplaceCartItems','UserId') IS NULL
+        ALTER TABLE dbo.MarketplaceCartItems ADD UserId INT NULL;
+    IF COL_LENGTH('dbo.MarketplaceCartItems','ListingId') IS NULL
+        ALTER TABLE dbo.MarketplaceCartItems ADD ListingId INT NULL;
+    IF COL_LENGTH('dbo.MarketplaceCartItems','AddedAt') IS NULL
+        ALTER TABLE dbo.MarketplaceCartItems ADD AddedAt DATETIME2 NULL DEFAULT(SYSDATETIME());
+END;
+GO
+
+IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_MarketplaceCartItems_User_Listing' AND object_id = OBJECT_ID('dbo.MarketplaceCartItems'))
+    DROP INDEX UX_MarketplaceCartItems_User_Listing ON dbo.MarketplaceCartItems;
+GO
+
+IF OBJECT_ID('dbo.MarketplaceCartItems','U') IS NOT NULL
+    AND NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_MarketplaceCartItems_User_Listing' AND object_id = OBJECT_ID('dbo.MarketplaceCartItems'))
+    CREATE UNIQUE INDEX UX_MarketplaceCartItems_User_Listing ON dbo.MarketplaceCartItems(UserId, ListingId) WHERE UserId IS NOT NULL AND ListingId IS NOT NULL;
+GO
+

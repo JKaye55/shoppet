@@ -117,7 +117,24 @@ public partial class HomeViewModel : ObservableObject, IRecipient<DataChangedMes
                 System.Diagnostics.Debug.WriteLine($"[HomeViewModel] Rankings error: {ex.Message}");
             }
 
-            IsPremium = Preferences.Get("LoggedInUserIsPremium", false);
+            try
+            {
+                var premiumStatus = await _api.GetPremiumStatusAsync();
+                if (premiumStatus != null)
+                {
+                    IsPremium = premiumStatus.IsPremium;
+                    Preferences.Set("LoggedInUserIsPremium", premiumStatus.IsPremium);
+                }
+                else
+                {
+                    IsPremium = Preferences.Get("LoggedInUserIsPremium", false);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[HomeViewModel] Premium status check error: {ex.Message}");
+                IsPremium = Preferences.Get("LoggedInUserIsPremium", false);
+            }
         }
         catch (Exception ex)
         {

@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ShoppetApp.Models;
@@ -115,13 +115,21 @@ namespace ShoppetApp.ViewModels
                             break;
                         }
 
-                        AttachedMedia.Add(new MediaAttachment { FilePath = file.FullPath, IsVideo = false });
+                        // Copy photo stream to local cache directory for Android photo provider compatibility
+                        var localCachePath = Path.Combine(FileSystem.CacheDirectory, $"{Guid.NewGuid():N}_{file.FileName}");
+                        using (var sourceStream = await file.OpenReadAsync())
+                        using (var targetStream = File.Create(localCachePath))
+                        {
+                            await sourceStream.CopyToAsync(targetStream);
+                        }
+
+                        AttachedMedia.Add(new MediaAttachment { FilePath = localCachePath, IsVideo = false });
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
+                Console.WriteLine($"Photo pick error: {ex.Message}");
             }
         }
 
@@ -170,7 +178,7 @@ namespace ShoppetApp.ViewModels
                         : string.Empty,
                     Content = Content.Trim(),
                     ImageUrls = uploadedUrls.Count > 0
-                        ? string.Join("|", uploadedUrls)
+                        ? string.Join(",", uploadedUrls)
                         : null
                 };
 

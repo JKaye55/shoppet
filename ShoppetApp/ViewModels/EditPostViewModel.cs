@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ShoppetApp.Models;
@@ -84,6 +84,44 @@ namespace ShoppetApp.ViewModels
         }
 
         [RelayCommand]
+        private async Task AttachPhotoAsync()
+        {
+            try
+            {
+                var result = await FilePicker.Default.PickMultipleAsync(new PickOptions
+                {
+                    PickerTitle = "Select Photos",
+                    FileTypes = FilePickerFileType.Images
+                });
+
+                if (result != null)
+                {
+                    foreach (var file in result)
+                    {
+                        if (AttachedMedia.Count >= 5)
+                        {
+                            await Shell.Current.DisplayAlertAsync("Limit Reached", "You can only attach a maximum of 5 photos.", "OK");
+                            break;
+                        }
+
+                        var localCachePath = Path.Combine(FileSystem.CacheDirectory, $"{Guid.NewGuid():N}_{file.FileName}");
+                        using (var sourceStream = await file.OpenReadAsync())
+                        using (var targetStream = File.Create(localCachePath))
+                        {
+                            await sourceStream.CopyToAsync(targetStream);
+                        }
+
+                        AttachedMedia.Add(new MediaAttachment { FilePath = localCachePath, IsVideo = false });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Photo pick error: {ex.Message}");
+            }
+        }
+
+        [RelayCommand]
         private async Task SaveAsync()
         {
             if (IsBusy) return;
@@ -111,7 +149,7 @@ namespace ShoppetApp.ViewModels
                     return;
                 }
 
-                string imageUrls = string.Join("|", existingUrls.Concat(uploadedUrls));
+                string imageUrls = string.Join(",", existingUrls.Concat(uploadedUrls));
                 
                 // Determine PetId and PetName
                 int? petId = null;

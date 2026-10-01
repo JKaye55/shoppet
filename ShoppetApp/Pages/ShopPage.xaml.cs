@@ -531,7 +531,13 @@ public partial class ShopPage : ContentPage
                     await DisplayAlertAsync("Limit Reached", "You can only attach up to 5 photos.", "OK");
                     break;
                 }
-                _pickedPhotoPaths.Add(file.FullPath);
+                var localCachePath = Path.Combine(FileSystem.CacheDirectory, $"{Guid.NewGuid():N}_{file.FileName}");
+                using (var sourceStream = await file.OpenReadAsync())
+                using (var targetStream = File.Create(localCachePath))
+                {
+                    await sourceStream.CopyToAsync(targetStream);
+                }
+                _pickedPhotoPaths.Add(localCachePath);
             }
             RefreshPickedPhotos();
         }

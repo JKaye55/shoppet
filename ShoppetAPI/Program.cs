@@ -38,6 +38,11 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
+var wwwrootFolder = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+var uploadsFolder = Path.Combine(wwwrootFolder, "uploads");
+Directory.CreateDirectory(Path.Combine(uploadsFolder, "community"));
+Directory.CreateDirectory(Path.Combine(uploadsFolder, "documents"));
+
 app.UseStaticFiles();
 
 app.UseAuthorization();
