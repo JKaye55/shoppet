@@ -35,9 +35,10 @@ public class PremiumController : ControllerBase
     }
 
     [HttpPost("activate")]
-    public async Task<IActionResult> Activate([FromQuery] int userId)
+    public async Task<IActionResult> Activate([FromQuery] int userId,[FromQuery]bool simulateSuccess=true)
     {
         if(userId<=0) return BadRequest("A valid user is required.");
+        if(!simulateSuccess)return BadRequest("Simulated payment failed. Premium status is unchanged.");
         await using var conn=new SqlConnection(ConnectionString);
         await conn.OpenAsync();
         await using var tx=(SqlTransaction)await conn.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);

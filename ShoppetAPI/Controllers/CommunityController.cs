@@ -73,7 +73,7 @@ public class CommunityController : ControllerBase
                     ProfilePicture = string.Empty,
                     PetName = reader.GetString(reader.GetOrdinal("PetName")),
                     Content = reader.GetString(reader.GetOrdinal("Content")),
-                    ImageUrls = reader.GetString(reader.GetOrdinal("ImageUrls")),
+                    ImageUrls = MediaUrls.Web(reader.GetString(reader.GetOrdinal("ImageUrls")),_configuration),
                     Timestamp = postedAt,
                     CreatedAt = postedAt,
                     IsEdited = reader.GetBoolean(reader.GetOrdinal("IsEdited")),
@@ -132,7 +132,7 @@ public class CommunityController : ControllerBase
             await using var stream = System.IO.File.Create(diskPath);
             await file.CopyToAsync(stream);
 
-            var publicBaseUrl = (_configuration["PublicBaseUrl"] ?? $"{Request.Scheme}://{Request.Host}").TrimEnd('/');
+            var publicBaseUrl = (_configuration["PublicApiBaseUrl"] ?? _configuration["PublicBaseUrl"] ?? "http://localhost:5020").TrimEnd('/');
             urls.Add($"{publicBaseUrl}/uploads/community/{safeName}");
         }
 

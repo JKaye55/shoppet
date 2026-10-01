@@ -90,7 +90,7 @@ public class AuthController : ControllerBase
             const string sql = """
                 SELECT Id, FullName, Email, PasswordHash, Role
                 FROM UserAccounts
-                WHERE Email=@Email;
+                WHERE Email=@Email AND ISNULL(IsDisabled,0)=0;
                 """;
 
             await using var cmd = new SqlCommand(sql, connection);

@@ -203,7 +203,7 @@ public class HealthLogsController : ControllerBase
         cmd.Parameters.AddWithValue("@DosageTotal", x.DosageTotal);
         cmd.Parameters.AddWithValue("@DosageRemaining", x.DosageRemaining);
         cmd.Parameters.AddWithValue("@CheckupDate", ParseDate(x.CheckupDate) is DateTime cd ? cd : DBNull.Value);
-        cmd.Parameters.AddWithValue("@DocumentPaths", x.DocumentPaths ?? string.Empty);
+        cmd.Parameters.AddWithValue("@DocumentPaths", ShoppetAPI.Services.MediaUrls.Canonical(x.DocumentPaths));
         cmd.Parameters.AddWithValue("@CompletedAt", x.Completed ? DateTime.Now : DBNull.Value);
         return cmd;
     }

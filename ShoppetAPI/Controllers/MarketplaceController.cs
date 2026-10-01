@@ -142,7 +142,7 @@ public class MarketplaceController : ControllerBase
             cmd.Parameters.AddWithValue("@Category",x.Category??"General");
             cmd.Parameters.AddWithValue("@Condition",x.Condition??"Used");
             cmd.Parameters.AddWithValue("@Location",x.Location??string.Empty);
-            cmd.Parameters.AddWithValue("@ImageUrl",x.ImageUrls??string.Empty);
+            cmd.Parameters.AddWithValue("@ImageUrl",MediaUrls.Canonical(x.ImageUrls));
             return await cmd.ExecuteNonQueryAsync()==0?NotFound():Ok(new{success=true});
         }
         catch(Exception ex){return StatusCode(500,$"Listing update error: {ex.Message}");}
@@ -176,8 +176,8 @@ public class MarketplaceController : ControllerBase
         SellerProfilePic=r.GetString(3),Title=r.GetString(4),Description=r.GetString(5),
         Price=r.GetDecimal(6),Category=r.GetString(7),Condition=r.GetString(8),
         Location=r.GetString(9),ImageUrls=MediaUrl(r.GetString(10)),IsAvailable=r.GetBoolean(11),
-        CreatedAt=r.GetDateTime(12),FacebookUrl=r.GetString(13),
-        InstagramUrl=r.GetString(14),OtherSocialUrl=r.GetString(15)
+        CreatedAt=r.GetDateTime(12),FacebookUrl=Social(r.GetString(13)),
+        InstagramUrl=Social(r.GetString(14)),OtherSocialUrl=Social(r.GetString(15))
     };
 
     private string MediaUrl(string value)=>string.Join(",",value.Split(',',StringSplitOptions.RemoveEmptyEntries).Select(u=>u.StartsWith("/")?(_configuration["PublicWebBaseUrl"]??"http://localhost:5253").TrimEnd('/')+u:u));
@@ -190,6 +190,7 @@ public class MarketplaceController : ControllerBase
         q.Parameters.AddWithValue("@Id",id);q.Parameters.AddWithValue("@U",userId);q.Parameters.AddWithValue("@Status",status);
         return await q.ExecuteNonQueryAsync()>0?Ok(new{success=true}):BadRequest("Purchased listings cannot be reopened.");
     }
+    private static string Social(string url)=>Uri.TryCreate(url,UriKind.Absolute,out var u)&&u.Scheme=="https"?url:"";
     private static void Bind(SqlCommand cmd,CreateListingRequest x)
     {
         cmd.Parameters.AddWithValue("@UserId",x.UserId);
@@ -199,7 +200,7 @@ public class MarketplaceController : ControllerBase
         cmd.Parameters.AddWithValue("@Price",x.Price);
         cmd.Parameters.AddWithValue("@Description",x.Description??string.Empty);
         cmd.Parameters.AddWithValue("@Location",x.Location??string.Empty);
-        cmd.Parameters.AddWithValue("@ImageUrl",x.ImageUrls??string.Empty);
+        cmd.Parameters.AddWithValue("@ImageUrl",MediaUrls.Canonical(x.ImageUrls));
     }
 }
 public class CreateListingRequest

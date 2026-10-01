@@ -22,7 +22,7 @@ public sealed class SessionGuard(IConfiguration configuration) : IAsyncActionFil
         await using var c=new SqlConnection(configuration.GetConnectionString("SharedSqlServer"));
         await c.OpenAsync();
         int actor;string role;
-        await using(var q=new SqlCommand("SELECT Id,Role FROM UserAccounts WHERE ApiToken=@Token AND ApiTokenExpiresAt>SYSUTCDATETIME()",c))
+        await using(var q=new SqlCommand("SELECT Id,Role FROM UserAccounts WHERE ApiToken=@Token AND ApiTokenExpiresAt>SYSUTCDATETIME() AND ISNULL(IsDisabled,0)=0",c))
         {
             q.Parameters.AddWithValue("@Token",authorization[7..].Trim());
             await using var r=await q.ExecuteReaderAsync();

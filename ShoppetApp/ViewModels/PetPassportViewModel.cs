@@ -23,7 +23,7 @@ public partial class PetPassportViewModel : ObservableObject, IQueryAttributable
 
     public bool HasPetId => Pet is not null && !string.IsNullOrWhiteSpace(Pet.CardId);
     public string PublicPetIdUrl => HasPetId
-        ? $"{Preferences.Get("PublicWebBaseUrl","http://localhost:5253").TrimEnd('/')}/pet/card/{Pet!.CardId}"
+        ? _api.ResolveDeviceUrl($"{Preferences.Get("PublicWebBaseUrl","http://localhost:5253").TrimEnd('/')}/pet/card/{Pet!.CardId}")
         : string.Empty;
     public string QrImageUrl => string.IsNullOrWhiteSpace(PublicPetIdUrl)
         ? string.Empty
@@ -93,6 +93,9 @@ public partial class PetPassportViewModel : ObservableObject, IQueryAttributable
         }
     }
 
+    [RelayCommand]
+    private async Task OpenDocumentAsync(string path)
+    {try{await _api.OpenCareDocumentAsync(path);}catch(Exception){await Shell.Current.DisplayAlertAsync("Document unavailable","Check the connection, or reattach an old local-only document.","OK");}}
     [RelayCommand]
     private async Task RetryAsync() => await LoadAsync();
 

@@ -42,6 +42,9 @@ public partial class PremiumPage : ContentPage
             "Cancel");
         if (!confirm) return;
 
+        var outcome=await DisplayActionSheetAsync("Demo payment outcome","Cancel",null,"Simulated success","Simulated failure");
+        if(outcome=="Simulated failure"){await DisplayAlertAsync("Simulated failure","Your account is unchanged. No payment was processed.","OK");return;}
+        if(outcome!="Simulated success")return;
         ActivateButton.IsEnabled = false;
         try
         {

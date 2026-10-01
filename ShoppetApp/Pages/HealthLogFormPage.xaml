@@ -123,7 +123,7 @@
                         <CollectionView.ItemTemplate>
                             <DataTemplate x:DataType="x:String">
                                 <Grid ColumnDefinitions="*,Auto" Margin="0,4">
-                                    <Label Text="{Binding .}" VerticalOptions="Center" LineBreakMode="TailTruncation" FontFamily="Nunito" FontSize="12" />
+                                    <Button Text="Open care document" BackgroundColor="Transparent" TextColor="{StaticResource Primary}" Command="{Binding Source={RelativeSource AncestorType={x:Type vm:HealthLogFormViewModel}}, Path=OpenDocumentCommand}" CommandParameter="{Binding .}" />
                                     <Button Grid.Column="1" Text="✕" WidthRequest="32" HeightRequest="32" Padding="0" BackgroundColor="Transparent" TextColor="{StaticResource StatusOverdue}" Command="{Binding Source={RelativeSource AncestorType={x:Type vm:HealthLogFormViewModel}}, Path=RemoveDocumentCommand}" CommandParameter="{Binding .}" />
                                 </Grid>
                             </DataTemplate>

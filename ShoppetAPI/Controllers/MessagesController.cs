@@ -59,6 +59,7 @@ public class MessagesController : ControllerBase
 
             await using var conn=new SqlConnection(ConnectionString);
             await conn.OpenAsync();
+            if(!await ShoppetAPI.Services.RbacService.IsPetOwnerAsync(conn,req.ReceiverId))return BadRequest("Choose another Pet Owner as the recipient.");
             await using var tx=(SqlTransaction)await conn.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
             int conversationId;

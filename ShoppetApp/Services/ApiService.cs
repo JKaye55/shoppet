@@ -84,6 +84,20 @@ public class ApiService
         _http = new HttpClient { BaseAddress = new Uri(Preferences.Get("ApiBaseUrl",BaseUrl).TrimEnd('/') + "/"), Timeout=TimeSpan.FromSeconds(30) };
     }
 
+    public string ResolveDeviceUrl(string value)
+    {
+#if ANDROID
+        return value.Replace("http://localhost:",$"http://{_http.BaseAddress!.Host}:",StringComparison.OrdinalIgnoreCase).Replace("http://127.0.0.1:",$"http://{_http.BaseAddress!.Host}:",StringComparison.OrdinalIgnoreCase);
+#else
+        return value;
+#endif
+    }
+    public async Task OpenCareDocumentAsync(string path)
+    {
+        if(Uri.TryCreate(path,UriKind.Absolute,out var u)&&u.Scheme is "https" or "http")await Launcher.Default.OpenAsync(ResolveDeviceUrl(path));
+        else if(File.Exists(path))await Launcher.Default.OpenAsync(new OpenFileRequest("Care document",new ReadOnlyFile(path)));
+        else throw new ArgumentException("This old document is unavailable on this device. Reattach and upload it from the original device.");
+    }
     public string CurrentBaseUrl=>_http.BaseAddress!.ToString().TrimEnd('/');
     public void ConfigureConnection(string apiUrl,string webUrl)
     {
@@ -183,7 +197,7 @@ public class ApiService
             if (!string.IsNullOrWhiteSpace(pet.PhotoUrl))
                 pet.PhotoUrl = pet.PhotoUrl.Replace(
                     "http://localhost:",
-                    "http://10.0.2.2:",
+                    $"http://{_http.BaseAddress!.Host}:",
                     StringComparison.OrdinalIgnoreCase);
         }
 #endif
@@ -456,7 +470,7 @@ public class ApiService
                             ? string.Empty
                             : item.ImageUrl.Replace(
                                 "http://localhost:",
-                                "http://10.0.2.2:",
+                                $"http://{_http.BaseAddress!.Host}:",
                                 StringComparison.OrdinalIgnoreCase)
                     }).ToList()
                 };
@@ -638,7 +652,7 @@ public class ApiService
             if (!string.IsNullOrWhiteSpace(post.ImageUrls))
                 post.ImageUrls = post.ImageUrls.Replace(
                     "http://localhost:",
-                    "http://10.0.2.2:",
+                    $"http://{_http.BaseAddress!.Host}:",
                     StringComparison.OrdinalIgnoreCase);
         }
 #endif
@@ -813,7 +827,7 @@ public class ApiService
                 if (!string.IsNullOrWhiteSpace(listing.ImageUrls))
                     listing.ImageUrls = listing.ImageUrls.Replace(
                         "http://localhost:",
-                        "http://10.0.2.2:",
+                        $"http://{_http.BaseAddress!.Host}:",
                         StringComparison.OrdinalIgnoreCase);
             }
 #endif
@@ -833,7 +847,7 @@ public class ApiService
                 if (!string.IsNullOrWhiteSpace(listing.ImageUrls))
                     listing.ImageUrls = listing.ImageUrls.Replace(
                         "http://localhost:",
-                        "http://10.0.2.2:",
+                        $"http://{_http.BaseAddress!.Host}:",
                         StringComparison.OrdinalIgnoreCase);
             }
 #endif

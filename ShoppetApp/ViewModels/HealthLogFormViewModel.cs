@@ -99,6 +99,9 @@ public partial class HealthLogFormViewModel : ObservableObject, IQueryAttributab
     }
 
     [RelayCommand]
+    private async Task OpenDocumentAsync(string path)
+    {try{await _api.OpenCareDocumentAsync(path);}catch(Exception){await Shell.Current.DisplayAlertAsync("Document unavailable","Check the connection, or reattach an old local-only document.","OK");}}
+    [RelayCommand]
     private async Task CloseAsync() => await Shell.Current.GoToAsync("..");
 
     [RelayCommand]

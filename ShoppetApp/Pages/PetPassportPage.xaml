@@ -212,6 +212,9 @@
                                             <Button Grid.Column="2" Text="Edit" FontSize="13" WidthRequest="34" HeightRequest="34" CornerRadius="17" Padding="0" BackgroundColor="{StaticResource Secondary10}" TextColor="{StaticResource Primary}" VerticalOptions="Start" Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PetPassportViewModel}}, Path=EditLogCommand}" CommandParameter="{Binding .}" />
                                         </Grid>
 
+                                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding DocumentsList}">
+                                            <BindableLayout.ItemTemplate><DataTemplate x:DataType="x:String"><Button Text="Open care document" FontSize="12" HeightRequest="36" BackgroundColor="Transparent" TextColor="{StaticResource Primary}" Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PetPassportViewModel}}, Path=OpenDocumentCommand}" CommandParameter="{Binding .}" /></DataTemplate></BindableLayout.ItemTemplate>
+                                        </VerticalStackLayout>
                                         <!-- Row 2: Schedule info -->
                                         <!-- Row 2: Schedule info -->
                                         <HorizontalStackLayout Spacing="6" IsVisible="{Binding BaseDateDisplay, Converter={StaticResource IsNotNullOrEmptyConverter}}">

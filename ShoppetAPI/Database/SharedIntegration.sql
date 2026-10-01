@@ -128,3 +128,9 @@ IF COL_LENGTH('dbo.MarketplaceListings','UpdatedAt') IS NULL ALTER TABLE dbo.Mar
 IF OBJECT_ID('dbo.VetVisitReminders','U') IS NULL
 CREATE TABLE dbo.VetVisitReminders(Id INT IDENTITY PRIMARY KEY,UserId INT NOT NULL,PetId INT NOT NULL,ClinicName NVARCHAR(150) NULL,VisitAt DATETIME2 NOT NULL,Purpose NVARCHAR(150) NULL,Notes NVARCHAR(1000) NULL,Completed BIT NOT NULL DEFAULT(0));
 GO
+
+IF COL_LENGTH('dbo.UserAccounts','IsDisabled') IS NULL ALTER TABLE dbo.UserAccounts ADD IsDisabled BIT NOT NULL DEFAULT(0);
+GO
+
+IF OBJECT_ID('dbo.MarketplaceCartItems','U') IS NOT NULL UPDATE dbo.MarketplaceCartItems SET Quantity=1 WHERE Quantity<>1;
+GO

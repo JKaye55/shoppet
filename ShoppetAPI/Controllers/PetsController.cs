@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using ShoppetAPI.Services;
 using Microsoft.Data.SqlClient;
 using System.Globalization;
 
@@ -82,7 +83,7 @@ public class PetsController : ControllerBase
                     CardId = reader.GetString(9),
                     CardIssuedAt = reader.IsDBNull(10) ? (DateTime?)null : reader.GetDateTime(10),
                     CardTheme = reader.GetString(11),
-                    PhotoUrl = reader.IsDBNull(12) ? string.Empty : reader.GetString(12)
+                    PhotoUrl = MediaUrls.Web(reader.IsDBNull(12)?"":reader.GetString(12),_configuration)
                 });
             }
 
@@ -105,6 +106,9 @@ public class PetsController : ControllerBase
             await using var connection = new SqlConnection(ConnectionString);
             await connection.OpenAsync();
 
+            await using var transaction=(SqlTransaction)await connection.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+            await using(var check=new SqlCommand("SELECT ISNULL(IsPremium,0),(SELECT COUNT(1) FROM PetProfiles WITH(UPDLOCK,HOLDLOCK) WHERE UserId=@U) FROM UserAccounts WITH(UPDLOCK,HOLDLOCK) WHERE Id=@U",connection,transaction))
+            {check.Parameters.AddWithValue("@U",request.UserId);await using var r=await check.ExecuteReaderAsync();if(!await r.ReadAsync())return NotFound();if(!r.GetBoolean(0)&&r.GetInt32(1)>=1)return BadRequest("Free accounts support 1 pet. Premium is ₱49 for lifetime access.");}
             var cardId = "PET-" + Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
             var weightKg = ParseWeight(request.Weight);
 
@@ -116,7 +120,7 @@ public class PetsController : ControllerBase
                     (@UserId, @PetName, @Species, @Breed, @Age, @WeightKg, @Diet, @CardId, SYSDATETIME(), @CardTheme, @PhotoUrl);
                 """;
 
-            await using var cmd = new SqlCommand(sql, connection);
+            await using var cmd = new SqlCommand(sql, connection,transaction);
             cmd.Parameters.AddWithValue("@UserId", request.UserId);
             cmd.Parameters.AddWithValue("@PetName", request.Name.Trim());
             cmd.Parameters.AddWithValue("@Species", request.Species?.Trim() ?? "Dog");
@@ -126,10 +130,11 @@ public class PetsController : ControllerBase
             cmd.Parameters.AddWithValue("@Diet", request.Diet?.Trim() ?? string.Empty);
             cmd.Parameters.AddWithValue("@CardId", cardId);
             cmd.Parameters.AddWithValue("@CardTheme", request.CardTheme?.Trim() ?? string.Empty);
-            cmd.Parameters.AddWithValue("@PhotoUrl", request.PhotoUrl?.Trim() ?? string.Empty);
+            cmd.Parameters.AddWithValue("@PhotoUrl", MediaUrls.Canonical(request.PhotoUrl?.Trim()));
 
             var newId = Convert.ToInt32(await cmd.ExecuteScalarAsync());
 
+            await transaction.CommitAsync();
             return Ok(new
             {
                 Id = newId,
@@ -186,7 +191,7 @@ public class PetsController : ControllerBase
             cmd.Parameters.AddWithValue("@WeightKg", ParseWeight(request.Weight) is decimal w ? w : DBNull.Value);
             cmd.Parameters.AddWithValue("@Diet", request.Diet?.Trim() ?? string.Empty);
             cmd.Parameters.AddWithValue("@CardTheme", request.CardTheme?.Trim() ?? string.Empty);
-            cmd.Parameters.AddWithValue("@PhotoUrl", request.PhotoUrl?.Trim() ?? string.Empty);
+            cmd.Parameters.AddWithValue("@PhotoUrl", MediaUrls.Canonical(request.PhotoUrl?.Trim()));
 
             var rows = await cmd.ExecuteNonQueryAsync();
             return rows == 0 ? NotFound() : Ok(new { success = true });

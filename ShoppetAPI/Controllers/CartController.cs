@@ -32,7 +32,7 @@ public class CartController : ControllerBase
             var items=new List<object>();
             decimal total=0;
             await using var cmd=new SqlCommand("""
-                SELECT ci.Id,ci.MarketplaceListingId,ci.Quantity,
+                SELECT ci.Id,ci.MarketplaceListingId,1,
                        m.Title,m.Price,ISNULL(m.ImageUrl,'')
                 FROM MarketplaceCartItems ci
                 JOIN MarketplaceListings m ON m.Id=ci.MarketplaceListingId
@@ -351,19 +351,11 @@ public class CartController : ControllerBase
 
     private static async Task<int> EnsureCartAsync(SqlConnection conn,int userId)
     {
-        await using var find=new SqlCommand("SELECT Id FROM MarketplaceCart WHERE UserId=@UserId",conn);
-        find.Parameters.AddWithValue("@UserId",userId);
-        var existing=await find.ExecuteScalarAsync();
-        if(existing is not null)return Convert.ToInt32(existing);
-
-        await using var create=new SqlCommand("""
-            INSERT INTO MarketplaceCart(UserId,UpdatedAt)
-            OUTPUT INSERTED.Id
-            VALUES(@UserId,SYSDATETIME());
-            """,conn);
-        create.Parameters.AddWithValue("@UserId",userId);
-        return Convert.ToInt32(await create.ExecuteScalarAsync());
+        await using var transaction=(SqlTransaction)await conn.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        await using var q=new SqlCommand("IF NOT EXISTS(SELECT 1 FROM MarketplaceCart WITH(UPDLOCK,HOLDLOCK) WHERE UserId=@U) INSERT INTO MarketplaceCart(UserId) VALUES(@U); SELECT Id FROM MarketplaceCart WHERE UserId=@U;",conn,transaction);
+        q.Parameters.AddWithValue("@U",userId);var id=Convert.ToInt32(await q.ExecuteScalarAsync());await transaction.CommitAsync();return id;
     }
+
 }
 
 public class OrderResponse

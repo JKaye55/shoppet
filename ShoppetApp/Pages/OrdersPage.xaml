@@ -9,7 +9,7 @@
         <Grid Padding="18,20,18,12" ColumnDefinitions="Auto,*">
             <Button Text="Back" BackgroundColor="Transparent" TextColor="{StaticResource Primary}" Clicked="OnBackClicked"/>
             <VerticalStackLayout Grid.Column="1" Spacing="1" Margin="8,0,0,0">
-                <Label Text="Purchases" FontFamily="NunitoExtraBold" FontSize="22" TextColor="{StaticResource BodyText}"/>
+                <Label Text="Purchases &amp; Sales" FontFamily="NunitoExtraBold" FontSize="22" TextColor="{StaticResource BodyText}"/>
                 <Label Text="Simulated marketplace orders" FontSize="12" TextColor="{StaticResource NavMuted}"/>
             </VerticalStackLayout>
         </Grid>

@@ -30,7 +30,7 @@ public partial class SplashPage : ContentPage
         // Check if user session already exists locally
         int savedUserId = Preferences.Get("LoggedInUserId", 0);
 
-        var token=await SecureStorage.GetAsync("ApiToken");
+        string? token=null;try{token=await SecureStorage.GetAsync("ApiToken");}catch{SecureStorage.Remove("ApiToken");}
         if (savedUserId > 0 && !string.IsNullOrWhiteSpace(token))
         {
             App.Services.GetRequiredService<ShoppetApp.Services.ApiService>().SetToken(token);
@@ -40,6 +40,7 @@ public partial class SplashPage : ContentPage
         }
         else
         {
+            Preferences.Remove("LoggedInUserId");Preferences.Remove("LoggedInUserName");Preferences.Remove("LoggedInUserRole");
             // Not logged in, send them to onboarding/login
             var onboarding = App.Services.GetRequiredService<OnboardingPage>();
             NavigationHelper.SetRoot(new NavigationPage(onboarding)

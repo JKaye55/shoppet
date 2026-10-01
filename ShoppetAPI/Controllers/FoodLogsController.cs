@@ -24,11 +24,11 @@ public class FoodLogsController : ControllerBase
             await conn.OpenAsync();
             const string sql = """
                 SELECT Id, PetId, FoodName,
-                       CASE
+                       ISNULL(CASE
                            WHEN ISNULL(AmountGrams,0) > 0 THEN AmountGrams
                            ELSE TRY_CONVERT(float,
                                REPLACE(REPLACE(REPLACE(ISNULL(PortionSize,''),'grams',''),'g',''),' ',''))
-                       END AS AmountGrams,
+                       END,0) AS AmountGrams,
                        ISNULL(IntervalHours,0), ISNULL(IntervalMinutes,0),
                        COALESCE(StartTimestamp,FedAt,CreatedAt) AS StartTimestamp,
                        COALESCE(LastFedTimestamp,FedAt) AS LastFedTimestamp,
@@ -62,6 +62,7 @@ public class FoodLogsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateFoodLog(int petId,[FromBody] FoodLogRequest request)
     {
+        if(string.IsNullOrWhiteSpace(request.FoodName)||request.AmountGrams<0||request.IntervalHours<0||request.IntervalMinutes is <0 or >59)return BadRequest("Enter valid food and feeding interval values.");
         try
         {
             await using var conn=new SqlConnection(ConnectionString);
@@ -92,6 +93,7 @@ public class FoodLogsController : ControllerBase
     [HttpPut("{id:int}")]
     public async Task<IActionResult> UpdateFoodLog(int petId,int id,[FromBody] FoodLogRequest request)
     {
+        if(string.IsNullOrWhiteSpace(request.FoodName)||request.AmountGrams<0||request.IntervalHours<0||request.IntervalMinutes is <0 or >59)return BadRequest("Enter valid food and feeding interval values.");
         try
         {
             await using var conn=new SqlConnection(ConnectionString);
