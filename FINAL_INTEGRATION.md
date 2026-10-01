@@ -83,3 +83,101 @@ For the presentation, demonstrate: create/edit a pet in Mobile → refresh My Pe
 Web/API build: passed. Android x64 Debug APK build: passed. The final incremental build has zero warnings/errors; the initial full package build reported one duplicate SQLite native-library warning. Authentication/anonymous-access contract checks: 15 passed. Running API smoke: private pets HTTP 401, public QR HTTP 200. Home HTTP 200 and retired navigation HTML checks passed.
 
 A live SQL Server and Android emulator were not available here. The SQL-backed integration script, real device workflows and complete rendered visual QA still need to be run locally. The remote preview browser could not access the workspace's local server. Compilation is not proof of cross-client database synchronization.
+
+## Login debugging commands (October 1, 2026)
+
+The web-created account was confirmed to sign in on Mobile after repairing a database schema mismatch and restarting the API. This verifies login; other integration flows still require their own checks.
+
+### 1. Start one API instance
+
+Run from the repository folder containing the `ShoppetAPI` project directory:
+
+```powershell
+dotnet run --project .\ShoppetAPI\ShoppetAPI.csproj --no-launch-profile --urls http://0.0.0.0:5020
+```
+
+Keep this terminal running and wait for `Now listening on: http://0.0.0.0:5020`. Use one API instance; do not also start a second copy through Visual Studio. If Windows Firewall asks about the ShoppetAPI you just launched, allow it on your trusted private network.
+
+The PC uses `http://localhost:5020`; the Android emulator uses `http://10.0.2.2:5020` (API routes start with `/api`).
+
+### 2. Test login connectivity from a second PowerShell window
+
+```powershell
+try {
+    Invoke-RestMethod `
+        -Uri "http://localhost:5020/api/auth/login" `
+        -Method Post `
+        -ContentType "application/json" `
+        -Body '{"email":"diagnostic@example.invalid","password":"diagnostic-only"}'
+}
+catch {
+    $_.ErrorDetails.Message
+    $_.Exception.Message
+}
+```
+
+These are deliberately fake credentials, not an account to use in the mobile app. A 401 response is expected when the login endpoint and account lookup work. It does not verify successful token creation for a real account. “Unable to connect” means the API is not reachable at this address. A timeout means it did not respond in time. HTTP 500 requires the API exception details; do not assume the password is wrong.
+
+### 3. Reveal the SQL exception in Visual Studio
+
+When running the API under the Visual Studio debugger, open **View → Output → Debug**, then retry login. The Error List shows build issues, not the full runtime failure.
+
+For the full exception message, open **Debug → Windows → Exception Settings** (`Ctrl+Alt+E`). Search for `Microsoft.Data.SqlClient.SqlException` and enable break when thrown. If missing, select Common Language Runtime Exceptions and use **+** to add that exact type. If adding is unavailable, clear the search and temporarily check **Common Language Runtime Exceptions**, then reproduce the error. This broad option may pause for unrelated exceptions; turn it off again after diagnosis, or restore your previous exception settings.
+
+The observed message was: `Column name 'Reference' does not exist in the target table, index or view.`
+
+### 4. Inspect the existing table in SQL Server Management Studio
+
+```sql
+USE Shoppet_VetClinic_DB;
+GO
+SELECT COLUMN_NAME, DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'MarketplaceOrders'
+ORDER BY ORDINAL_POSITION;
+```
+
+The affected table contained `Id`, `BuyerUserId`, `SellerUserId`, `ListingId`, `ItemTitle`, `Amount`, `PaymentMethod`, `PaymentStatus`, `Status`, `IsSimulation`, and `OrderedAt`. The migration used the absence of `BuyerUserId` to decide whether to add several columns. Because that column already existed, the missing columns were skipped.
+
+### 5. Repair that confirmed order-table variant
+
+Back up the database first. This repair applies to the inspected variant above, which has `Amount` and `OrderedAt`; inspect your schema before applying it elsewhere. It adds missing fields and fills new values without deleting existing orders. It is a targeted startup repair, not a complete migration of every legacy checkout field.
+
+```sql
+USE Shoppet_VetClinic_DB;
+GO
+IF COL_LENGTH('dbo.MarketplaceOrders', 'Reference') IS NULL
+    ALTER TABLE dbo.MarketplaceOrders ADD Reference NVARCHAR(100) NULL;
+IF COL_LENGTH('dbo.MarketplaceOrders', 'Subtotal') IS NULL
+    ALTER TABLE dbo.MarketplaceOrders ADD Subtotal DECIMAL(10,2) NULL;
+IF COL_LENGTH('dbo.MarketplaceOrders', 'VoucherDiscount') IS NULL
+    ALTER TABLE dbo.MarketplaceOrders
+    ADD VoucherDiscount DECIMAL(10,2) NOT NULL DEFAULT (0);
+IF COL_LENGTH('dbo.MarketplaceOrders', 'Total') IS NULL
+    ALTER TABLE dbo.MarketplaceOrders ADD Total DECIMAL(10,2) NULL;
+IF COL_LENGTH('dbo.MarketplaceOrders', 'CreatedAt') IS NULL
+    ALTER TABLE dbo.MarketplaceOrders ADD CreatedAt DATETIME2 NULL;
+IF COL_LENGTH('dbo.MarketplaceOrders', 'CompletedAt') IS NULL
+    ALTER TABLE dbo.MarketplaceOrders ADD CompletedAt DATETIME2 NULL;
+GO
+UPDATE dbo.MarketplaceOrders
+SET Reference = COALESCE(Reference, CONCAT('LEGACY-', Id)),
+    Subtotal = COALESCE(Subtotal, Amount),
+    Total = COALESCE(Total, Amount),
+    CreatedAt = COALESCE(CreatedAt, OrderedAt);
+GO
+```
+
+Restart the API after the repair and retry Mobile login with the real web account. Check the startup log for any remaining initialization errors.
+
+### 6. Release a locked API build
+
+If the build says `ShoppetAPI.exe` is locked, stop debugging in Visual Studio and press `Ctrl+C` in the terminal running the API. If the process remains, inspect it and stop the PID reported by the error:
+
+```powershell
+Get-Process -Name ShoppetAPI -ErrorAction SilentlyContinue
+# 23420 was the PID in this incident. Replace it with the current API PID.
+Stop-Process -Id 23420 -Force
+```
+
+If the PID no longer exists, it already stopped. Run the startup command in step 1 once, wait for the listening message, then retry login. Deleting build files while the API is running does not release its file locks.
