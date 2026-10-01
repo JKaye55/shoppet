@@ -61,5 +61,19 @@ public partial class PremiumPage : ContentPage
         finally { ActivateButton.IsEnabled = true; }
     }
 
+    private async void OnOpenWebPremiumClicked(object? sender, EventArgs e)
+    {
+        var webUrl = Preferences.Get("PublicWebBaseUrl", "http://localhost:5253").TrimEnd('/');
+        var target = $"{webUrl}/premium";
+        try
+        {
+            await Launcher.Default.OpenAsync(new Uri(target));
+        }
+        catch
+        {
+            await DisplayAlertAsync("Web Portal", $"Please visit {target} in your browser to avail Premium.", "OK");
+        }
+    }
+
     private async void OnBackClicked(object? sender, EventArgs e) => await Shell.Current.GoToAsync("..");
 }

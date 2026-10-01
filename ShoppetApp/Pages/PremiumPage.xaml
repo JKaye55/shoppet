@@ -15,6 +15,7 @@
                     <Label Text="Premium (2 Months) unlocks unlimited pets and health records, plus advanced Pet ID customization and marketplace perks." FontSize="13" TextColor="{StaticResource BodyText}"/>
                     <Label Text="₱150 for 2 Months • mock payment only" FontFamily="NunitoExtraBold" FontSize="20" TextColor="{StaticResource BodyText}"/>
                     <Button x:Name="ActivateButton" Text="Activate Premium (Simulation)" BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="18" HeightRequest="50" FontFamily="NunitoBold" Clicked="OnActivateClicked"/>
+                    <Button x:Name="OpenWebButton" Text="Open Web Portal (ShoppetCare Web)" BackgroundColor="Transparent" TextColor="{StaticResource Primary}" BorderColor="{StaticResource Primary}" BorderWidth="1" CornerRadius="18" HeightRequest="46" FontFamily="NunitoBold" Clicked="OnOpenWebPremiumClicked"/>
                 </VerticalStackLayout>
             </Border>
         </VerticalStackLayout>
