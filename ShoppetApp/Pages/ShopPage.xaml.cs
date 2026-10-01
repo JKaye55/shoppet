@@ -195,6 +195,8 @@ public partial class ShopPage : ContentPage
         DetailPrice.Text = listing.PriceDisplay;
         DetailCategory.Text = listing.Category;
         DetailCondition.Text = listing.Condition;
+        DetailSku.Text = $"SKU: {listing.Sku}";
+        DetailStock.Text = listing.StockDisplay;
         DetailDescription.Text = listing.Description;
         DetailSellerName.Text = listing.SellerName;
         DetailSellerPremiumBadge.IsVisible = listing.IsSellerPremium;

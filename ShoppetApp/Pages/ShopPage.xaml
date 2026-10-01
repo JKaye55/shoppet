@@ -116,6 +116,11 @@
                                                             <Label Text="🏅" FontSize="10" TextColor="#B45309" IsVisible="{Binding IsSellerPremium}"/>
                                                         </HorizontalStackLayout>
                                                         <Label Text="{Binding TimeAgo}" TextColor="#aaa" FontSize="10"/>
+                                                        <HorizontalStackLayout Spacing="4" VerticalOptions="Center" Margin="0,2,0,0">
+                                                            <Label Text="{Binding Sku}" TextColor="#7E22CE" FontFamily="NunitoBold" FontSize="10"/>
+                                                            <Label Text="•" TextColor="#ccc" FontSize="10"/>
+                                                            <Label Text="{Binding StockDisplay}" TextColor="#16A34A" FontSize="10"/>
+                                                        </HorizontalStackLayout>
                                                     </VerticalStackLayout>
                                                 </VerticalStackLayout>
                                             </Border>
@@ -201,10 +206,14 @@
                                 <Label x:Name="DetailTitle" Grid.Column="0" TextColor="{StaticResource BodyText}" FontFamily="NunitoBold" FontSize="20"/>
                                 <Label x:Name="DetailPrice" Grid.Column="1" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" FontSize="20"/>
                             </Grid>
-                            <HorizontalStackLayout Spacing="8">
+                            <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
                                 <Label x:Name="DetailCategory" TextColor="#888" FontSize="13"/>
                                 <Label Text="|" TextColor="#ddd"/>
                                 <Label x:Name="DetailCondition" TextColor="#888" FontSize="13"/>
+                                <Label Text="|" TextColor="#ddd"/>
+                                <Label x:Name="DetailSku" TextColor="#7E22CE" FontFamily="NunitoBold" FontSize="12"/>
+                                <Label Text="|" TextColor="#ddd"/>
+                                <Label x:Name="DetailStock" TextColor="#16A34A" FontFamily="NunitoBold" FontSize="12"/>
                             </HorizontalStackLayout>
                             <BoxView HeightRequest="1" Color="{StaticResource Secondary30}" Margin="0,4"/>
                             <Label Text="Description" FontFamily="NunitoBold" FontSize="14" TextColor="{StaticResource BodyText}"/>

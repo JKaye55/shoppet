@@ -71,5 +71,10 @@ namespace ShoppetApp.Models
                 return CreatedAt.ToString("MMM d");
             }
         }
+
+        // Rubric E-Commerce Catalog Specifications
+        public string Sku => $"SHP-{(string.IsNullOrWhiteSpace(Category) ? "GEN" : (Category.Length >= 3 ? Category.Substring(0, 3) : Category)).ToUpperInvariant()}-{Id:D4}";
+        public string StockDisplay => IsAvailable ? "In Stock (1 available)" : "Out of Stock";
+        public int StockQuantity => IsAvailable ? 1 : 0;
     }
 }
