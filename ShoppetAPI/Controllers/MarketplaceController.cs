@@ -24,7 +24,7 @@ public class MarketplaceController : ControllerBase
             await using var conn=new SqlConnection(ConnectionString);
             await conn.OpenAsync();
 
-            var conditions=new List<string>{"ISNULL(m.Status,'Available') <> 'Sold'"};
+            var conditions=new List<string>{"ISNULL(m.Status,'Available') IN ('Available','Active')"};
             if(!string.IsNullOrWhiteSpace(category)&&!category.Equals("All",StringComparison.OrdinalIgnoreCase))
                 conditions.Add("m.Category=@Category");
             if(!string.IsNullOrWhiteSpace(search))
@@ -35,7 +35,7 @@ public class MarketplaceController : ControllerBase
                        ISNULL(u.ProfilePicture,''),m.Title,ISNULL(m.Description,''),
                        m.Price,m.Category,ISNULL(m.ItemCondition,'Used'),
                        ISNULL(m.Location,''),ISNULL(m.ImageUrl,''),
-                       CASE WHEN ISNULL(m.Status,'Available')='Sold' THEN CAST(0 AS bit) ELSE CAST(1 AS bit) END,
+                       CASE WHEN ISNULL(m.Status,'Available') IN('Available','Active') THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END,
                        m.CreatedAt,
                        CASE WHEN ISNULL(u.ShowSocialLinksOnMarketplace,1)=1 THEN ISNULL(u.FacebookUrl,'') ELSE '' END,
                        CASE WHEN ISNULL(u.ShowSocialLinksOnMarketplace,1)=1 THEN ISNULL(u.InstagramUrl,'') ELSE '' END,
@@ -72,14 +72,14 @@ public class MarketplaceController : ControllerBase
                        ISNULL(u.ProfilePicture,''),m.Title,ISNULL(m.Description,''),
                        m.Price,m.Category,ISNULL(m.ItemCondition,'Used'),
                        ISNULL(m.Location,''),ISNULL(m.ImageUrl,''),
-                       CASE WHEN ISNULL(m.Status,'Available')='Sold' THEN CAST(0 AS bit) ELSE CAST(1 AS bit) END,
+                       CASE WHEN ISNULL(m.Status,'Available') IN('Available','Active') THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END,
                        m.CreatedAt,
                        CASE WHEN ISNULL(u.ShowSocialLinksOnMarketplace,1)=1 THEN ISNULL(u.FacebookUrl,'') ELSE '' END,
                        CASE WHEN ISNULL(u.ShowSocialLinksOnMarketplace,1)=1 THEN ISNULL(u.InstagramUrl,'') ELSE '' END,
                        CASE WHEN ISNULL(u.ShowSocialLinksOnMarketplace,1)=1 THEN ISNULL(u.OtherSocialUrl,'') ELSE '' END
                 FROM MarketplaceListings m
                 LEFT JOIN UserAccounts u ON u.Id=m.SellerUserId
-                WHERE m.SellerUserId=@UserId
+                WHERE m.SellerUserId=@UserId AND m.Status<>'Deleted'
                 ORDER BY m.CreatedAt DESC;
                 """,conn);
             cmd.Parameters.AddWithValue("@UserId",userId);
@@ -93,7 +93,7 @@ public class MarketplaceController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateListing([FromBody] CreateListingRequest x)
     {
-        if(x.UserId<=0||string.IsNullOrWhiteSpace(x.Title))
+        if(x.UserId<=0||string.IsNullOrWhiteSpace(x.Title)||x.Title.Length>150||x.Price<=0)
             return BadRequest("A valid seller and title are required.");
         try
         {
@@ -119,6 +119,7 @@ public class MarketplaceController : ControllerBase
     [HttpPut("{id:int}")]
     public async Task<IActionResult> EditListing(int id,[FromBody] EditListingRequest x)
     {
+        if(string.IsNullOrWhiteSpace(x.Title)||x.Title.Length>150||x.Price<=0)return BadRequest("Enter a title and positive price.");
         try
         {
             await using var conn=new SqlConnection(ConnectionString);
@@ -159,8 +160,8 @@ public class MarketplaceController : ControllerBase
             if(role is null) return Unauthorized();
 
             var sql = RbacService.IsAdmin(role)
-                ? "DELETE FROM MarketplaceListings WHERE Id=@Id"
-                : "DELETE FROM MarketplaceListings WHERE Id=@Id AND SellerUserId=@UserId";
+                ? "UPDATE MarketplaceListings SET Status='Deleted',UpdatedAt=SYSDATETIME() WHERE Id=@Id"
+                : "UPDATE MarketplaceListings SET Status='Deleted',UpdatedAt=SYSDATETIME() WHERE Id=@Id AND SellerUserId=@UserId";
 
             await using var cmd=new SqlCommand(sql,conn);
             cmd.Parameters.AddWithValue("@Id",id);
@@ -170,15 +171,25 @@ public class MarketplaceController : ControllerBase
         catch(Exception ex){return StatusCode(500,$"Listing delete error: {ex.Message}");}
     }
 
-    private static object Map(SqlDataReader r)=>new{
+    private object Map(SqlDataReader r)=>new{
         Id=r.GetInt32(0),UserId=r.GetInt32(1),SellerName=r.GetString(2),
         SellerProfilePic=r.GetString(3),Title=r.GetString(4),Description=r.GetString(5),
         Price=r.GetDecimal(6),Category=r.GetString(7),Condition=r.GetString(8),
-        Location=r.GetString(9),ImageUrls=r.GetString(10),IsAvailable=r.GetBoolean(11),
+        Location=r.GetString(9),ImageUrls=MediaUrl(r.GetString(10)),IsAvailable=r.GetBoolean(11),
         CreatedAt=r.GetDateTime(12),FacebookUrl=r.GetString(13),
         InstagramUrl=r.GetString(14),OtherSocialUrl=r.GetString(15)
     };
 
+    private string MediaUrl(string value)=>string.Join(",",value.Split(',',StringSplitOptions.RemoveEmptyEntries).Select(u=>u.StartsWith("/")?(_configuration["PublicWebBaseUrl"]??"http://localhost:5253").TrimEnd('/')+u:u));
+    [HttpPut("{id:int}/status")]
+    public async Task<IActionResult> SetStatus(int id,[FromQuery]int userId,[FromQuery]string status)
+    {
+        if(!new[]{"Available","Sold","Unavailable"}.Contains(status))return BadRequest("Invalid listing status.");
+        await using var c=new SqlConnection(ConnectionString);await c.OpenAsync();
+        await using var q=new SqlCommand("UPDATE MarketplaceListings SET Status=@Status,UpdatedAt=SYSDATETIME() WHERE Id=@Id AND SellerUserId=@U AND Status<>'Deleted' AND (@Status<>'Available' OR NOT EXISTS(SELECT 1 FROM MarketplaceOrderItems WHERE ListingId=@Id))",c);
+        q.Parameters.AddWithValue("@Id",id);q.Parameters.AddWithValue("@U",userId);q.Parameters.AddWithValue("@Status",status);
+        return await q.ExecuteNonQueryAsync()>0?Ok(new{success=true}):BadRequest("Purchased listings cannot be reopened.");
+    }
     private static void Bind(SqlCommand cmd,CreateListingRequest x)
     {
         cmd.Parameters.AddWithValue("@UserId",x.UserId);

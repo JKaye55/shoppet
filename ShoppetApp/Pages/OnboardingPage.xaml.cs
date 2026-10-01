@@ -19,6 +19,7 @@ public partial class OnboardingPage : ContentPage
     public OnboardingPage()
     {
         InitializeComponent();
+        ToolbarItems.Add(new ToolbarItem("Server",null,async()=>await Navigation.PushAsync(App.Services.GetRequiredService<ConnectionSettingsPage>())));
         NavigationPage.SetHasBackButton(this, false);
         ApplySlide(animate: false);
     }

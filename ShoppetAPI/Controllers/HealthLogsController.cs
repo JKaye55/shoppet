@@ -82,11 +82,14 @@ public class HealthLogsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateHealthLog(int petId, [FromBody] HealthLogRequest request)
     {
+        if(!Valid(request))return BadRequest("Enter a title and valid nonnegative care values.");
         try
         {
             await using var conn = new SqlConnection(ConnectionString);
             await conn.OpenAsync();
-
+            await using var transaction=(SqlTransaction)await conn.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+            await using(var limit=new SqlCommand("SELECT ISNULL(u.IsPremium,0),(SELECT COUNT(1) FROM PetHealthRecords WITH(UPDLOCK,HOLDLOCK) WHERE PetId=@Pet) FROM PetProfiles p JOIN UserAccounts u ON u.Id=p.UserId WHERE p.Id=@Pet",conn,transaction))
+            {limit.Parameters.AddWithValue("@Pet",petId);await using var r=await limit.ExecuteReaderAsync();if(!await r.ReadAsync())return NotFound();if(!r.GetBoolean(0)&&r.GetInt32(1)>=5)return BadRequest("Free accounts can save 5 health records per pet. Premium is ₱49 for lifetime access.");}
             const string sql = """
                 INSERT INTO PetHealthRecords
                 (PetId, RecordType, Title, Notes, RecordDate, NextDueDate, VetName,
@@ -95,14 +98,16 @@ public class HealthLogsController : ControllerBase
                  CheckupDate, DocumentPaths, CompletedAt)
                 OUTPUT INSERTED.Id
                 VALUES
-                (@PetId,@Type,@Name,'',SYSDATETIME(),@DueDate,'',
+                (@PetId,@Type,@Name,@Notes,@RecordDate,@DueDate,@VetName,
                  @Completed,@DateAdministered,@ValidityInterval,@ValidityUnit,
                  @MedicationIntervalHours,@TimeStarted,@DosageTotal,@DosageRemaining,
                  @CheckupDate,@DocumentPaths,@CompletedAt);
                 """;
 
             await using var cmd = BuildCommand(sql, conn, petId, request);
+            cmd.Transaction=transaction;
             var id = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+            await transaction.CommitAsync();
             return Ok(new {
                 Id=id, PetId=petId, request.Type, request.Name, request.DueDate,
                 request.Completed, request.DateAdministered, request.ValidityInterval,
@@ -117,13 +122,14 @@ public class HealthLogsController : ControllerBase
     [HttpPut("{id:int}")]
     public async Task<IActionResult> UpdateHealthLog(int petId, int id, [FromBody] HealthLogRequest request)
     {
+        if(!Valid(request))return BadRequest("Enter a title and valid nonnegative care values.");
         try
         {
             await using var conn = new SqlConnection(ConnectionString);
             await conn.OpenAsync();
             const string sql = """
                 UPDATE PetHealthRecords SET
-                    RecordType=@Type, Title=@Name, NextDueDate=@DueDate,
+                    RecordType=@Type, Title=@Name, NextDueDate=@DueDate,Notes=@Notes,VetName=@VetName,RecordDate=@RecordDate,
                     Completed=@Completed, DateAdministered=@DateAdministered,
                     ValidityInterval=@ValidityInterval, ValidityUnit=@ValidityUnit,
                     MedicationIntervalHours=@MedicationIntervalHours, TimeStarted=@TimeStarted,
@@ -186,6 +192,7 @@ public class HealthLogsController : ControllerBase
         cmd.Parameters.AddWithValue("@PetId", petId);
         cmd.Parameters.AddWithValue("@Type", x.Type ?? "vital");
         cmd.Parameters.AddWithValue("@Name", x.Name ?? string.Empty);
+        cmd.Parameters.AddWithValue("@Notes",x.Notes ?? "");cmd.Parameters.AddWithValue("@VetName",x.VetName ?? "");cmd.Parameters.AddWithValue("@RecordDate",ParseDate(x.RecordDate)??DateTime.Now);
         cmd.Parameters.AddWithValue("@DueDate", ParseDate(x.DueDate) is DateTime due ? due : DBNull.Value);
         cmd.Parameters.AddWithValue("@Completed", x.Completed);
         cmd.Parameters.AddWithValue("@DateAdministered", ParseDate(x.DateAdministered) is DateTime da ? da : DBNull.Value);
@@ -201,6 +208,7 @@ public class HealthLogsController : ControllerBase
         return cmd;
     }
 
+    private static bool Valid(HealthLogRequest x)=>!string.IsNullOrWhiteSpace(x.Name)&&x.Name.Length<=150&&x.DosageTotal>=0&&x.DosageRemaining>=0&&x.DosageRemaining<=x.DosageTotal&&x.ValidityInterval>=0&&x.MedicationIntervalHours>=0;
     private static DateTime? ParseDate(string? value) =>
         DateTime.TryParse(value, out var dt) ? dt : null;
 
@@ -217,6 +225,7 @@ public class HealthLogRequest
 {
     public string Type { get; set; } = "vital";
     public string Name { get; set; } = string.Empty;
+    public string Notes {get;set;}="";public string VetName{get;set;}="";public string RecordDate{get;set;}="";
     public string DueDate { get; set; } = string.Empty;
     public bool Completed { get; set; }
     public string DateAdministered { get; set; } = string.Empty;

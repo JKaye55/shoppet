@@ -150,9 +150,10 @@
                                                     <Label Text="{Binding Description}" TextColor="{StaticResource BodyText}" FontSize="13" LineBreakMode="TailTruncation" MaxLines="2"/>
                                                 </VerticalStackLayout>
                                                 <!-- Actions -->
-                                                <Grid ColumnDefinitions="*,*" Padding="12,0">
+                                                <Grid ColumnDefinitions="*,*,*" Padding="12,0">
                                                     <Button Grid.Column="0" Text="Edit" BackgroundColor="{StaticResource CardBg}" TextColor="{StaticResource Primary}" BorderColor="{StaticResource Primary}" BorderWidth="1" CornerRadius="8" FontFamily="NunitoBold" Clicked="OnEditListingClicked" CommandParameter="{Binding .}"/>
-                                                    <Button Grid.Column="1" Text="Delete" BackgroundColor="{StaticResource CardBg}" TextColor="{StaticResource StatusOverdue}" BorderColor="{StaticResource StatusOverdue}" BorderWidth="1" CornerRadius="8" FontFamily="NunitoBold" Margin="8,0,0,0" Clicked="OnDeleteListingClicked" CommandParameter="{Binding .}"/>
+                                <Button Grid.Column="1" Text="Status" Clicked="OnStatusClicked" CommandParameter="{Binding .}" />
+                                                    <Button Grid.Column="2" Text="Delete" BackgroundColor="{StaticResource CardBg}" TextColor="{StaticResource StatusOverdue}" BorderColor="{StaticResource StatusOverdue}" BorderWidth="1" CornerRadius="8" FontFamily="NunitoBold" Margin="8,0,0,0" Clicked="OnDeleteListingClicked" CommandParameter="{Binding .}"/>
                                                 </Grid>
                                             </VerticalStackLayout>
                                         </Border>

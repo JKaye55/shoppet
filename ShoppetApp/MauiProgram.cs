@@ -15,8 +15,7 @@ public static class MauiProgram
         builder
             .UseMauiApp<App>()
             .UseMauiCommunityToolkit()
-            .UseMauiCommunityToolkitMediaElement(false)
-            .ConfigureFonts(fonts =>
+                        .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("Nunito-Regular.ttf", "Nunito");
                 fonts.AddFont("Nunito-SemiBold.ttf", "NunitoSemiBold");
@@ -26,6 +25,11 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
 
+#if ANDROID
+        if(OperatingSystem.IsAndroidVersionAtLeast(26))builder.UseMauiCommunityToolkitMediaElement(false);
+#else
+        builder.UseMauiCommunityToolkitMediaElement(false);
+#endif
 #if DEBUG
         builder.Logging.AddDebug();
 #endif
@@ -38,6 +42,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<CartService>();
 
         builder.Services.AddTransient<SplashPage>();
+        builder.Services.AddTransient<VetVisitsPage>();
+        builder.Services.AddTransient<ConnectionSettingsPage>();
         builder.Services.AddTransient<OnboardingPage>();
         builder.Services.AddTransient<AuthPage>();
         builder.Services.AddTransient<AuthViewModel>();

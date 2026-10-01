@@ -16,6 +16,7 @@ public partial class OrdersPage : ContentPage
         base.OnAppearing();
         Loading.IsVisible = Loading.IsRunning = true;
         try { OrdersView.ItemsSource = await _api.GetOrdersAsync(); }
+        catch(Exception){await DisplayAlertAsync("Orders unavailable","Check your connection and sign in again if your session expired.","OK");}
         finally { Loading.IsRunning = Loading.IsVisible = false; }
     }
 

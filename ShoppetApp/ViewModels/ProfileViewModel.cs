@@ -155,6 +155,8 @@ namespace ShoppetApp.ViewModels
             ShowContactRequested?.Invoke(this, contact);
         }
 
+        [RelayCommand] private async Task OpenVetVisitsAsync()=>await Shell.Current.GoToAsync(nameof(ShoppetApp.Pages.VetVisitsPage));
+        [RelayCommand] private async Task OpenConnectionSettingsAsync()=>await Shell.Current.GoToAsync(nameof(ShoppetApp.Pages.ConnectionSettingsPage));
         [RelayCommand]
         private void Logout() => NavigationHelper.GoToAuth();
     }

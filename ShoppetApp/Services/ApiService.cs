@@ -4,12 +4,12 @@ using System.Net.Http.Json;
 
 namespace ShoppetApp.Services;
 
-public class UserSearchResult 
-{ 
-    public int UserId { get; set; } 
-    public string FullName { get; set; } = string.Empty; 
+public class UserSearchResult
+{
+    public int UserId { get; set; }
+    public string FullName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
-    public string ProfilePicture { get; set; } = string.Empty; 
+    public string ProfilePicture { get; set; } = string.Empty;
 }
 
 public class ApiService
@@ -24,7 +24,7 @@ public class ApiService
     private const string BaseUrl = "http://localhost:5020/api";
 #endif
 
-    private readonly HttpClient _http;
+    private HttpClient _http;
     private string? _token;
         public class UserProfileDto
         {
@@ -84,6 +84,25 @@ public class ApiService
         _http = new HttpClient { BaseAddress = new Uri(Preferences.Get("ApiBaseUrl",BaseUrl).TrimEnd('/') + "/"), Timeout=TimeSpan.FromSeconds(30) };
     }
 
+    public string CurrentBaseUrl=>_http.BaseAddress!.ToString().TrimEnd('/');
+    public void ConfigureConnection(string apiUrl,string webUrl)
+    {
+        if(!Uri.TryCreate(apiUrl.Trim(),UriKind.Absolute,out var a)||a.Scheme is not ("http" or "https")||!a.AbsolutePath.TrimEnd('/').EndsWith("/api",StringComparison.OrdinalIgnoreCase))throw new ArgumentException("Enter an HTTP or HTTPS API URL ending in /api.");
+        if(!Uri.TryCreate(webUrl.Trim(),UriKind.Absolute,out var w)||w.Scheme is not ("http" or "https"))throw new ArgumentException("Enter a complete web URL.");
+        Preferences.Set("ApiBaseUrl",a.AbsoluteUri.TrimEnd('/'));Preferences.Set("PublicWebBaseUrl",w.AbsoluteUri.TrimEnd('/'));
+        _http.Dispose();_http=new HttpClient{BaseAddress=new Uri(a.AbsoluteUri.TrimEnd('/')+"/"),Timeout=TimeSpan.FromSeconds(30)};
+        if(!string.IsNullOrEmpty(_token))SetToken(_token);
+    }
+    public string PetQrUrl(string cardId)=>_http.BaseAddress+"publicpetid/"+Uri.EscapeDataString(cardId)+"/qr";
+    public async Task<List<string>> UploadDocumentsAsync(IEnumerable<string> paths)
+    {
+        using var form=new MultipartFormDataContent();foreach(var path in paths){var bytes=await File.ReadAllBytesAsync(path);form.Add(new ByteArrayContent(bytes),"files",Path.GetFileName(path));}
+        var response=await _http.PostAsync("documents",form);response.EnsureSuccessStatusCode();return await response.Content.ReadFromJsonAsync<List<string>>()??new();
+    }
+    public async Task<List<ShoppetApp.Models.VetVisit>> GetVetVisitsAsync()=>await _http.GetFromJsonAsync<List<ShoppetApp.Models.VetVisit>>($"vetvisits?userId={Preferences.Get("LoggedInUserId",0)}")??new();
+    public async Task<bool> SaveVetVisitAsync(ShoppetApp.Models.VetVisit x){x.UserId=Preferences.Get("LoggedInUserId",0);var r=x.Id==0?await _http.PostAsJsonAsync("vetvisits",x):await _http.PutAsJsonAsync($"vetvisits/{x.Id}",x);return r.IsSuccessStatusCode;}
+    public async Task<bool> DeleteVetVisitAsync(int id)=>(await _http.DeleteAsync($"vetvisits/{id}?userId={Preferences.Get("LoggedInUserId",0)}")).IsSuccessStatusCode;
+    public async Task<bool> SetListingStatusAsync(int id,string status)=>(await _http.PutAsync($"marketplace/{id}/status?userId={Preferences.Get("LoggedInUserId",0)}&status={Uri.EscapeDataString(status)}",null)).IsSuccessStatusCode;
     // -- Token management ------------------------------------------------------
 
     public void SetToken(string token)
@@ -164,7 +183,7 @@ public class ApiService
             if (!string.IsNullOrWhiteSpace(pet.PhotoUrl))
                 pet.PhotoUrl = pet.PhotoUrl.Replace(
                     "http://localhost:",
-                    "http://10.0.2.2:5020",
+                    "http://10.0.2.2:",
                     StringComparison.OrdinalIgnoreCase);
         }
 #endif
@@ -247,6 +266,7 @@ public class ApiService
             {
                 log.Type,
                 log.Name,
+                log.Notes,log.VetName,log.RecordDate,
                 log.DueDate,
                 log.Completed,
                 log.DateAdministered,
@@ -279,12 +299,12 @@ public class ApiService
         try { return (await _http.PutAsync($"pets/{petId}/foodlogs/{id}/complete", null)).IsSuccessStatusCode; }
         catch { return false; }
     }
-    
+
     public async Task<bool> CompleteHealthLogAsync(int petId, int id, string nextDueDate)
     {
-        try { 
+        try {
             var body = new { NextDueDate = nextDueDate };
-            return (await _http.PutAsJsonAsync($"pets/{petId}/healthlogs/{id}/complete", body)).IsSuccessStatusCode; 
+            return (await _http.PutAsJsonAsync($"pets/{petId}/healthlogs/{id}/complete", body)).IsSuccessStatusCode;
         }
         catch { return false; }
     }
@@ -436,7 +456,7 @@ public class ApiService
                             ? string.Empty
                             : item.ImageUrl.Replace(
                                 "http://localhost:",
-                                "http://10.0.2.2:5020",
+                                "http://10.0.2.2:",
                                 StringComparison.OrdinalIgnoreCase)
                     }).ToList()
                 };
@@ -618,7 +638,7 @@ public class ApiService
             if (!string.IsNullOrWhiteSpace(post.ImageUrls))
                 post.ImageUrls = post.ImageUrls.Replace(
                     "http://localhost:",
-                    "http://10.0.2.2:5020",
+                    "http://10.0.2.2:",
                     StringComparison.OrdinalIgnoreCase);
         }
 #endif
@@ -742,8 +762,8 @@ public class ApiService
         {
             try
             {
-                var res = await _http.PostAsJsonAsync($"community/{postId}/comments", new 
-                { 
+                var res = await _http.PostAsJsonAsync($"community/{postId}/comments", new
+                {
                     UserId = userId,
                     Content = content,
                     ParentCommentId = parentCommentId
@@ -793,7 +813,7 @@ public class ApiService
                 if (!string.IsNullOrWhiteSpace(listing.ImageUrls))
                     listing.ImageUrls = listing.ImageUrls.Replace(
                         "http://localhost:",
-                        "http://10.0.2.2:5020",
+                        "http://10.0.2.2:",
                         StringComparison.OrdinalIgnoreCase);
             }
 #endif
@@ -813,7 +833,7 @@ public class ApiService
                 if (!string.IsNullOrWhiteSpace(listing.ImageUrls))
                     listing.ImageUrls = listing.ImageUrls.Replace(
                         "http://localhost:",
-                        "http://10.0.2.2:5020",
+                        "http://10.0.2.2:",
                         StringComparison.OrdinalIgnoreCase);
             }
 #endif
@@ -850,7 +870,7 @@ public class ApiService
             catch { return false; }
         }
 
-        
+
 
 
         public async Task<List<UserSearchResult>> SearchUsersAsync(string query)

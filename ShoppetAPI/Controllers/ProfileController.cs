@@ -63,6 +63,8 @@ public class ProfileController : ControllerBase
     {
         if(req.UserId<=0||string.IsNullOrWhiteSpace(req.FullName))
             return BadRequest("A valid user and full name are required.");
+        foreach(var url in new[]{req.FacebookUrl,req.InstagramUrl,req.OtherSocialUrl})
+            if(!string.IsNullOrWhiteSpace(url)&&(!Uri.TryCreate(url,UriKind.Absolute,out var parsed)||parsed.Scheme!="https"||url.Length>300))return BadRequest("Social links must be complete HTTPS URLs.");
         try
         {
             await using var conn=new SqlConnection(ConnectionString);

@@ -23,11 +23,11 @@ public partial class PetPassportViewModel : ObservableObject, IQueryAttributable
 
     public bool HasPetId => Pet is not null && !string.IsNullOrWhiteSpace(Pet.CardId);
     public string PublicPetIdUrl => HasPetId
-        ? $"https://shoppetcare.com/pet/card/{Pet!.CardId}"
+        ? $"{Preferences.Get("PublicWebBaseUrl","http://localhost:5253").TrimEnd('/')}/pet/card/{Pet!.CardId}"
         : string.Empty;
     public string QrImageUrl => string.IsNullOrWhiteSpace(PublicPetIdUrl)
         ? string.Empty
-        : $"https://quickchart.io/qr?size=220&text={Uri.EscapeDataString(PublicPetIdUrl)}";
+        : _api.PetQrUrl(Pet!.CardId);
     [ObservableProperty] private ObservableCollection<HealthLog> _healthLogs = [];
     [ObservableProperty] private ObservableCollection<FoodLog> _foodLogs = [];
     [ObservableProperty] private bool _isBusy;
@@ -64,7 +64,7 @@ public partial class PetPassportViewModel : ObservableObject, IQueryAttributable
             Pet = (await _api.GetPetsAsync()).FirstOrDefault(p => p.Id == PetId);
             if (Pet is null)
                 throw new InvalidOperationException("The selected pet was not returned by the shared database.");
-            
+
             var logs = await _api.GetHealthLogsAsync(PetId);
             var sortedHLogs = logs
                 .OrderBy(x => x.Completed)
@@ -72,7 +72,7 @@ public partial class PetPassportViewModel : ObservableObject, IQueryAttributable
                 .ThenByDescending(x => x.CompletedAt ?? DateTime.MinValue)
                 .ToList();
             HealthLogs = new ObservableCollection<HealthLog>(sortedHLogs);
-            
+
             var foodLogs = await _api.GetFoodLogsAsync(PetId);
             var sortedFLogs = foodLogs
                 .OrderBy(x => x.IsCompleted)
@@ -165,12 +165,12 @@ public partial class PetPassportViewModel : ObservableObject, IQueryAttributable
             {
                 nextDueDate = currentDue.AddHours(log.MedicationIntervalHours).ToString("yyyy/MM/dd, HH:mm:ss");
             }
-            
+
             if (log.DosageRemaining > 0)
                 log.DosageRemaining--;
-                
+
             if (log.DosageRemaining <= 0)
-                shouldComplete = true;
+            { await _api.SaveHealthLogAsync(PetId,log);shouldComplete = true; }
         }
         else // Checkup
         {
@@ -186,10 +186,10 @@ public partial class PetPassportViewModel : ObservableObject, IQueryAttributable
             log.DueDate = nextDueDate;
             await _api.SaveHealthLogAsync(PetId, log);
         }
-        
+
         WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
     }
-    
+
     [RelayCommand]
     private async Task MarkCompletedAsync(HealthLog log)
     {

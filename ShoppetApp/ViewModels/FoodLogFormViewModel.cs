@@ -132,7 +132,7 @@ public partial class FoodLogFormViewModel : ObservableObject, IQueryAttributable
         _ = int.TryParse(IntervalHoursText, out var hours);
         _ = int.TryParse(IntervalMinutesText, out var minutes);
 
-        if (minutes >= 60)
+        if (minutes <0 || minutes >= 60 || hours<0 || grams<0)
         {
             await Shell.Current.DisplayAlertAsync("Validation", "Minutes must be between 0 and 59.", "OK");
             return;
@@ -163,7 +163,7 @@ public partial class FoodLogFormViewModel : ObservableObject, IQueryAttributable
             Notes = Notes.Trim()
         };
 
-        await _api.SaveFoodLogAsync(PetId, log);
+        if(await _api.SaveFoodLogAsync(PetId, log) is null){await Shell.Current.DisplayAlertAsync("Not saved","Check your connection and try again. Your form is unchanged.","OK");return;}
         WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
         await Shell.Current.GoToAsync("..");
     }

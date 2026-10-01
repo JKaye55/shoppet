@@ -182,12 +182,12 @@ public partial class ShopPage : ContentPage
         {
             DetailImage.Source = listing.FirstImage;
             DetailImage.IsVisible = true;
-            
+
         }
         else
         {
             DetailImage.IsVisible = false;
-            
+
         }
 
         // Hide "Message" button if the listing belongs to the current logged-in user
@@ -369,6 +369,7 @@ public partial class ShopPage : ContentPage
             await Shell.Current.GoToAsync("chat", new Dictionary<string, object>
             {
                 { "ContactId", _currentListing.UserId.ToString() },
+                {"ListingId",_currentListing.Id.ToString()},
                 { "ContactName", _currentListing.SellerName }
             });
         }
@@ -585,6 +586,14 @@ public partial class ShopPage : ContentPage
         }
     }
 
+    private async void OnStatusClicked(object? sender,EventArgs e)
+    {
+        if(sender is not Button b || b.CommandParameter is not ShoppetApp.Models.MarketplaceListing x)return;
+        var status=await DisplayActionSheetAsync("Listing status","Cancel",null,"Available","Sold","Unavailable");
+        if(status is null or "Cancel")return;
+        if(!await _api.SetListingStatusAsync(x.Id,status)){await DisplayAlertAsync("Status unchanged","Purchased listings cannot be reopened. Check your connection.","OK");return;}
+        await LoadMyListingsAsync();await LoadExploreListingsAsync();
+    }
     private void ClearPostForm()
     {
         EntryTitle.Text = "";

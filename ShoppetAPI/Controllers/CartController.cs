@@ -87,7 +87,7 @@ public class CartController : ControllerBase
                 if(!await vr.ReadAsync()) return NotFound("Listing not found.");
                 if(vr.GetInt32(0)==request.UserId)
                     return BadRequest("You cannot add your own listing to cart.");
-                if(vr.GetString(1).Equals("Sold",StringComparison.OrdinalIgnoreCase))
+                if(!new[]{"Available","Active"}.Contains(vr.GetString(1),StringComparer.OrdinalIgnoreCase))
                     return BadRequest("This listing has already been sold.");
             }
 
@@ -99,7 +99,7 @@ public class CartController : ControllerBase
                     WHERE CartId=@CartId AND MarketplaceListingId=@ListingId
                 )
                     UPDATE MarketplaceCartItems
-                    SET Quantity=Quantity+@Quantity
+                    SET Quantity=1
                     WHERE CartId=@CartId AND MarketplaceListingId=@ListingId;
                 ELSE
                     INSERT INTO MarketplaceCartItems(CartId,MarketplaceListingId,Quantity)
@@ -145,7 +145,7 @@ public class CartController : ControllerBase
                     """,conn);
                 cmd.Parameters.AddWithValue("@Id",itemId);
                 cmd.Parameters.AddWithValue("@UserId",userId);
-                cmd.Parameters.AddWithValue("@Quantity",request.Quantity);
+                cmd.Parameters.AddWithValue("@Quantity",1);
                 await cmd.ExecuteNonQueryAsync();
             }
             return await GetCart(userId);
@@ -197,9 +197,11 @@ public class CartController : ControllerBase
     [HttpPost("checkout")]
     public async Task<IActionResult> Checkout(
         [FromQuery] int userId,
-        [FromQuery] string paymentMethod = "GCash Mock")
+        [FromQuery] string paymentMethod = "GCash Mock", [FromQuery] bool simulateSuccess=true)
     {
         if(userId<=0) return BadRequest("A valid user is required.");
+        if(!new[]{"GCash Mock","Cash on Meet-up","GCash - Demo","Maya - Demo"}.Contains(paymentMethod,StringComparer.OrdinalIgnoreCase)) return BadRequest("Choose a supported simulated payment method.");
+        if(!simulateSuccess)return BadRequest("Simulated payment failed. Your cart is unchanged.");
         try
         {
             await using var conn=new SqlConnection(ConnectionString);
@@ -208,10 +210,10 @@ public class CartController : ControllerBase
             if(!await RbacService.IsPetOwnerAsync(conn,userId))
                 return StatusCode(403,"Access denied.");
 
-            await using var tx=(SqlTransaction)await conn.BeginTransactionAsync();
+            await using var tx=(SqlTransaction)await conn.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
             int? cartId=null;
-            await using(var find=new SqlCommand("SELECT Id FROM MarketplaceCart WHERE UserId=@UserId",conn,tx))
+            await using(var find=new SqlCommand("SELECT Id FROM MarketplaceCart WITH(UPDLOCK,HOLDLOCK) WHERE UserId=@UserId",conn,tx))
             {
                 find.Parameters.AddWithValue("@UserId",userId);
                 var v=await find.ExecuteScalarAsync();
@@ -221,71 +223,38 @@ public class CartController : ControllerBase
 
             var entries=new List<(int ListingId,int Qty,decimal Price,string Title,int SellerUserId)>();
             await using(var read=new SqlCommand("""
-                SELECT ci.MarketplaceListingId,ci.Quantity,m.Price,m.Title,m.SellerUserId
+                SELECT ci.MarketplaceListingId,1,m.Price,m.Title,m.SellerUserId,m.Status
                 FROM MarketplaceCartItems ci
-                JOIN MarketplaceListings m ON m.Id=ci.MarketplaceListingId
-                WHERE ci.CartId=@CartId AND ISNULL(m.Status,'Available')<>'Sold';
+                JOIN MarketplaceListings m WITH(UPDLOCK,HOLDLOCK) ON m.Id=ci.MarketplaceListingId
+                WHERE ci.CartId=@CartId;
                 """,conn,tx))
             {
                 read.Parameters.AddWithValue("@CartId",cartId.Value);
                 await using var r=await read.ExecuteReaderAsync();
                 while(await r.ReadAsync())
-                    entries.Add((r.GetInt32(0),r.GetInt32(1),r.GetDecimal(2),r.GetString(3),r.GetInt32(4)));
+                { if(!new[]{"Available","Active"}.Contains(r.GetString(5),StringComparer.OrdinalIgnoreCase)) return BadRequest("A cart item is no longer available. Remove it before checkout.");
+                  entries.Add((r.GetInt32(0),1,r.GetDecimal(2),r.GetString(3),r.GetInt32(4))); }
             }
             if(entries.Count==0) return BadRequest("Cart is empty.");
             if(entries.Any(x=>x.SellerUserId==userId))
                 return BadRequest("You cannot purchase your own marketplace listing.");
 
             var total=entries.Sum(x=>x.Price*x.Qty);
-            int orderId;
-            await using(var order=new SqlCommand("""
-                INSERT INTO MarketplaceOrders(UserId,TotalAmount,Status,OrderedAt)
-                OUTPUT INSERTED.Id
-                VALUES(@UserId,@Total,'Confirmed',SYSDATETIME());
-                """,conn,tx))
+            int orderId=0;
+            foreach(var seller in entries.GroupBy(e=>e.SellerUserId))
             {
-                order.Parameters.AddWithValue("@UserId",userId);
-                order.Parameters.AddWithValue("@Total",total);
-                orderId=Convert.ToInt32(await order.ExecuteScalarAsync());
+                var reference="MOCK-"+Guid.NewGuid().ToString("N")[..12].ToUpperInvariant();
+                var sellerTotal=seller.Sum(e=>e.Price);
+                await using(var order=new SqlCommand("INSERT INTO MarketplaceOrders(BuyerUserId,SellerUserId,Reference,PaymentMethod,Status,Subtotal,VoucherDiscount,Total,CreatedAt,CompletedAt) OUTPUT INSERTED.Id VALUES(@Buyer,@Seller,@Ref,@Method,'Completed',@Total,0,@Total,SYSDATETIME(),SYSDATETIME())",conn,tx))
+                {order.Parameters.AddWithValue("@Buyer",userId);order.Parameters.AddWithValue("@Seller",seller.Key);order.Parameters.AddWithValue("@Ref",reference);order.Parameters.AddWithValue("@Method",paymentMethod);order.Parameters.AddWithValue("@Total",sellerTotal);orderId=Convert.ToInt32(await order.ExecuteScalarAsync());}
+                foreach(var e in seller)
+                {
+                    await using var line=new SqlCommand("INSERT INTO MarketplaceOrderItems(OrderId,ListingId,ListingTitle,Price) VALUES(@Order,@Listing,@Title,@Price); UPDATE MarketplaceListings SET Status='Sold',UpdatedAt=SYSDATETIME() WHERE Id=@Listing;",conn,tx);
+                    line.Parameters.AddWithValue("@Order",orderId);line.Parameters.AddWithValue("@Listing",e.ListingId);line.Parameters.AddWithValue("@Title",e.Title);line.Parameters.AddWithValue("@Price",e.Price);await line.ExecuteNonQueryAsync();
+                }
+                await using var payment=new SqlCommand("INSERT INTO Transactions(UserId,Type,Amount,Reference,PaidAt,PaymentMethod,Status) VALUES(@User,'MarketplacePurchase',@Total,@Ref,SYSDATETIME(),@Method,'SimulatedPaid')",conn,tx);
+                payment.Parameters.AddWithValue("@User",userId);payment.Parameters.AddWithValue("@Total",sellerTotal);payment.Parameters.AddWithValue("@Ref",reference);payment.Parameters.AddWithValue("@Method",paymentMethod);await payment.ExecuteNonQueryAsync();
             }
-
-            foreach(var e in entries)
-            {
-                await using var item=new SqlCommand("""
-                    INSERT INTO MarketplaceOrderItems(OrderId,MarketplaceListingId,Quantity,UnitPrice)
-                    VALUES(@OrderId,@ListingId,@Quantity,@UnitPrice);
-                    """,conn,tx);
-                item.Parameters.AddWithValue("@OrderId",orderId);
-                item.Parameters.AddWithValue("@ListingId",e.ListingId);
-                item.Parameters.AddWithValue("@Quantity",e.Qty);
-                item.Parameters.AddWithValue("@UnitPrice",e.Price);
-                await item.ExecuteNonQueryAsync();
-            }
-
-            foreach(var e in entries)
-            {
-                await using var sold=new SqlCommand(
-                    "UPDATE MarketplaceListings SET Status='Sold' WHERE Id=@ListingId",conn,tx);
-                sold.Parameters.AddWithValue("@ListingId",e.ListingId);
-                await sold.ExecuteNonQueryAsync();
-            }
-
-            var reference = "MOCK-" + Guid.NewGuid().ToString("N")[..10].ToUpperInvariant();
-            await using(var payment=new SqlCommand("""
-                INSERT INTO Transactions
-                    (UserId,Type,Amount,Reference,PaidAt,PaymentMethod,Status)
-                VALUES
-                    (@UserId,'MarketplacePurchase',@Amount,@Reference,SYSDATETIME(),@PaymentMethod,'SimulatedPaid');
-                """,conn,tx))
-            {
-                payment.Parameters.AddWithValue("@UserId",userId);
-                payment.Parameters.AddWithValue("@Amount",total);
-                payment.Parameters.AddWithValue("@Reference",reference);
-                payment.Parameters.AddWithValue("@PaymentMethod",
-                    string.IsNullOrWhiteSpace(paymentMethod) ? "GCash Mock" : paymentMethod);
-                await payment.ExecuteNonQueryAsync();
-            }
-
             await using(var notify=new SqlCommand("""
                 INSERT INTO Notifications(UserId,Title,Body,Link,Icon,IsRead,CreatedAt)
                 VALUES(@UserId,'Purchase confirmed',
@@ -306,7 +275,7 @@ public class CartController : ControllerBase
 
             await tx.CommitAsync();
             return Ok(new{
-                Id=orderId,UserId=userId,TotalAmount=total,Status="Confirmed",
+                Id=orderId,UserId=userId,TotalAmount=total,Status="Completed",
                 OrderedAt=DateTime.Now,
                 Items=entries.Select(e=>new{
                     ProductId=e.ListingId,ProductName=e.Title,Quantity=e.Qty,
@@ -327,10 +296,10 @@ public class CartController : ControllerBase
             await conn.OpenAsync();
 
             await using(var cmd=new SqlCommand("""
-                SELECT Id,UserId,TotalAmount,Status,OrderedAt
+                SELECT Id,BuyerUserId,Total,Status,CreatedAt
                 FROM MarketplaceOrders
-                WHERE UserId=@UserId
-                ORDER BY OrderedAt DESC;
+                WHERE BuyerUserId=@UserId OR SellerUserId=@UserId
+                ORDER BY CreatedAt DESC;
                 """,conn))
             {
                 cmd.Parameters.AddWithValue("@UserId",userId);
@@ -351,10 +320,10 @@ public class CartController : ControllerBase
             foreach(var order in orders)
             {
                 await using var items=new SqlCommand("""
-                    SELECT oi.MarketplaceListingId,ISNULL(m.Title,'Marketplace item'),
-                           oi.Quantity,oi.UnitPrice
+                    SELECT oi.ListingId,oi.ListingTitle,
+                           1,oi.Price
                     FROM MarketplaceOrderItems oi
-                    LEFT JOIN MarketplaceListings m ON m.Id=oi.MarketplaceListingId
+                    LEFT JOIN MarketplaceListings m ON m.Id=oi.ListingId
                     WHERE oi.OrderId=@OrderId
                     ORDER BY oi.Id;
                     """,conn);

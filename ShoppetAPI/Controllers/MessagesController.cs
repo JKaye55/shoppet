@@ -33,7 +33,7 @@ public class MessagesController : ControllerBase
             await using var cmd=new SqlCommand("""
                 SELECT TOP 20 Id,FullName,Email,ISNULL(ProfilePicture,'')
                 FROM UserAccounts
-                WHERE Id<>@CurrentUserId
+                WHERE Id<>@CurrentUserId AND Role IN('Pet Owner','PetOwner')
                   AND (FullName LIKE @Query OR Email LIKE @Query)
                 ORDER BY FullName;
                 """,conn);
@@ -50,7 +50,7 @@ public class MessagesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> SendMessage([FromBody] SendMessageRequest req)
     {
-        if(req.SenderId<=0||req.ReceiverId<=0||string.IsNullOrWhiteSpace(req.Text))
+        if(req.SenderId<=0||req.ReceiverId<=0||req.SenderId==req.ReceiverId||string.IsNullOrWhiteSpace(req.Text)||req.Text.Length>1000)
             return BadRequest("Sender, receiver, and message are required.");
         try
         {
@@ -59,11 +59,11 @@ public class MessagesController : ControllerBase
 
             await using var conn=new SqlConnection(ConnectionString);
             await conn.OpenAsync();
-            await using var tx=(SqlTransaction)await conn.BeginTransactionAsync();
+            await using var tx=(SqlTransaction)await conn.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
             int conversationId;
             await using(var get=new SqlCommand(
-                "SELECT Id FROM Conversations WHERE User1Id=@U1 AND User2Id=@U2",conn,tx))
+                "SELECT Id FROM Conversations WITH(UPDLOCK,HOLDLOCK) WHERE User1Id=@U1 AND User2Id=@U2",conn,tx))
             {
                 get.Parameters.AddWithValue("@U1",u1);
                 get.Parameters.AddWithValue("@U2",u2);
@@ -212,7 +212,7 @@ public class MessagesController : ControllerBase
             int u1=Math.Min(userId,contactId),u2=Math.Max(userId,contactId);
             await using var conn=new SqlConnection(ConnectionString);
             await conn.OpenAsync();
-            await using var tx=(SqlTransaction)await conn.BeginTransactionAsync();
+            await using var tx=(SqlTransaction)await conn.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
             await using(var read=new SqlCommand("""
                 UPDATE m SET IsRead=1

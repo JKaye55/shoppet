@@ -7,6 +7,8 @@ public partial class AppShell : Shell
     public AppShell()
     {
         InitializeComponent();
+        Routing.RegisterRoute(nameof(VetVisitsPage),typeof(VetVisitsPage));
+        Routing.RegisterRoute(nameof(ConnectionSettingsPage),typeof(ConnectionSettingsPage));
 
         Routing.RegisterRoute("petpassport", typeof(PetPassportPage));
         Routing.RegisterRoute("petform", typeof(PetFormPage));

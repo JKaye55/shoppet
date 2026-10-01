@@ -17,7 +17,7 @@ public sealed class SessionGuard(IConfiguration configuration) : IAsyncActionFil
              (controller=="Community" && action.ActionName is "GetPosts" or "GetComments") || controller=="PublicPetId");
         if(controller=="Auth" || publicRead) { await next();return; }
         var authorization=context.HttpContext.Request.Headers.Authorization.ToString();
-        if(!authorization.StartsWith("Bearer ",StringComparison.OrdinalIgnoreCase) || authorization.Length<20)
+        if(!authorization.StartsWith("Bearer ",StringComparison.OrdinalIgnoreCase) || authorization.Length!=71 || authorization[7..].Any(c=>!Uri.IsHexDigit(c)))
         { context.Result=new UnauthorizedObjectResult("Sign in to continue.");return; }
         await using var c=new SqlConnection(configuration.GetConnectionString("SharedSqlServer"));
         await c.OpenAsync();
@@ -30,11 +30,12 @@ public sealed class SessionGuard(IConfiguration configuration) : IAsyncActionFil
             actor=r.GetInt32(0);role=RbacService.NormalizeRole(r.GetString(1));
         }
         if(string.IsNullOrEmpty(role)) {context.Result=new ObjectResult("Account role is inactive."){StatusCode=403};return;}
-        foreach(var pair in context.ActionArguments)
+        foreach(var pair in context.ActionArguments.ToArray())
         {
             if(pair.Key is "userId" or "currentUserId")
             {
                 if(pair.Value is int value && value!=0 && value!=actor) {Deny(context);return;}
+                context.ActionArguments[pair.Key]=actor;
             }
             if(pair.Value is not null && !pair.Value.GetType().IsPrimitive && pair.Value is not string)
                 foreach(var name in new[]{"UserId","SenderId"})

@@ -325,7 +325,7 @@ public class CommunityController : ControllerBase
     [HttpPost("{postId:int}/comments")]
     public async Task<IActionResult> AddComment(int postId, [FromBody] AddCommentRequest request)
     {
-        if (request.UserId <= 0 || string.IsNullOrWhiteSpace(request.Content))
+        if (request.UserId <= 0 || string.IsNullOrWhiteSpace(request.Content)||request.Content.Length>300)
             return BadRequest("A valid user and comment are required.");
 
         try
@@ -338,8 +338,10 @@ public class CommunityController : ControllerBase
 
             const string query = """
                 DECLARE @AuthorName NVARCHAR(150) =
-                    ISNULL((SELECT FullName FROM UserAccounts WHERE Id=@UserId), 'Unknown');
+                    LEFT(ISNULL((SELECT FullName FROM UserAccounts WHERE Id=@UserId), 'Unknown'),120);
 
+                IF NOT EXISTS(SELECT 1 FROM CommunityPosts WHERE Id=@PostId) THROW 51000,'Post not found.',1;
+                IF @ParentCommentId IS NOT NULL AND NOT EXISTS(SELECT 1 FROM CommunityComments WHERE Id=@ParentCommentId AND PostId=@PostId) THROW 51000,'Reply parent is not in this post.',1;
                 INSERT INTO CommunityComments
                     (PostId, UserId, AuthorName, Body, IsGuest, CreatedAt, ParentCommentId, Content)
                 VALUES

@@ -21,7 +21,7 @@ public class PremiumController : ControllerBase
         await conn.OpenAsync();
         await using var cmd=new SqlCommand("""
             SELECT ISNULL(IsPremium,0),PremiumActivatedAt,ISNULL(PremiumReference,'')
-            FROM UserAccounts WHERE Id=@UserId;
+            FROM UserAccounts WITH(UPDLOCK,HOLDLOCK) WHERE Id=@UserId;
             """,conn);
         cmd.Parameters.AddWithValue("@UserId",userId);
         await using var r=await cmd.ExecuteReaderAsync();
@@ -40,10 +40,10 @@ public class PremiumController : ControllerBase
         if(userId<=0) return BadRequest("A valid user is required.");
         await using var conn=new SqlConnection(ConnectionString);
         await conn.OpenAsync();
-        await using var tx=(SqlTransaction)await conn.BeginTransactionAsync();
+        await using var tx=(SqlTransaction)await conn.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
         await using(var check=new SqlCommand(
-            "SELECT ISNULL(IsPremium,0) FROM UserAccounts WHERE Id=@UserId",conn,tx))
+            "SELECT ISNULL(IsPremium,0) FROM UserAccounts WITH(UPDLOCK,HOLDLOCK) WHERE Id=@UserId",conn,tx))
         {
             check.Parameters.AddWithValue("@UserId",userId);
             var existing=await check.ExecuteScalarAsync();

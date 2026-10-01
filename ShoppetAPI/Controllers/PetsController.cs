@@ -221,6 +221,7 @@ public class PetsController : ControllerBase
 
             var cleanupSql = new[]
             {
+                "DELETE FROM VetVisitReminders WHERE PetId=@Id",
                 "DELETE FROM PetHealthRecords WHERE PetId=@Id",
                 "DELETE FROM FoodLogs WHERE PetId=@Id",
                 "UPDATE CommunityPosts SET PetId=NULL WHERE PetId=@Id"
