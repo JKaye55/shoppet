@@ -81,7 +81,7 @@ public class ApiService
 
     public ApiService()
     {
-        _http = new HttpClient { BaseAddress = new Uri(BaseUrl + "/") };
+        _http = new HttpClient { BaseAddress = new Uri(Preferences.Get("ApiBaseUrl",BaseUrl).TrimEnd('/') + "/"), Timeout=TimeSpan.FromSeconds(30) };
     }
 
     // -- Token management ------------------------------------------------------
@@ -163,7 +163,7 @@ public class ApiService
         {
             if (!string.IsNullOrWhiteSpace(pet.PhotoUrl))
                 pet.PhotoUrl = pet.PhotoUrl.Replace(
-                    "http://localhost:5020",
+                    "http://localhost:",
                     "http://10.0.2.2:5020",
                     StringComparison.OrdinalIgnoreCase);
         }
@@ -435,7 +435,7 @@ public class ApiService
                         ImageUrl = string.IsNullOrWhiteSpace(item.ImageUrl)
                             ? string.Empty
                             : item.ImageUrl.Replace(
-                                "http://localhost:5020",
+                                "http://localhost:",
                                 "http://10.0.2.2:5020",
                                 StringComparison.OrdinalIgnoreCase)
                     }).ToList()
@@ -617,7 +617,7 @@ public class ApiService
         {
             if (!string.IsNullOrWhiteSpace(post.ImageUrls))
                 post.ImageUrls = post.ImageUrls.Replace(
-                    "http://localhost:5020",
+                    "http://localhost:",
                     "http://10.0.2.2:5020",
                     StringComparison.OrdinalIgnoreCase);
         }
@@ -792,7 +792,7 @@ public class ApiService
             {
                 if (!string.IsNullOrWhiteSpace(listing.ImageUrls))
                     listing.ImageUrls = listing.ImageUrls.Replace(
-                        "http://localhost:5020",
+                        "http://localhost:",
                         "http://10.0.2.2:5020",
                         StringComparison.OrdinalIgnoreCase);
             }
@@ -812,7 +812,7 @@ public class ApiService
             {
                 if (!string.IsNullOrWhiteSpace(listing.ImageUrls))
                     listing.ImageUrls = listing.ImageUrls.Replace(
-                        "http://localhost:5020",
+                        "http://localhost:",
                         "http://10.0.2.2:5020",
                         StringComparison.OrdinalIgnoreCase);
             }

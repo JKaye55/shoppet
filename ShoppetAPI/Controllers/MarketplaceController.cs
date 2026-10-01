@@ -101,7 +101,7 @@ public class MarketplaceController : ControllerBase
             await conn.OpenAsync();
 
             if(!await RbacService.IsPetOwnerAsync(conn,x.UserId))
-                return Forbid();
+                return StatusCode(403,"Access denied.");
 
             await using var cmd=new SqlCommand("""
                 INSERT INTO MarketplaceListings
@@ -125,7 +125,7 @@ public class MarketplaceController : ControllerBase
             await conn.OpenAsync();
 
             if(!await RbacService.IsPetOwnerAsync(conn,x.UserId))
-                return Forbid();
+                return StatusCode(403,"Access denied.");
 
             await using var cmd=new SqlCommand("""
                 UPDATE MarketplaceListings

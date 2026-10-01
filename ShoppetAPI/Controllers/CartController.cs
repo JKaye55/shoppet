@@ -25,7 +25,7 @@ public class CartController : ControllerBase
             await conn.OpenAsync();
 
             if(!await RbacService.IsPetOwnerAsync(conn,userId))
-                return Forbid();
+                return StatusCode(403,"Access denied.");
 
             var cartId=await EnsureCartAsync(conn,userId);
 
@@ -74,7 +74,7 @@ public class CartController : ControllerBase
             await conn.OpenAsync();
 
             if(!await RbacService.IsPetOwnerAsync(conn,request.UserId))
-                return Forbid();
+                return StatusCode(403,"Access denied.");
 
             await using(var validate=new SqlCommand("""
                 SELECT SellerUserId,ISNULL(Status,'Available')
@@ -206,7 +206,7 @@ public class CartController : ControllerBase
             await conn.OpenAsync();
 
             if(!await RbacService.IsPetOwnerAsync(conn,userId))
-                return Forbid();
+                return StatusCode(403,"Access denied.");
 
             await using var tx=(SqlTransaction)await conn.BeginTransactionAsync();
 

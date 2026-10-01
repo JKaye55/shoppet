@@ -105,6 +105,7 @@ public partial class AuthViewModel : ObservableObject
                 if (result.Success && result.Data is not null)
                 {
                     _apiService.SetToken(result.Data.Token);
+                    await SecureStorage.SetAsync("ApiToken",result.Data.Token);
 
                     // ⭐ Save user session locally for API mapping + Community RBAC
                     Preferences.Set("LoggedInUserId", result.Data.UserId);
@@ -140,6 +141,7 @@ public partial class AuthViewModel : ObservableObject
                     hasError = true;
                 }
 
+                if (Password.Length < 15 || Password.Length > 64) { PasswordError="Use a passphrase of 15–64 characters.";hasError=true; }
                 if (Password != ConfirmPassword)
                 {
                     ConfirmPasswordError = "Passwords do not match.";
@@ -153,6 +155,7 @@ public partial class AuthViewModel : ObservableObject
                 if (result.Success && result.Data is not null)
                 {
                     _apiService.SetToken(result.Data.Token);
+                    await SecureStorage.SetAsync("ApiToken",result.Data.Token);
 
                     // ⭐ Save user session locally for API mapping + Community RBAC
                     Preferences.Set("LoggedInUserId", result.Data.UserId);

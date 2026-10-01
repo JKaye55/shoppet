@@ -195,30 +195,6 @@ public static class CommunitySchemaInitializer
                     ON dbo.MarketplaceCartItems(CartId, MarketplaceListingId);
             END;
 
-            IF OBJECT_ID(N'dbo.MarketplaceOrders', N'U') IS NULL
-            BEGIN
-                CREATE TABLE dbo.MarketplaceOrders
-                (
-                    Id INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-                    UserId INT NOT NULL,
-                    TotalAmount DECIMAL(10,2) NOT NULL,
-                    Status NVARCHAR(30) NOT NULL CONSTRAINT DF_MarketplaceOrders_Status DEFAULT('Confirmed'),
-                    OrderedAt DATETIME2 NOT NULL CONSTRAINT DF_MarketplaceOrders_OrderedAt DEFAULT(SYSDATETIME())
-                );
-            END;
-
-            IF OBJECT_ID(N'dbo.MarketplaceOrderItems', N'U') IS NULL
-            BEGIN
-                CREATE TABLE dbo.MarketplaceOrderItems
-                (
-                    Id INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-                    OrderId INT NOT NULL,
-                    MarketplaceListingId INT NOT NULL,
-                    Quantity INT NOT NULL,
-                    UnitPrice DECIMAL(10,2) NOT NULL
-                );
-            END;
-
             IF OBJECT_ID(N'dbo.CommunityPosts', N'U') IS NOT NULL
                AND COL_LENGTH('dbo.CommunityPosts', 'ImageUrl') IS NOT NULL
                 ALTER TABLE dbo.CommunityPosts ALTER COLUMN ImageUrl NVARCHAR(MAX) NULL;
@@ -295,6 +271,8 @@ public static class CommunitySchemaInitializer
 
             IF OBJECT_ID(N'dbo.CommunityComments', N'U') IS NOT NULL
             BEGIN
+                IF COL_LENGTH('dbo.CommunityComments', 'Body') IS NULL ALTER TABLE dbo.CommunityComments ADD Body NVARCHAR(1000) NULL;
+                IF COL_LENGTH('dbo.CommunityComments', 'IsGuest') IS NULL ALTER TABLE dbo.CommunityComments ADD IsGuest BIT NOT NULL DEFAULT(0);
                 IF COL_LENGTH('dbo.CommunityComments', 'UserId') IS NULL
                     ALTER TABLE dbo.CommunityComments ADD UserId INT NULL;
 

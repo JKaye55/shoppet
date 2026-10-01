@@ -25,7 +25,7 @@ public class ContactsController : ControllerBase
             await conn.OpenAsync();
 
             if(!await RbacService.IsPetOwnerAsync(conn,userId))
-                return Forbid();
+                return StatusCode(403,"Access denied.");
 
             var sql="""
                 SELECT Id,UserId,Name,ISNULL(Role,''),ISNULL(Address,''),
@@ -63,7 +63,7 @@ public class ContactsController : ControllerBase
             await conn.OpenAsync();
 
             if(!await RbacService.IsPetOwnerAsync(conn,x.UserId))
-                return Forbid();
+                return StatusCode(403,"Access denied.");
 
             await using var cmd=new SqlCommand("""
                 INSERT INTO EmergencyContacts(UserId,Name,Role,Address,Phone,IsEmergency)
@@ -86,7 +86,7 @@ public class ContactsController : ControllerBase
             await conn.OpenAsync();
 
             if(!await RbacService.IsPetOwnerAsync(conn,x.UserId))
-                return Forbid();
+                return StatusCode(403,"Access denied.");
 
             await using var cmd=new SqlCommand("""
                 UPDATE EmergencyContacts
@@ -108,7 +108,7 @@ public class ContactsController : ControllerBase
             await using var conn=new SqlConnection(ConnectionString);
             await conn.OpenAsync();
             if(!await RbacService.IsPetOwnerAsync(conn,userId))
-                return Forbid();
+                return StatusCode(403,"Access denied.");
 
             const string sql="DELETE FROM EmergencyContacts WHERE Id=@Id AND UserId=@UserId";
             await using var cmd=new SqlCommand(sql,conn);

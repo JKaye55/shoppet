@@ -195,7 +195,7 @@ public class CommunityController : ControllerBase
             await connection.OpenAsync();
 
             if (!await RbacService.IsPetOwnerAsync(connection, request.UserId))
-                return Forbid();
+                return StatusCode(403,"Access denied.");
 
             await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync();
 
@@ -334,7 +334,7 @@ public class CommunityController : ControllerBase
             await connection.OpenAsync();
 
             if (!await RbacService.IsPetOwnerAsync(connection, request.UserId))
-                return Forbid();
+                return StatusCode(403,"Access denied.");
 
             const string query = """
                 DECLARE @AuthorName NVARCHAR(150) =
@@ -377,7 +377,7 @@ public class CommunityController : ControllerBase
             await connection.OpenAsync();
 
             if (!await RbacService.IsPetOwnerAsync(connection, request.UserId))
-                return Forbid();
+                return StatusCode(403,"Access denied.");
 
             const string checkSql =
                 "SELECT Id FROM CommunityCommentLikes WHERE CommentId=@CommentId AND UserId=@UserId";
@@ -428,7 +428,7 @@ public class CommunityController : ControllerBase
 
                 if (owner is null) return NotFound();
                 if (!RbacService.IsAdmin(role) && Convert.ToInt32(owner) != userId)
-                    return Forbid();
+                    return StatusCode(403,"Access denied.");
             }
 
             var commands = new[]
@@ -519,7 +519,7 @@ public class CommunityController : ControllerBase
                 var owner = await ownership.ExecuteScalarAsync();
                 if (owner is null) return NotFound();
                 if (!RbacService.IsAdmin(role) && Convert.ToInt32(owner) != userId)
-                    return Forbid();
+                    return StatusCode(403,"Access denied.");
             }
 
             await using (var likes = new SqlCommand(

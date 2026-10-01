@@ -27,6 +27,9 @@ public class AuthController : ControllerBase
             string.IsNullOrWhiteSpace(request.Password))
             return BadRequest("Full name, email, and password are required.");
 
+        if (request.Password.Length < 15 || request.Password.Length > 64 || request.FullName.Trim().Length > 150
+            || !System.Net.Mail.MailAddress.TryCreate(request.Email, out var address) || address.Address != request.Email.Trim())
+            return BadRequest("Use a valid email, name, and a passphrase of 15–64 characters.");
         try
         {
             await using var connection = new SqlConnection(ConnectionString);
@@ -36,7 +39,7 @@ public class AuthController : ControllerBase
                 "SELECT COUNT(1) FROM UserAccounts WHERE Email=@Email",
                 connection))
             {
-                check.Parameters.AddWithValue("@Email", request.Email.Trim());
+                check.Parameters.AddWithValue("@Email", request.Email.Trim().ToLowerInvariant());
                 var count = Convert.ToInt32(await check.ExecuteScalarAsync());
                 if (count > 0)
                     return Conflict("Email is already registered.");
@@ -52,7 +55,7 @@ public class AuthController : ControllerBase
 
             await using var insert = new SqlCommand(insertSql, connection);
             insert.Parameters.AddWithValue("@FullName", request.FullName.Trim());
-            insert.Parameters.AddWithValue("@Email", request.Email.Trim());
+            insert.Parameters.AddWithValue("@Email", request.Email.Trim().ToLowerInvariant());
             insert.Parameters.AddWithValue("@PasswordHash", passwordHash);
 
             var userId = Convert.ToInt32(await insert.ExecuteScalarAsync());
@@ -61,9 +64,9 @@ public class AuthController : ControllerBase
             {
                 UserId = userId,
                 FullName = request.FullName.Trim(),
-                Email = request.Email.Trim(),
+                Email = request.Email.Trim().ToLowerInvariant(),
                 Role = "Pet Owner",
-                Token = "local-session"
+                Token = await IssueTokenAsync(connection,userId)
             });
         }
         catch (Exception ex)
@@ -91,7 +94,7 @@ public class AuthController : ControllerBase
                 """;
 
             await using var cmd = new SqlCommand(sql, connection);
-            cmd.Parameters.AddWithValue("@Email", request.Email.Trim());
+            cmd.Parameters.AddWithValue("@Email", request.Email.Trim().ToLowerInvariant());
 
             await using var reader = await cmd.ExecuteReaderAsync();
             if (!await reader.ReadAsync())
@@ -112,13 +115,14 @@ public class AuthController : ControllerBase
                 return StatusCode(403,
                     "This legacy account role is no longer part of the active ShoppetCare flow.");
 
+            await reader.DisposeAsync();
             return Ok(new AuthResponse
             {
                 UserId = userId,
                 FullName = fullName,
                 Email = email,
                 Role = role,
-                Token = "local-session"
+                Token = await IssueTokenAsync(connection,userId)
             });
         }
         catch (Exception ex)
@@ -127,26 +131,14 @@ public class AuthController : ControllerBase
         }
     }
 
-    private static bool VerifyPassword(string password, string storedPassword)
+    private static bool VerifyPassword(string password,string storedPassword) => CredentialMigration.Verify(password,storedPassword);
+    private static async Task<string> IssueTokenAsync(SqlConnection c,int id)
     {
-        if (string.IsNullOrEmpty(storedPassword))
-            return false;
-
-        if (storedPassword.StartsWith("$2", StringComparison.Ordinal))
-        {
-            try
-            {
-                return BCrypt.Net.BCrypt.Verify(password, storedPassword);
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        // Compatibility for existing web accounts created before BCrypt migration.
-        return string.Equals(password, storedPassword, StringComparison.Ordinal);
+        var token=Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+        await using var q=new SqlCommand("UPDATE UserAccounts SET ApiToken=@Token,ApiTokenExpiresAt=DATEADD(day,7,SYSUTCDATETIME()) WHERE Id=@Id",c);
+        q.Parameters.AddWithValue("@Token",token);q.Parameters.AddWithValue("@Id",id);await q.ExecuteNonQueryAsync();return token;
     }
+
 }
 
 public class RegisterRequest

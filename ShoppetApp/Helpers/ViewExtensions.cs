@@ -38,6 +38,10 @@ public static class NavigationHelper
 
     public static void GoToAuth()
     {
+        App.Services.GetRequiredService<ShoppetApp.Services.ApiService>().ClearToken();
+        App.Services.GetRequiredService<ShoppetApp.Services.DatabaseService>().CurrentUser=null;
+        SecureStorage.Remove("ApiToken");
+        Preferences.Remove("LoggedInUserId");Preferences.Remove("LoggedInUserName");Preferences.Remove("LoggedInUserRole");
         var auth = App.Services.GetRequiredService<Pages.AuthPage>();
         SetRoot(new NavigationPage(auth)
         {
