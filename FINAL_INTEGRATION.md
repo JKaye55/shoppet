@@ -181,3 +181,9 @@ Stop-Process -Id 23420 -Force
 ```
 
 If the PID no longer exists, it already stopped. Run the startup command in step 1 once, wait for the listening message, then retry login. Deleting build files while the API is running does not release its file locks.
+
+## October 1 migration follow-up
+
+The shared migration now checks each order column independently, supports the existing single-listing order format, retains legacy order lines, and makes obsolete order fields optional for new checkout writes. Existing payment/status values are preserved. The earlier manual repair remains documented as the troubleshooting history; updated startup migration handles these columns automatically.
+
+After pulling both branches, restart one API instance and the Web app. Check startup logs, then run the shared integration script from the mobile repository. This creates demo data and checks the database-backed flows; compilation alone cannot verify your local SQL schema.

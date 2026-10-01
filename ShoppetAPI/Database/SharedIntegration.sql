@@ -1,23 +1,36 @@
 SET XACT_ABORT ON;
-IF OBJECT_ID('dbo.MarketplaceOrders','U') IS NOT NULL AND COL_LENGTH('dbo.MarketplaceOrders','BuyerUserId') IS NULL
+-- Check columns individually: existing databases have several order formats.
+IF OBJECT_ID('dbo.MarketplaceOrders','U') IS NOT NULL
 BEGIN
-    ALTER TABLE dbo.MarketplaceOrders ADD BuyerUserId INT NULL,SellerUserId INT NULL,Reference NVARCHAR(100) NULL,PaymentMethod NVARCHAR(50) NULL,Subtotal DECIMAL(10,2) NULL,VoucherDiscount DECIMAL(10,2) NOT NULL DEFAULT(0),Total DECIMAL(10,2) NULL,CreatedAt DATETIME2 NULL,CompletedAt DATETIME2 NULL;
-    ALTER TABLE dbo.MarketplaceOrders ALTER COLUMN UserId INT NULL;
-    ALTER TABLE dbo.MarketplaceOrders ALTER COLUMN TotalAmount DECIMAL(10,2) NULL;
+    IF COL_LENGTH('dbo.MarketplaceOrders','BuyerUserId') IS NULL
+        ALTER TABLE dbo.MarketplaceOrders ADD BuyerUserId INT NULL;
+    IF COL_LENGTH('dbo.MarketplaceOrders','SellerUserId') IS NULL
+        ALTER TABLE dbo.MarketplaceOrders ADD SellerUserId INT NULL;
+    IF COL_LENGTH('dbo.MarketplaceOrders','Reference') IS NULL
+        ALTER TABLE dbo.MarketplaceOrders ADD Reference NVARCHAR(100) NULL;
+    IF COL_LENGTH('dbo.MarketplaceOrders','PaymentMethod') IS NULL
+        ALTER TABLE dbo.MarketplaceOrders ADD PaymentMethod NVARCHAR(50) NULL;
+    IF COL_LENGTH('dbo.MarketplaceOrders','Subtotal') IS NULL
+        ALTER TABLE dbo.MarketplaceOrders ADD Subtotal DECIMAL(10,2) NULL;
+    IF COL_LENGTH('dbo.MarketplaceOrders','VoucherDiscount') IS NULL
+        ALTER TABLE dbo.MarketplaceOrders ADD VoucherDiscount DECIMAL(10,2) NOT NULL DEFAULT(0);
+    IF COL_LENGTH('dbo.MarketplaceOrders','Total') IS NULL
+        ALTER TABLE dbo.MarketplaceOrders ADD Total DECIMAL(10,2) NULL;
+    IF COL_LENGTH('dbo.MarketplaceOrders','CreatedAt') IS NULL
+        ALTER TABLE dbo.MarketplaceOrders ADD CreatedAt DATETIME2 NULL;
+    IF COL_LENGTH('dbo.MarketplaceOrders','CompletedAt') IS NULL
+        ALTER TABLE dbo.MarketplaceOrders ADD CompletedAt DATETIME2 NULL;
 END;
 GO
-IF OBJECT_ID('dbo.MarketplaceOrderItems','U') IS NOT NULL AND COL_LENGTH('dbo.MarketplaceOrderItems','ListingId') IS NULL
+IF OBJECT_ID('dbo.MarketplaceOrderItems','U') IS NOT NULL
 BEGIN
-    ALTER TABLE dbo.MarketplaceOrderItems ADD ListingId INT NULL,ListingTitle NVARCHAR(200) NULL,Price DECIMAL(10,2) NULL;
-    ALTER TABLE dbo.MarketplaceOrderItems ALTER COLUMN MarketplaceListingId INT NULL;
-    ALTER TABLE dbo.MarketplaceOrderItems ALTER COLUMN Quantity INT NULL;
-    ALTER TABLE dbo.MarketplaceOrderItems ALTER COLUMN UnitPrice DECIMAL(10,2) NULL;
+    IF COL_LENGTH('dbo.MarketplaceOrderItems','ListingId') IS NULL
+        ALTER TABLE dbo.MarketplaceOrderItems ADD ListingId INT NULL;
+    IF COL_LENGTH('dbo.MarketplaceOrderItems','ListingTitle') IS NULL
+        ALTER TABLE dbo.MarketplaceOrderItems ADD ListingTitle NVARCHAR(200) NULL;
+    IF COL_LENGTH('dbo.MarketplaceOrderItems','Price') IS NULL
+        ALTER TABLE dbo.MarketplaceOrderItems ADD Price DECIMAL(10,2) NULL;
 END;
-GO
-IF COL_LENGTH('dbo.MarketplaceOrderItems','MarketplaceListingId') IS NOT NULL
- EXEC(N'UPDATE oi SET ListingId=MarketplaceListingId,ListingTitle=COALESCE(m.Title,''Marketplace item''),Price=UnitPrice FROM dbo.MarketplaceOrderItems oi LEFT JOIN dbo.MarketplaceListings m ON m.Id=oi.MarketplaceListingId WHERE ListingId IS NULL');
-IF COL_LENGTH('dbo.MarketplaceOrders','UserId') IS NOT NULL
- EXEC(N'UPDATE o SET BuyerUserId=UserId,SellerUserId=(SELECT TOP(1) m.SellerUserId FROM dbo.MarketplaceOrderItems i JOIN dbo.MarketplaceListings m ON m.Id=i.ListingId WHERE i.OrderId=o.Id),Reference=CONCAT(''MOCK-LEGACY-'',Id),PaymentMethod=''GCash Mock'',Subtotal=TotalAmount,Total=TotalAmount,CreatedAt=OrderedAt,CompletedAt=OrderedAt,Status=''Completed'' FROM dbo.MarketplaceOrders o WHERE BuyerUserId IS NULL');
 GO
 IF OBJECT_ID('dbo.MarketplaceOrders', 'U') IS NULL
 BEGIN
@@ -55,6 +68,48 @@ BEGIN
 END;
 GO
 
+-- New checkout stores lines in MarketplaceOrderItems. Obsolete required fields
+-- must allow NULL so both clients can insert the canonical order format.
+DECLARE @relaxSql NVARCHAR(MAX)=N'';
+SELECT @relaxSql=@relaxSql+N'ALTER TABLE dbo.'+QUOTENAME(t.name)+N' ALTER COLUMN '+QUOTENAME(c.name)+N' '+QUOTENAME(ty.name)+
+    CASE WHEN ty.name IN ('nvarchar','nchar') THEN N'('+CASE WHEN c.max_length=-1 THEN N'MAX' ELSE CONVERT(NVARCHAR(10),c.max_length/2) END+N')'
+         WHEN ty.name IN ('varchar','char','varbinary','binary') THEN N'('+CASE WHEN c.max_length=-1 THEN N'MAX' ELSE CONVERT(NVARCHAR(10),c.max_length) END+N')'
+         WHEN ty.name IN ('decimal','numeric') THEN N'('+CONVERT(NVARCHAR(10),c.precision)+N','+CONVERT(NVARCHAR(10),c.scale)+N')'
+         WHEN ty.name IN ('datetime2','datetimeoffset','time') THEN N'('+CONVERT(NVARCHAR(10),c.scale)+N')'
+         ELSE N'' END+N' NULL;'
+FROM sys.columns c JOIN sys.tables t ON t.object_id=c.object_id JOIN sys.types ty ON ty.user_type_id=c.user_type_id
+WHERE t.schema_id=SCHEMA_ID('dbo') AND c.is_nullable=0 AND c.is_computed=0 AND c.is_identity=0
+AND ((t.name='MarketplaceOrders' AND c.name IN ('UserId','TotalAmount','ListingId','ItemTitle','Amount','PaymentStatus','IsSimulation','OrderedAt'))
+  OR (t.name='MarketplaceOrderItems' AND c.name IN ('MarketplaceListingId','Quantity','UnitPrice')));
+IF LEN(@relaxSql)>0 EXEC sys.sp_executesql @relaxSql;
+GO
+-- Preserve legacy values; do not mark unpaid or pending orders completed.
+IF COL_LENGTH('dbo.MarketplaceOrderItems','MarketplaceListingId') IS NOT NULL
+    EXEC(N'UPDATE oi SET ListingId=COALESCE(oi.ListingId,oi.MarketplaceListingId), ListingTitle=COALESCE(oi.ListingTitle,m.Title,''Marketplace item'') FROM dbo.MarketplaceOrderItems oi LEFT JOIN dbo.MarketplaceListings m ON m.Id=oi.MarketplaceListingId');
+IF COL_LENGTH('dbo.MarketplaceOrderItems','UnitPrice') IS NOT NULL
+    EXEC(N'UPDATE dbo.MarketplaceOrderItems SET Price=COALESCE(Price,UnitPrice)');
+IF COL_LENGTH('dbo.MarketplaceOrders','UserId') IS NOT NULL
+    EXEC(N'UPDATE dbo.MarketplaceOrders SET BuyerUserId=COALESCE(BuyerUserId,UserId)');
+IF COL_LENGTH('dbo.MarketplaceOrders','TotalAmount') IS NOT NULL
+    EXEC(N'UPDATE dbo.MarketplaceOrders SET Subtotal=COALESCE(Subtotal,TotalAmount),Total=COALESCE(Total,TotalAmount)');
+IF COL_LENGTH('dbo.MarketplaceOrders','Amount') IS NOT NULL
+    EXEC(N'UPDATE dbo.MarketplaceOrders SET Subtotal=COALESCE(Subtotal,Amount),Total=COALESCE(Total,Amount)');
+IF COL_LENGTH('dbo.MarketplaceOrders','OrderedAt') IS NOT NULL
+    EXEC(N'UPDATE dbo.MarketplaceOrders SET CreatedAt=COALESCE(CreatedAt,OrderedAt)');
+GO
+UPDATE dbo.MarketplaceOrders SET Reference=CONCAT('LEGACY-',Id) WHERE Reference IS NULL;
+UPDATE o SET SellerUserId=(SELECT TOP(1) m.SellerUserId FROM dbo.MarketplaceOrderItems i JOIN dbo.MarketplaceListings m ON m.Id=i.ListingId WHERE i.OrderId=o.Id ORDER BY i.Id)
+FROM dbo.MarketplaceOrders o WHERE o.SellerUserId IS NULL;
+GO
+-- Older single-listing orders stored their line on the order itself.
+IF COL_LENGTH('dbo.MarketplaceOrders','ListingId') IS NOT NULL
+   AND COL_LENGTH('dbo.MarketplaceOrders','ItemTitle') IS NOT NULL
+   AND COL_LENGTH('dbo.MarketplaceOrders','Amount') IS NOT NULL
+    EXEC(N'INSERT INTO dbo.MarketplaceOrderItems(OrderId,ListingId,ListingTitle,Price)
+        SELECT o.Id,o.ListingId,COALESCE(o.ItemTitle,m.Title,''Marketplace item''),o.Amount
+        FROM dbo.MarketplaceOrders o JOIN dbo.MarketplaceListings m ON m.Id=o.ListingId
+        WHERE NOT EXISTS(SELECT 1 FROM dbo.MarketplaceOrderItems i WHERE i.OrderId=o.Id)');
+GO
 IF OBJECT_ID('dbo.MarketplaceReviews', 'U') IS NULL
 BEGIN
     CREATE TABLE dbo.MarketplaceReviews
