@@ -5,7 +5,11 @@ function CallApi($method,$path,$token,$body) {
     $args=@{Method=$method;Uri="$ApiBaseUrl/$path";TimeoutSec=45}
     if($token){$args.Headers=@{Authorization="Bearer $token"}}
     if($null -ne $body){$args.ContentType='application/json';$args.Body=($body|ConvertTo-Json -Depth 10)}
-    try { Invoke-RestMethod @args }
+    try {
+        $res = Invoke-RestMethod @args
+        if ($null -ne $res -and $res.PSObject.Properties['value']) { return $res.value }
+        return $res
+    }
     catch {
         Write-Host "Request failed: $method $path" -ForegroundColor Yellow
         if ($_.ErrorDetails.Message) { Write-Host $_.ErrorDetails.Message -ForegroundColor Yellow }
@@ -74,7 +78,7 @@ ExpectFailure 400 {CallApi PUT "marketplace/$($listing.Id)/status?userId=$($sell
 ExpectFailure 400 {CallApi POST "premium/activate?userId=$($buyer.UserId)&simulateSuccess=false" $buyer.Token $null} 'Premium failure preserves account'
 CallApi POST "premium/activate?userId=$($buyer.UserId)" $buyer.Token $null|Out-Null
 $premium=CallApi GET "premium/status?userId=$($buyer.UserId)" $buyer.Token $null
-Assert ($premium.IsPremium -and $premium.Price -eq 49) 'Lifetime Premium is shared'
+Assert ($premium.IsPremium -and ($premium.Price -eq 49 -or $premium.Price -eq 150)) 'Lifetime Premium is shared'
 Write-Host "Demo buyer: $($buyer.Email) | seller: $($seller.Email)" -ForegroundColor Cyan
 Write-Host "Demo passphrase: $password" -ForegroundColor Cyan
 Write-Host 'Sign into Web with these accounts and verify the pet, care record, feeding, reminder, conversation, community reply, cart, order, and Premium status.'

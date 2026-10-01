@@ -19,6 +19,7 @@ public partial class HomeViewModel : ObservableObject, IRecipient<DataChangedMes
     [ObservableProperty] private ObservableCollection<CommunityRanking> _rankings = [];
     [ObservableProperty] private StoryCard? _activeStory;
     [ObservableProperty] private bool _isBusy;
+    [ObservableProperty] private bool _isPremium;
 
     public string Greeting
     {
@@ -115,6 +116,8 @@ public partial class HomeViewModel : ObservableObject, IRecipient<DataChangedMes
             {
                 System.Diagnostics.Debug.WriteLine($"[HomeViewModel] Rankings error: {ex.Message}");
             }
+
+            IsPremium = Preferences.Get("LoggedInUserIsPremium", false);
         }
         catch (Exception ex)
         {
@@ -124,6 +127,26 @@ public partial class HomeViewModel : ObservableObject, IRecipient<DataChangedMes
         {
             IsBusy = false;
         }
+    }
+
+    [RelayCommand]
+    private async Task OpenWebPortalAsync()
+    {
+        var url = Preferences.Get("PublicWebBaseUrl", "https://localhost:7198");
+        try
+        {
+            await Launcher.OpenAsync(new Uri(url));
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[HomeViewModel] OpenWebPortal error: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    private async Task OpenUpgradePromptAsync()
+    {
+        await Shell.Current.GoToAsync("premium");
     }
 
     [RelayCommand]

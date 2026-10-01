@@ -541,14 +541,14 @@ public class ApiService
         return null;
     }
 
-    public async Task<OrderDto?> CheckoutAsync(string paymentMethod)
+    public async Task<OrderDto?> CheckoutAsync(string paymentMethod, bool simulateSuccess = true)
     {
         try
         {
             var userId = Preferences.Get("LoggedInUserId", 0);
             var method = Uri.EscapeDataString(paymentMethod);
             var res = await _http.PostAsync(
-                $"cart/checkout?userId={userId}&paymentMethod={method}",
+                $"cart/checkout?userId={userId}&paymentMethod={method}&simulateSuccess={simulateSuccess}",
                 null);
             if (res.IsSuccessStatusCode)
                 return await res.Content.ReadFromJsonAsync<OrderDto>();

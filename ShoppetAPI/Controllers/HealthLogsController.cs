@@ -43,9 +43,14 @@ public class HealthLogsController : ControllerBase
 
             while (await r.ReadAsync())
             {
-                string Iso(int ordinal) => r.IsDBNull(ordinal)
-                    ? string.Empty
-                    : r.GetDateTime(ordinal).ToString("O");
+                string Iso(int ordinal)
+                {
+                    if (r.IsDBNull(ordinal)) return string.Empty;
+                    var val = r.GetValue(ordinal);
+                    if (val is DateTime dt) return dt.ToString("O");
+                    if (DateTime.TryParse(val?.ToString(), out var parsed)) return parsed.ToString("O");
+                    return val?.ToString() ?? string.Empty;
+                }
 
                 result.Add(new
                 {
@@ -53,21 +58,21 @@ public class HealthLogsController : ControllerBase
                     PetId = r.GetInt32(1),
                     Type = NormalizeRecordType(r.IsDBNull(2) ? string.Empty : r.GetString(2)),
                     Name = r.IsDBNull(3) ? string.Empty : r.GetString(3),
-                    Notes = r.GetString(4),
+                    Notes = r.IsDBNull(4) ? string.Empty : r.GetString(4),
                     RecordDate = Iso(5),
                     DueDate = Iso(6),
-                    VetName = r.GetString(7),
-                    Completed = r.GetBoolean(8),
+                    VetName = r.IsDBNull(7) ? string.Empty : r.GetString(7),
+                    Completed = !r.IsDBNull(8) && Convert.ToBoolean(r.GetValue(8)),
                     DateAdministered = !r.IsDBNull(9) ? Iso(9) : Iso(5),
-                    ValidityInterval = r.GetInt32(10),
-                    ValidityUnit = r.GetString(11),
-                    MedicationIntervalHours = Convert.ToDouble(r.GetDecimal(12)),
+                    ValidityInterval = r.IsDBNull(10) ? 0 : Convert.ToInt32(r.GetValue(10)),
+                    ValidityUnit = r.IsDBNull(11) ? "Months" : r.GetString(11),
+                    MedicationIntervalHours = r.IsDBNull(12) ? 0.0 : Convert.ToDouble(r.GetValue(12)),
                     TimeStarted = !r.IsDBNull(13) ? Iso(13) : Iso(5),
-                    DosageTotal = r.GetInt32(14),
-                    DosageRemaining = r.GetInt32(15),
+                    DosageTotal = r.IsDBNull(14) ? 0 : Convert.ToInt32(r.GetValue(14)),
+                    DosageRemaining = r.IsDBNull(15) ? 0 : Convert.ToInt32(r.GetValue(15)),
                     CheckupDate = !r.IsDBNull(16) ? Iso(16) : Iso(5),
-                    DocumentPaths = r.GetString(17),
-                    CompletedAt = r.IsDBNull(18) ? (DateTime?)null : r.GetDateTime(18)
+                    DocumentPaths = r.IsDBNull(17) ? string.Empty : r.GetString(17),
+                    CompletedAt = r.IsDBNull(18) ? (DateTime?)null : (r.GetValue(18) is DateTime cat ? cat : (DateTime.TryParse(r.GetValue(18)?.ToString(), out var parsedCat) ? parsedCat : null))
                 });
             }
 
@@ -198,7 +203,7 @@ public class HealthLogsController : ControllerBase
         cmd.Parameters.AddWithValue("@DateAdministered", ParseDate(x.DateAdministered) is DateTime da ? da : DBNull.Value);
         cmd.Parameters.AddWithValue("@ValidityInterval", x.ValidityInterval);
         cmd.Parameters.AddWithValue("@ValidityUnit", x.ValidityUnit ?? "Months");
-        cmd.Parameters.AddWithValue("@MedicationIntervalHours", Convert.ToDecimal(x.MedicationIntervalHours));
+        cmd.Parameters.AddWithValue("@MedicationIntervalHours", Convert.ToDouble(x.MedicationIntervalHours));
         cmd.Parameters.AddWithValue("@TimeStarted", ParseDate(x.TimeStarted) is DateTime ts ? ts : DBNull.Value);
         cmd.Parameters.AddWithValue("@DosageTotal", x.DosageTotal);
         cmd.Parameters.AddWithValue("@DosageRemaining", x.DosageRemaining);

@@ -67,7 +67,7 @@ public class PetsController : ControllerBase
                 var ageYears = ParseAgeYears(ageText);
                 var weight = reader.IsDBNull(6)
                     ? string.Empty
-                    : $"{reader.GetDecimal(6):0.##} kg";
+                    : $"{Convert.ToDecimal(reader.GetValue(6)):0.##} kg";
 
                 pets.Add(new
                 {

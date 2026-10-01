@@ -44,14 +44,21 @@ public class FoodLogsController : ControllerBase
 
             while (await r.ReadAsync())
             {
-                string Iso(int i) => r.IsDBNull(i) ? string.Empty : r.GetDateTime(i).ToString("O");
+                string Iso(int i)
+                {
+                    if (r.IsDBNull(i)) return string.Empty;
+                    var val = r.GetValue(i);
+                    if (val is DateTime dt) return dt.ToString("O");
+                    if (DateTime.TryParse(val?.ToString(), out var parsed)) return parsed.ToString("O");
+                    return val?.ToString() ?? string.Empty;
+                }
                 result.Add(new {
-                    Id=r.GetInt32(0), PetId=r.GetInt32(1), FoodName=r.GetString(2),
-                    AmountGrams=r.GetDouble(3), IntervalHours=r.GetInt32(4),
-                    IntervalMinutes=r.GetInt32(5), StartTimestamp=Iso(6),
-                    LastFedTimestamp=Iso(7), FedDate=Iso(8), Notes=r.GetString(9),
-                    IsCompleted=r.GetBoolean(10),
-                    CompletedAt=r.IsDBNull(11)?(DateTime?)null:r.GetDateTime(11)
+                    Id=r.GetInt32(0), PetId=r.GetInt32(1), FoodName=r.IsDBNull(2)?"":r.GetString(2),
+                    AmountGrams=r.IsDBNull(3)?0.0:Convert.ToDouble(r.GetValue(3)), IntervalHours=r.IsDBNull(4)?0:Convert.ToInt32(r.GetValue(4)),
+                    IntervalMinutes=r.IsDBNull(5)?0:Convert.ToInt32(r.GetValue(5)), StartTimestamp=Iso(6),
+                    LastFedTimestamp=Iso(7), FedDate=Iso(8), Notes=r.IsDBNull(9)?"":r.GetString(9),
+                    IsCompleted=!r.IsDBNull(10) && Convert.ToBoolean(r.GetValue(10)),
+                    CompletedAt=r.IsDBNull(11)?(DateTime?)null:(r.GetValue(11) is DateTime cdt ? cdt : (DateTime.TryParse(r.GetValue(11)?.ToString(), out var pcdt)?pcdt:null))
                 });
             }
             return Ok(result);
@@ -135,14 +142,21 @@ public class FoodLogsController : ControllerBase
             cmd.Parameters.AddWithValue("@PetId",petId);
             await using var r=await cmd.ExecuteReaderAsync();
             if(!await r.ReadAsync()) return NotFound();
-            string Iso(int i)=>r.IsDBNull(i)?string.Empty:r.GetDateTime(i).ToString("O");
+            string Iso(int i)
+            {
+                if (r.IsDBNull(i)) return string.Empty;
+                var val = r.GetValue(i);
+                if (val is DateTime dt) return dt.ToString("O");
+                if (DateTime.TryParse(val?.ToString(), out var parsed)) return parsed.ToString("O");
+                return val?.ToString() ?? string.Empty;
+            }
             return Ok(new {
-                Id=r.GetInt32(0),PetId=r.GetInt32(1),FoodName=r.GetString(2),
-                AmountGrams=r.GetDouble(3),IntervalHours=r.GetInt32(4),
-                IntervalMinutes=r.GetInt32(5),StartTimestamp=Iso(6),
-                LastFedTimestamp=Iso(7),FedDate=Iso(8),Notes=r.GetString(9),
-                IsCompleted=r.GetBoolean(10),
-                CompletedAt=r.IsDBNull(11)?(DateTime?)null:r.GetDateTime(11)
+                Id=r.GetInt32(0),PetId=r.GetInt32(1),FoodName=r.IsDBNull(2)?"":r.GetString(2),
+                AmountGrams=r.IsDBNull(3)?0.0:Convert.ToDouble(r.GetValue(3)),IntervalHours=r.IsDBNull(4)?0:Convert.ToInt32(r.GetValue(4)),
+                IntervalMinutes=r.IsDBNull(5)?0:Convert.ToInt32(r.GetValue(5)),StartTimestamp=Iso(6),
+                LastFedTimestamp=Iso(7),FedDate=Iso(8),Notes=r.IsDBNull(9)?"":r.GetString(9),
+                IsCompleted=!r.IsDBNull(10) && Convert.ToBoolean(r.GetValue(10)),
+                CompletedAt=r.IsDBNull(11)?(DateTime?)null:(r.GetValue(11) is DateTime cdt ? cdt : (DateTime.TryParse(r.GetValue(11)?.ToString(), out var pcdt)?pcdt:null))
             });
         }
         catch(Exception ex){ return StatusCode(500,$"Mark fed error: {ex.Message}"); }

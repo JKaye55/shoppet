@@ -298,65 +298,142 @@ public partial class ShopPage : ContentPage
             await RefreshCartAsync();
     }
 
-    private async void OnCheckoutClicked(object? sender, EventArgs e)
+    private void OnCheckoutClicked(object? sender, EventArgs e)
     {
-        CheckoutButton.IsEnabled = false;
+        if (_cartItems.Count == 0)
+        {
+            _ = DisplayAlertAsync("Cart", "Your cart is empty. Add an item before checking out.", "OK");
+            return;
+        }
+
+        PaymentDueLabel.Text = CartTotalLabel.Text;
+        PickerMockPaymentMethod.SelectedIndex = 0;
+        PickerSimulationOutcome.SelectedIndex = 0;
+        UpdateDemoCredentialsDisplay(0);
+        PaymentErrorLabel.IsVisible = false;
+        PaymentProcessingPanel.IsVisible = false;
+        BtnSubmitPayment.IsEnabled = true;
+        BtnCancelPayment.IsEnabled = true;
+
+        PaymentModal.IsVisible = true;
+    }
+
+    private void OnMockMethodChanged(object? sender, EventArgs e)
+    {
+        UpdateDemoCredentialsDisplay(PickerMockPaymentMethod.SelectedIndex);
+    }
+
+    private void UpdateDemoCredentialsDisplay(int index)
+    {
+        switch (index)
+        {
+            case 0:
+                DemoCredentialsTitle.Text = "Demo Visa •••• 4242";
+                DemoCredentialsDetail.Text = "Cardholder: ShoppetCare Demo Tester | Expiry: 12/28 | CVV: •••";
+                break;
+            case 1:
+                DemoCredentialsTitle.Text = "Demo Mastercard •••• 5555";
+                DemoCredentialsDetail.Text = "Cardholder: ShoppetCare Demo Tester | Expiry: 12/28 | CVV: •••";
+                break;
+            case 2:
+                DemoCredentialsTitle.Text = "GCash Mock Sandbox (0917-•••-1234)";
+                DemoCredentialsDetail.Text = "Account: Demo ShoppetCare E-Wallet | Instant Simulated Approval";
+                break;
+            case 3:
+                DemoCredentialsTitle.Text = "Cash on Meet-up Arrangement";
+                DemoCredentialsDetail.Text = "Agreement: Pay in cash directly upon item handover / inspection";
+                break;
+            default:
+                DemoCredentialsTitle.Text = "Demo Payment Sandbox";
+                DemoCredentialsDetail.Text = "Pre-approved academic demonstration credentials.";
+                break;
+        }
+    }
+
+    private void OnCancelPaymentClicked(object? sender, EventArgs e)
+    {
+        PaymentModal.IsVisible = false;
+    }
+
+    private async void OnSubmitPaymentClicked(object? sender, EventArgs e)
+    {
+        var methodIndex = PickerMockPaymentMethod.SelectedIndex;
+        var simulateSuccess = PickerSimulationOutcome.SelectedIndex == 0;
+
+        var paymentMethod = methodIndex switch
+        {
+            0 => "Credit Card",
+            1 => "Credit Card",
+            2 => "GCash Mock",
+            3 => "Cash on Meet-up",
+            _ => "Credit Card"
+        };
+
+        var displayMethodName = methodIndex switch
+        {
+            0 => "Demo Visa (•••• 4242)",
+            1 => "Demo Mastercard (•••• 5555)",
+            2 => "GCash Mock",
+            3 => "Cash on Meet-up",
+            _ => "Mock Payment"
+        };
+
+        PaymentErrorLabel.IsVisible = false;
+        BtnSubmitPayment.IsEnabled = false;
+        BtnCancelPayment.IsEnabled = false;
+        PaymentProcessingPanel.IsVisible = true;
+
         try
         {
-            var paymentMethod = await DisplayActionSheetAsync(
-                "Mock Payment Method",
-                "Cancel",
-                null,
-                "GCash Mock",
-                "Cash on Meetup");
+            // 1.5s simulated loading/processing delay for mock transaction
+            await Task.Delay(1500);
 
-            if (string.IsNullOrWhiteSpace(paymentMethod) || paymentMethod == "Cancel")
-                return;
-
-            if (paymentMethod == "GCash Mock")
+            if (!simulateSuccess)
             {
-                var simulation = await DisplayActionSheetAsync(
-                    "GCash Payment Simulation",
-                    "Cancel",
-                    null,
-                    "Simulate Success",
-                    "Simulate Failure");
+                // Call API with simulateSuccess=false to verify server-side failure handling
+                await _api.CheckoutAsync(paymentMethod, simulateSuccess: false);
 
-                if (simulation == "Simulate Failure")
-                {
-                    await DisplayAlertAsync(
-                        "Payment Failed",
-                        "Simulation only: no order or successful transaction was created, and the listing remains available.",
-                        "OK");
-                    return;
-                }
-
-                if (simulation != "Simulate Success")
-                    return;
+                PaymentErrorLabel.Text = "Simulated payment declined. No funds were charged, and your cart items remain preserved.";
+                PaymentErrorLabel.IsVisible = true;
+                BtnSubmitPayment.IsEnabled = true;
+                BtnCancelPayment.IsEnabled = true;
+                PaymentProcessingPanel.IsVisible = false;
+                return;
             }
 
-            var order = await _api.CheckoutAsync(paymentMethod);
+            var order = await _api.CheckoutAsync(paymentMethod, simulateSuccess: true);
             if (order == null)
             {
-                await DisplayAlertAsync(
-                    "Checkout",
-                    "The simulated checkout could not be completed. Your cart was not cleared.",
-                    "OK");
+                PaymentErrorLabel.Text = "Simulated transaction authorization failed. Please try again.";
+                PaymentErrorLabel.IsVisible = true;
+                BtnSubmitPayment.IsEnabled = true;
+                BtnCancelPayment.IsEnabled = true;
+                PaymentProcessingPanel.IsVisible = false;
                 return;
             }
 
-            await DisplayAlertAsync(
-                "Order Confirmed",
-                $"Simulation only — no real money was charged.\n\nOrder #{order.Id}\nMethod: {paymentMethod}\nTotal: ₱{order.TotalAmount:N0}",
-                "OK");
-
+            PaymentModal.IsVisible = false;
             CartModal.IsVisible = false;
+
+            ConfirmOrderIdLabel.Text = $"#{order.Id}";
+            ConfirmTotalLabel.Text = $"₱{order.TotalAmount:N2}";
+            OrderConfirmationModal.IsVisible = true;
+
             await LoadExploreListingsAsync();
         }
-        finally
+        catch (Exception ex)
         {
-            CheckoutButton.IsEnabled = true;
+            PaymentErrorLabel.Text = $"Payment error: {ex.Message}";
+            PaymentErrorLabel.IsVisible = true;
+            BtnSubmitPayment.IsEnabled = true;
+            BtnCancelPayment.IsEnabled = true;
+            PaymentProcessingPanel.IsVisible = false;
         }
+    }
+
+    private void OnCloseConfirmationClicked(object? sender, EventArgs e)
+    {
+        OrderConfirmationModal.IsVisible = false;
     }
 
     private void OnDismissModal(object? sender, EventArgs e) => DetailModal.IsVisible = false;

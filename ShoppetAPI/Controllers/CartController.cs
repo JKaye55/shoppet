@@ -96,19 +96,22 @@ public class CartController : ControllerBase
             await using var cmd=new SqlCommand("""
                 IF EXISTS(
                     SELECT 1 FROM MarketplaceCartItems
-                    WHERE CartId=@CartId AND MarketplaceListingId=@ListingId
+                    WHERE (CartId=@CartId AND MarketplaceListingId=@ListingId)
+                       OR (UserId=@UserId AND ListingId=@ListingId)
                 )
                     UPDATE MarketplaceCartItems
-                    SET Quantity=1
-                    WHERE CartId=@CartId AND MarketplaceListingId=@ListingId;
+                    SET Quantity=1, CartId=@CartId, MarketplaceListingId=@ListingId, UserId=@UserId, ListingId=@ListingId
+                    WHERE (CartId=@CartId AND MarketplaceListingId=@ListingId)
+                       OR (UserId=@UserId AND ListingId=@ListingId);
                 ELSE
-                    INSERT INTO MarketplaceCartItems(CartId,MarketplaceListingId,Quantity)
-                    VALUES(@CartId,@ListingId,@Quantity);
+                    INSERT INTO MarketplaceCartItems(CartId,MarketplaceListingId,Quantity,UserId,ListingId,AddedAt)
+                    VALUES(@CartId,@ListingId,@Quantity,@UserId,@ListingId,SYSDATETIME());
 
                 UPDATE MarketplaceCart SET UpdatedAt=SYSDATETIME() WHERE Id=@CartId;
                 """,conn);
             cmd.Parameters.AddWithValue("@CartId",cartId);
             cmd.Parameters.AddWithValue("@ListingId",request.ProductId);
+            cmd.Parameters.AddWithValue("@UserId",request.UserId);
             cmd.Parameters.AddWithValue("@Quantity",1);
             await cmd.ExecuteNonQueryAsync();
             return await GetCart(request.UserId);
@@ -200,7 +203,7 @@ public class CartController : ControllerBase
         [FromQuery] string paymentMethod = "GCash Mock", [FromQuery] bool simulateSuccess=true)
     {
         if(userId<=0) return BadRequest("A valid user is required.");
-        if(!new[]{"GCash Mock","Cash on Meet-up","GCash - Demo","Maya - Demo"}.Contains(paymentMethod,StringComparer.OrdinalIgnoreCase)) return BadRequest("Choose a supported simulated payment method.");
+        if(!new[]{"GCash Mock","Cash on Meet-up","GCash - Demo","Maya - Demo","Card","Credit Card","Mock Payment Gateway","Debit Card"}.Contains(paymentMethod,StringComparer.OrdinalIgnoreCase)) return BadRequest("Choose a supported simulated payment method.");
         if(!simulateSuccess)return BadRequest("Simulated payment failed. Your cart is unchanged.");
         try
         {

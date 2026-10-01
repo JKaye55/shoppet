@@ -390,6 +390,151 @@
             </Border>
         </Grid>
 
+        <!-- Mock Payment Gateway Modal -->
+        <Grid x:Name="PaymentModal" IsVisible="False" BackgroundColor="#99000000" ZIndex="40">
+            <Border BackgroundColor="{StaticResource CardBg}"
+                    StrokeThickness="0"
+                    StrokeShape="RoundRectangle 24"
+                    Margin="20,40,20,40"
+                    VerticalOptions="Center"
+                    HorizontalOptions="Fill">
+                <ScrollView MaximumHeightRequest="600">
+                    <VerticalStackLayout Padding="22" Spacing="12">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <VerticalStackLayout Spacing="2">
+                                <Label Text="Mock Payment Gateway" FontFamily="NunitoExtraBold" FontSize="20" TextColor="{StaticResource BodyText}" />
+                                <Label Text="🔒 256-Bit Simulated SSL Sandbox" FontSize="11" TextColor="{StaticResource NavMuted}" />
+                            </VerticalStackLayout>
+                            <Border Grid.Column="1" BackgroundColor="{StaticResource Primary10}" StrokeThickness="0" Padding="8,4" StrokeShape="RoundRectangle 10" VerticalOptions="Start">
+                                <Label Text="Demo Sandbox" FontSize="10" FontFamily="NunitoBold" TextColor="{StaticResource Primary}" />
+                            </Border>
+                        </Grid>
+
+                        <Border BackgroundColor="{StaticResource AppBackground}" Stroke="{StaticResource Secondary20}" StrokeThickness="1" StrokeShape="RoundRectangle 14" Padding="12,10">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="Total Amount Due" FontFamily="NunitoBold" FontSize="13" TextColor="{StaticResource BodyText}" VerticalOptions="Center" />
+                                <Label x:Name="PaymentDueLabel" Grid.Column="1" Text="₱0.00" FontFamily="NunitoExtraBold" FontSize="18" TextColor="{StaticResource Primary}" VerticalOptions="Center" />
+                            </Grid>
+                        </Border>
+
+                        <Label Text="Predefined Demo Payment Method *" TextColor="{StaticResource BodyText}" FontSize="12" FontFamily="NunitoBold" />
+                        <Border BackgroundColor="{StaticResource AppBackground}" Stroke="{StaticResource Secondary30}" StrokeThickness="1" StrokeShape="RoundRectangle 12" Padding="4,0">
+                            <Picker x:Name="PickerMockPaymentMethod" SelectedIndex="0" TextColor="{StaticResource BodyText}" BackgroundColor="Transparent" FontSize="13" SelectedIndexChanged="OnMockMethodChanged">
+                                <Picker.Items>
+                                    <x:String>💳 Demo Visa (•••• 4242) — Pre-approved Sandbox</x:String>
+                                    <x:String>💳 Demo Mastercard (•••• 5555) — Pre-approved Sandbox</x:String>
+                                    <x:String>📱 GCash Mock (0917-•••-1234) — Instant Approval</x:String>
+                                    <x:String>🤝 Cash on Meet-up — Handover Arrangement</x:String>
+                                </Picker.Items>
+                            </Picker>
+                        </Border>
+
+                        <Label Text="Simulation Outcome *" TextColor="{StaticResource BodyText}" FontSize="12" FontFamily="NunitoBold" />
+                        <Border BackgroundColor="{StaticResource AppBackground}" Stroke="{StaticResource Secondary30}" StrokeThickness="1" StrokeShape="RoundRectangle 12" Padding="4,0">
+                            <Picker x:Name="PickerSimulationOutcome" SelectedIndex="0" TextColor="{StaticResource BodyText}" BackgroundColor="Transparent" FontSize="13">
+                                <Picker.Items>
+                                    <x:String>Simulate Success (Complete Order)</x:String>
+                                    <x:String>Simulate Failure (Decline / Keep Cart)</x:String>
+                                </Picker.Items>
+                            </Picker>
+                        </Border>
+
+                        <!-- Predefined Demo Sandbox Information (Read-only) -->
+                        <Border BackgroundColor="#F0FDFC" Stroke="#2DD4BF" StrokeThickness="1" StrokeShape="RoundRectangle 14" Padding="12,10">
+                            <VerticalStackLayout Spacing="4">
+                                <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                                    <Label Text="🛡️" FontSize="14" VerticalOptions="Center" />
+                                    <Label x:Name="DemoCredentialsTitle" Text="Demo Visa •••• 4242" FontFamily="NunitoBold" FontSize="12" TextColor="#0F766E" VerticalOptions="Center" />
+                                </HorizontalStackLayout>
+                                <Label x:Name="DemoCredentialsDetail" Text="Holder: ShoppetCare Demo Tester | Exp: 12/28 | CVV: •••" FontFamily="Nunito" FontSize="11" TextColor="#115E59" />
+                                <Label Text="Simulated academic demo only. Predefined mock choices are used — real payment credentials and banking information are never accepted or processed." FontSize="10" TextColor="#0D9488" Margin="0,2,0,0" LineBreakMode="WordWrap" />
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <Label x:Name="PaymentErrorLabel" TextColor="{StaticResource StatusOverdue}" FontSize="12" FontFamily="NunitoBold" IsVisible="False" />
+
+                        <!-- 1.5s Processing Indicator -->
+                        <VerticalStackLayout x:Name="PaymentProcessingPanel" Spacing="8" IsVisible="False" HorizontalOptions="Center" Margin="0,8">
+                            <ActivityIndicator IsRunning="True" Color="{StaticResource Primary}" WidthRequest="32" HeightRequest="32" />
+                            <Label Text="Authorizing simulated card payment..." FontSize="12" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Margin="0,10,0,0">
+                            <Button Grid.Column="0"
+                                    x:Name="BtnCancelPayment"
+                                    Text="Cancel"
+                                    BackgroundColor="{StaticResource CardBg}"
+                                    TextColor="{StaticResource BodyText}"
+                                    BorderColor="{StaticResource Secondary30}"
+                                    BorderWidth="1"
+                                    CornerRadius="14"
+                                    FontFamily="NunitoBold"
+                                    HeightRequest="46"
+                                    Clicked="OnCancelPaymentClicked" />
+                            <Button Grid.Column="1"
+                                    x:Name="BtnSubmitPayment"
+                                    Text="Authorize Pay"
+                                    BackgroundColor="{StaticResource Primary}"
+                                    TextColor="White"
+                                    CornerRadius="14"
+                                    FontFamily="NunitoBold"
+                                    HeightRequest="46"
+                                    Clicked="OnSubmitPaymentClicked" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </ScrollView>
+            </Border>
+        </Grid>
+
+        <!-- Verified Order Confirmation Modal -->
+        <Grid x:Name="OrderConfirmationModal" IsVisible="False" BackgroundColor="#99000000" ZIndex="50">
+            <Border BackgroundColor="{StaticResource CardBg}"
+                    StrokeThickness="0"
+                    StrokeShape="RoundRectangle 24"
+                    Margin="24,60"
+                    VerticalOptions="Center"
+                    HorizontalOptions="Fill">
+                <VerticalStackLayout Padding="24" Spacing="14" HorizontalOptions="Center">
+                    <Border WidthRequest="64" HeightRequest="64" BackgroundColor="{StaticResource Primary10}" StrokeThickness="0" StrokeShape="RoundRectangle 32" HorizontalOptions="Center">
+                        <Label Text="✓" FontSize="32" TextColor="{StaticResource Primary}" FontFamily="NunitoExtraBold" HorizontalOptions="Center" VerticalOptions="Center" />
+                    </Border>
+
+                    <Label Text="Order Verified &amp; Confirmed!" FontFamily="NunitoExtraBold" FontSize="20" TextColor="{StaticResource BodyText}" HorizontalTextAlignment="Center" />
+                    <Label Text="Your mock purchase was verified and logged to your transaction records." FontSize="12" TextColor="{StaticResource NavMuted}" HorizontalTextAlignment="Center" />
+
+                    <Border BackgroundColor="{StaticResource AppBackground}" Stroke="{StaticResource Secondary20}" StrokeThickness="1" StrokeShape="RoundRectangle 16" Padding="16,12" HorizontalOptions="Fill">
+                        <VerticalStackLayout Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="Order ID" FontSize="12" TextColor="{StaticResource NavMuted}" />
+                                <Label x:Name="ConfirmOrderIdLabel" Grid.Column="1" Text="#0000" FontFamily="NunitoBold" FontSize="13" TextColor="{StaticResource BodyText}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="Payment Method" FontSize="12" TextColor="{StaticResource NavMuted}" />
+                                <Label Text="Mock Credit Card" Grid.Column="1" FontFamily="NunitoBold" FontSize="12" TextColor="{StaticResource Primary}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="Amount Paid" FontSize="12" TextColor="{StaticResource NavMuted}" />
+                                <Label x:Name="ConfirmTotalLabel" Grid.Column="1" Text="₱0.00" FontFamily="NunitoExtraBold" FontSize="14" TextColor="{StaticResource Primary}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="Status" FontSize="12" TextColor="{StaticResource NavMuted}" />
+                                <Label Text="Completed (Verified)" Grid.Column="1" FontFamily="NunitoBold" FontSize="12" TextColor="{StaticResource StatusHealthy}" />
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Button Text="Continue Shopping"
+                            BackgroundColor="{StaticResource Primary}"
+                            TextColor="White"
+                            FontFamily="NunitoBold"
+                            CornerRadius="16"
+                            HeightRequest="48"
+                            HorizontalOptions="Fill"
+                            Clicked="OnCloseConfirmationClicked" />
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+
         <!-- Create/Edit Listing Modal -->
         <Grid x:Name="PostModal" IsVisible="False" BackgroundColor="#99000000">
             <Border BackgroundColor="{StaticResource CardBg}" StrokeThickness="0" StrokeShape="RoundRectangle 20"
