@@ -27,5 +27,32 @@ public static class CredentialMigration
             q.Parameters.AddWithValue("@Id",row.Id); q.Parameters.AddWithValue("@Old",row.Hash);
             await q.ExecuteNonQueryAsync();
         }
+
+        const string adminEmail = "julliannekayefernando@gmail.com";
+        const string adminPass = "akonalangsana";
+        var hasher = new PasswordHasher<object>();
+        var hash = hasher.HashPassword(new object(), adminPass);
+
+        await using (var checkCmd = new SqlCommand("SELECT Id FROM UserAccounts WHERE LOWER(Email) = @Email", c))
+        {
+            checkCmd.Parameters.AddWithValue("@Email", adminEmail.ToLowerInvariant());
+            var existingId = await checkCmd.ExecuteScalarAsync();
+            if (existingId is not null && existingId != DBNull.Value)
+            {
+                await using var updateCmd = new SqlCommand("UPDATE UserAccounts SET PasswordHash = @Hash, Role = 'Admin', IsDisabled = 0, FullName = 'Jullianne Kaye Fernando' WHERE Id = @Id", c);
+                updateCmd.Parameters.AddWithValue("@Hash", hash);
+                updateCmd.Parameters.AddWithValue("@Id", Convert.ToInt32(existingId));
+                await updateCmd.ExecuteNonQueryAsync();
+            }
+            else
+            {
+                await using var insertCmd = new SqlCommand(@"
+                    INSERT INTO UserAccounts (FullName, Email, PasswordHash, Role, IsDisabled, CreatedAt, ShowSocialLinksOnMarketplace)
+                    VALUES ('Jullianne Kaye Fernando', @Email, @Hash, 'Admin', 0, SYSDATETIME(), 1)", c);
+                insertCmd.Parameters.AddWithValue("@Email", adminEmail);
+                insertCmd.Parameters.AddWithValue("@Hash", hash);
+                await insertCmd.ExecuteNonQueryAsync();
+            }
+        }
     }
 }

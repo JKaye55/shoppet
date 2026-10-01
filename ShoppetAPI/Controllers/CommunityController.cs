@@ -562,6 +562,76 @@ public class CommunityController : ControllerBase
             return StatusCode(500, $"Error deleting comment: {ex.Message}");
         }
     }
+
+    [HttpGet("rankings")]
+    public async Task<IActionResult> GetRankings([FromQuery] int limit = 20)
+    {
+        try
+        {
+            var rankings = new List<object>();
+            await using var connection = new SqlConnection(ConnectionString);
+            await connection.OpenAsync();
+
+            const string query = """
+                SELECT TOP (@Limit)
+                    u.Id AS UserId,
+                    ISNULL(u.FullName, 'Pet Lover') AS FullName,
+                    ISNULL(u.ProfilePicture, '') AS Avatar,
+                    (SELECT COUNT(*) FROM CommunityPosts p WHERE p.UserId = u.Id) AS PostCount,
+                    ISNULL((
+                        SELECT COUNT(*)
+                        FROM CommunityLikes cl
+                        INNER JOIN CommunityPosts cp ON cp.Id = cl.PostId
+                        WHERE cp.UserId = u.Id
+                    ), 0) AS LikesReceived,
+                    (SELECT COUNT(*) FROM CommunityComments cc WHERE cc.UserId = u.Id) AS CommentCount
+                FROM UserAccounts u
+                WHERE ISNULL(u.IsDisabled, 0) = 0
+                ORDER BY (
+                    (SELECT COUNT(*) FROM CommunityPosts p WHERE p.UserId = u.Id) * 3 +
+                    ISNULL((
+                        SELECT COUNT(*)
+                        FROM CommunityLikes cl
+                        INNER JOIN CommunityPosts cp ON cp.Id = cl.PostId
+                        WHERE cp.UserId = u.Id
+                    ), 0) * 2 +
+                    (SELECT COUNT(*) FROM CommunityComments cc WHERE cc.UserId = u.Id)
+                ) DESC, u.Id ASC;
+                """;
+
+            await using var cmd = new SqlCommand(query, connection);
+            cmd.Parameters.AddWithValue("@Limit", limit <= 0 ? 20 : limit);
+
+            await using var reader = await cmd.ExecuteReaderAsync();
+            int rank = 1;
+            while (await reader.ReadAsync())
+            {
+                var postCount = reader.GetInt32(reader.GetOrdinal("PostCount"));
+                var likesReceived = reader.GetInt32(reader.GetOrdinal("LikesReceived"));
+                var commentCount = reader.GetInt32(reader.GetOrdinal("CommentCount"));
+                var score = (postCount * 3) + (likesReceived * 2) + commentCount;
+                var rawAvatar = reader.GetString(reader.GetOrdinal("Avatar"));
+
+                rankings.Add(new
+                {
+                    Rank = rank++,
+                    UserId = reader.GetInt32(reader.GetOrdinal("UserId")),
+                    FullName = reader.GetString(reader.GetOrdinal("FullName")),
+                    Avatar = rawAvatar,
+                    PostCount = postCount,
+                    LikesReceived = likesReceived,
+                    CommentCount = commentCount,
+                    Score = score
+                });
+            }
+
+            return Ok(rankings);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Error fetching rankings: {ex.Message}");
+        }
+    }
 }
 
 public class EditPostRequest
