@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MySql.Data.MySqlClient;
+using System.ComponentModel.DataAnnotations;
 using System.Data;
 
 namespace ShoppetAPI.Controllers
@@ -38,17 +39,19 @@ namespace ShoppetAPI.Controllers
                     string hashedPassword = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
                     var insertCmd = new MySqlCommand(
-                        "INSERT INTO Users (FullName, Email, PasswordHash) VALUES (@FullName, @Email, @PasswordHash)", connection);
+                        "INSERT INTO Users (FullName, Email, PasswordHash) VALUES (@FullName, @Email, @PasswordHash); SELECT LAST_INSERT_ID();", connection);
                     insertCmd.Parameters.AddWithValue("@FullName", request.FullName);
                     insertCmd.Parameters.AddWithValue("@Email", request.Email);
                     insertCmd.Parameters.AddWithValue("@PasswordHash", hashedPassword);
 
-                    await insertCmd.ExecuteNonQueryAsync();
+                    int userId = Convert.ToInt32(await insertCmd.ExecuteScalarAsync());
 
                     return Ok(new AuthResponse
                     {
+                        UserId = userId,
                         FullName = request.FullName,
                         Email = request.Email,
+                        Role = "PetOwner",
                         Token = "sample-token"
                     });
                 }
@@ -110,14 +113,24 @@ namespace ShoppetAPI.Controllers
 
     public class RegisterRequest
     {
+        [Required]
+        [MinLength(4)]
         public string FullName { get; set; } = string.Empty;
+        [Required]
+        [EmailAddress]
         public string Email { get; set; } = string.Empty;
+        [Required]
+        [MinLength(6)]
         public string Password { get; set; } = string.Empty;
     }
 
     public class LoginRequest
     {
+        [Required]
+        [EmailAddress]
         public string Email { get; set; } = string.Empty;
+        [Required]
+        [MinLength(6)]
         public string Password { get; set; } = string.Empty;
     }
 
@@ -126,6 +139,7 @@ namespace ShoppetAPI.Controllers
         public int UserId { get; set; }
         public string FullName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+        public string Role { get; set; } = "PetOwner";
         public string Token { get; set; } = string.Empty;
     }
 }

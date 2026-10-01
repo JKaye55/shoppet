@@ -97,4 +97,8 @@
 	  </MauiXaml>
 	</ItemGroup>
 
+	<ItemGroup>
+		<EmbeddedResource Include="appsettings.json" LogicalName="ShoppetApp.appsettings.json" />
+	</ItemGroup>
+
 </Project>

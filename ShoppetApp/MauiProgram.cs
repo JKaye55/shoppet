@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using ShoppetApp.Pages;
 using ShoppetApp.Services;
 using ShoppetApp.ViewModels;
+using System.Reflection;
 
 namespace ShoppetApp;
 
@@ -12,6 +13,16 @@ public static class MauiProgram
     public static MauiApp CreateMauiApp()
     {
         var builder = MauiApp.CreateBuilder();
+
+        using var appSettingsStream = Assembly
+            .GetExecutingAssembly()
+            .GetManifestResourceStream("ShoppetApp.appsettings.json");
+        if (appSettingsStream != null)
+        {
+            builder.Configuration.AddJsonStream(appSettingsStream);
+        }
+        builder.Configuration.AddEnvironmentVariables(prefix: "SHOPPET_");
+
         builder
             .UseMauiApp<App>()
             .UseMauiCommunityToolkit()
@@ -33,7 +44,15 @@ public static class MauiProgram
         builder.Services.AddSingleton<ApiService>();
 
         // FIXED: Explicitly provide the local SQLite file path to DatabaseService
-        builder.Services.AddSingleton<DatabaseService>(s => { var db = new DatabaseService(Path.Combine(FileSystem.AppDataDirectory, "shoppet.db3")); db.ApiService = s.GetRequiredService<ApiService>(); return db; });
+        builder.Services.AddSingleton<DatabaseService>(s =>
+        {
+            var config = s.GetRequiredService<IConfiguration>();
+            var db = new DatabaseService(
+                Path.Combine(FileSystem.AppDataDirectory, "shoppet.db3"),
+                config["ShoppetData:LegacyMySqlConnection"] ?? string.Empty);
+            db.ApiService = s.GetRequiredService<ApiService>();
+            return db;
+        });
 
         builder.Services.AddSingleton<CartService>();
 
@@ -82,7 +101,6 @@ public static class MauiProgram
         return app;
     }
 }
-
 
 
 
