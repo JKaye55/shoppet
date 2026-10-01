@@ -38,7 +38,8 @@ public class ProfileController : ControllerBase
                 SELECT FullName,ISNULL(ProfilePicture,''),
                        ISNULL(FacebookUrl,''),ISNULL(InstagramUrl,''),
                        ISNULL(OtherSocialUrl,''),ISNULL(ShowSocialLinksOnMarketplace,1),
-                       ISNULL(MobileNumber,''),ISNULL(ShowMobileOnPublicPetId,0)
+                       ISNULL(MobileNumber,''),ISNULL(ShowMobileOnPublicPetId,0),
+                       ISNULL(IsPremium,0),ISNULL(Role,'Pet Owner')
                 FROM UserAccounts WHERE Id=@UserId;
                 """,conn);
             cmd.Parameters.AddWithValue("@UserId",userId);
@@ -52,7 +53,9 @@ public class ProfileController : ControllerBase
                 OtherSocialUrl=r.GetString(4),
                 ShowSocialLinksOnMarketplace=r.GetBoolean(5),
                 MobileNumber=r.GetString(6),
-                ShowMobileOnPublicPetId=r.GetBoolean(7)
+                ShowMobileOnPublicPetId=r.GetBoolean(7),
+                IsPremium=!r.IsDBNull(8) && r.GetBoolean(8),
+                Role=r.IsDBNull(9) ? "Pet Owner" : r.GetString(9)
             });
         }
         catch(Exception ex){return StatusCode(500,$"Profile error: {ex.Message}");}

@@ -36,6 +36,9 @@ public class CommunityController : ControllerBase
                     p.UserId,
                     p.PetId,
                     ISNULL(u.FullName, 'Unknown') AS AuthorName,
+                    ISNULL(u.ProfilePicture, '') AS ProfilePicture,
+                    ISNULL(u.IsPremium, 0) AS IsAuthorPremium,
+                    ISNULL(u.Role, '') AS AuthorRole,
                     ISNULL(pp.PetName, '') AS PetName,
                     ISNULL(p.Caption, '') AS Content,
                     ISNULL(p.ImageUrl, '') AS ImageUrls,
@@ -60,6 +63,7 @@ public class CommunityController : ControllerBase
             while (await reader.ReadAsync())
             {
                 var postedAt = reader.IsDBNull(reader.GetOrdinal("PostedAt")) ? DateTime.UtcNow : reader.GetDateTime(reader.GetOrdinal("PostedAt"));
+                var rawPic = reader.IsDBNull(reader.GetOrdinal("ProfilePicture")) ? "" : reader.GetString(reader.GetOrdinal("ProfilePicture"));
                 posts.Add(new
                 {
                     Id = reader.GetInt32(reader.GetOrdinal("Id")),
@@ -70,7 +74,9 @@ public class CommunityController : ControllerBase
                         ? (int?)null
                         : reader.GetInt32(reader.GetOrdinal("PetId")),
                     AuthorName = reader.IsDBNull(reader.GetOrdinal("AuthorName")) ? "Unknown" : reader.GetString(reader.GetOrdinal("AuthorName")),
-                    ProfilePicture = string.Empty,
+                    ProfilePicture = MediaUrls.Web(rawPic, _configuration),
+                    IsAuthorPremium = !reader.IsDBNull(reader.GetOrdinal("IsAuthorPremium")) && reader.GetBoolean(reader.GetOrdinal("IsAuthorPremium")),
+                    AuthorRole = reader.IsDBNull(reader.GetOrdinal("AuthorRole")) ? "" : reader.GetString(reader.GetOrdinal("AuthorRole")),
                     PetName = reader.IsDBNull(reader.GetOrdinal("PetName")) ? string.Empty : reader.GetString(reader.GetOrdinal("PetName")),
                     Content = reader.IsDBNull(reader.GetOrdinal("Content")) ? string.Empty : reader.GetString(reader.GetOrdinal("Content")),
                     ImageUrls = MediaUrls.Web(reader.IsDBNull(reader.GetOrdinal("ImageUrls")) ? "" : reader.GetString(reader.GetOrdinal("ImageUrls")),_configuration),
@@ -273,6 +279,9 @@ public class CommunityController : ControllerBase
                     COALESCE(NULLIF(c.Content, ''), c.Body, '') AS Content,
                     c.CreatedAt,
                     COALESCE(u.FullName, NULLIF(c.AuthorName, ''), 'Unknown') AS AuthorName,
+                    ISNULL(u.ProfilePicture, '') AS ProfilePicture,
+                    ISNULL(u.IsPremium, 0) AS IsAuthorPremium,
+                    ISNULL(u.Role, '') AS AuthorRole,
                     parent_u.FullName AS ParentAuthorName,
                     (SELECT COUNT(*) FROM CommunityCommentLikes l WHERE l.CommentId=c.Id) AS LikeCount,
                     CASE WHEN EXISTS(
@@ -294,6 +303,7 @@ public class CommunityController : ControllerBase
             await using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
+                var rawPic = reader.IsDBNull(reader.GetOrdinal("ProfilePicture")) ? "" : reader.GetString(reader.GetOrdinal("ProfilePicture"));
                 comments.Add(new
                 {
                     Id = reader.GetInt32(reader.GetOrdinal("Id")),
@@ -307,7 +317,9 @@ public class CommunityController : ControllerBase
                     AuthorName = reader.IsDBNull(reader.GetOrdinal("AuthorName"))
                         ? "Unknown"
                         : reader.GetString(reader.GetOrdinal("AuthorName")),
-                    ProfilePicture = string.Empty,
+                    ProfilePicture = MediaUrls.Web(rawPic, _configuration),
+                    IsAuthorPremium = !reader.IsDBNull(reader.GetOrdinal("IsAuthorPremium")) && reader.GetBoolean(reader.GetOrdinal("IsAuthorPremium")),
+                    AuthorRole = reader.IsDBNull(reader.GetOrdinal("AuthorRole")) ? "" : reader.GetString(reader.GetOrdinal("AuthorRole")),
                     ParentAuthorName = reader.IsDBNull(reader.GetOrdinal("ParentAuthorName"))
                         ? null
                         : reader.GetString(reader.GetOrdinal("ParentAuthorName")),
@@ -584,7 +596,9 @@ public class CommunityController : ControllerBase
                         INNER JOIN CommunityPosts cp ON cp.Id = cl.PostId
                         WHERE cp.UserId = u.Id
                     ), 0) AS LikesReceived,
-                    (SELECT COUNT(*) FROM CommunityComments cc WHERE cc.UserId = u.Id) AS CommentCount
+                    (SELECT COUNT(*) FROM CommunityComments cc WHERE cc.UserId = u.Id) AS CommentCount,
+                    ISNULL(u.IsPremium, 0) AS IsPremium,
+                    ISNULL(u.Role, '') AS Role
                 FROM UserAccounts u
                 WHERE ISNULL(u.IsDisabled, 0) = 0
                 ORDER BY (
@@ -611,17 +625,21 @@ public class CommunityController : ControllerBase
                 var commentCount = reader.GetInt32(reader.GetOrdinal("CommentCount"));
                 var score = (postCount * 3) + (likesReceived * 2) + commentCount;
                 var rawAvatar = reader.GetString(reader.GetOrdinal("Avatar"));
+                var isPrem = !reader.IsDBNull(reader.GetOrdinal("IsPremium")) && reader.GetBoolean(reader.GetOrdinal("IsPremium"));
+                var role = reader.IsDBNull(reader.GetOrdinal("Role")) ? "" : reader.GetString(reader.GetOrdinal("Role"));
 
                 rankings.Add(new
                 {
                     Rank = rank++,
                     UserId = reader.GetInt32(reader.GetOrdinal("UserId")),
                     FullName = reader.GetString(reader.GetOrdinal("FullName")),
-                    Avatar = rawAvatar,
+                    Avatar = MediaUrls.Web(rawAvatar, _configuration),
                     PostCount = postCount,
                     LikesReceived = likesReceived,
                     CommentCount = commentCount,
-                    Score = score
+                    Score = score,
+                    IsPremium = isPrem,
+                    Role = role
                 });
             }
 

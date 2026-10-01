@@ -39,7 +39,8 @@ public class MarketplaceController : ControllerBase
                        m.CreatedAt,
                        CASE WHEN ISNULL(u.ShowSocialLinksOnMarketplace,1)=1 THEN ISNULL(u.FacebookUrl,'') ELSE '' END,
                        CASE WHEN ISNULL(u.ShowSocialLinksOnMarketplace,1)=1 THEN ISNULL(u.InstagramUrl,'') ELSE '' END,
-                       CASE WHEN ISNULL(u.ShowSocialLinksOnMarketplace,1)=1 THEN ISNULL(u.OtherSocialUrl,'') ELSE '' END
+                       CASE WHEN ISNULL(u.ShowSocialLinksOnMarketplace,1)=1 THEN ISNULL(u.OtherSocialUrl,'') ELSE '' END,
+                       ISNULL(u.IsPremium, 0)
                 FROM MarketplaceListings m
                 LEFT JOIN UserAccounts u ON u.Id=m.SellerUserId
                 WHERE {string.Join(" AND ",conditions)}
@@ -76,7 +77,8 @@ public class MarketplaceController : ControllerBase
                        m.CreatedAt,
                        CASE WHEN ISNULL(u.ShowSocialLinksOnMarketplace,1)=1 THEN ISNULL(u.FacebookUrl,'') ELSE '' END,
                        CASE WHEN ISNULL(u.ShowSocialLinksOnMarketplace,1)=1 THEN ISNULL(u.InstagramUrl,'') ELSE '' END,
-                       CASE WHEN ISNULL(u.ShowSocialLinksOnMarketplace,1)=1 THEN ISNULL(u.OtherSocialUrl,'') ELSE '' END
+                       CASE WHEN ISNULL(u.ShowSocialLinksOnMarketplace,1)=1 THEN ISNULL(u.OtherSocialUrl,'') ELSE '' END,
+                       ISNULL(u.IsPremium, 0)
                 FROM MarketplaceListings m
                 LEFT JOIN UserAccounts u ON u.Id=m.SellerUserId
                 WHERE m.SellerUserId=@UserId AND m.Status<>'Deleted'
@@ -102,6 +104,25 @@ public class MarketplaceController : ControllerBase
 
             if(!await RbacService.IsPetOwnerAsync(conn,x.UserId))
                 return StatusCode(403,"Access denied.");
+
+            // Enforce free listing limit: Free users max 5 listings
+            await using (var checkCmd = new SqlCommand("SELECT ISNULL(IsPremium, 0) FROM UserAccounts WHERE Id = @UserId", conn))
+            {
+                checkCmd.Parameters.AddWithValue("@UserId", x.UserId);
+                var isPremObj = await checkCmd.ExecuteScalarAsync();
+                bool isPrem = isPremObj != null && Convert.ToBoolean(isPremObj);
+
+                if (!isPrem)
+                {
+                    await using var countCmd = new SqlCommand("SELECT COUNT(*) FROM MarketplaceListings WHERE SellerUserId = @UserId AND Status <> 'Deleted'", conn);
+                    countCmd.Parameters.AddWithValue("@UserId", x.UserId);
+                    var count = Convert.ToInt32(await countCmd.ExecuteScalarAsync());
+                    if (count >= 5)
+                    {
+                        return BadRequest("Free accounts can create up to 5 marketplace listings. Upgrade to Premium (₱150 for 2 months) for unlimited listings.");
+                    }
+                }
+            }
 
             await using var cmd=new SqlCommand("""
                 INSERT INTO MarketplaceListings
@@ -189,6 +210,7 @@ public class MarketplaceController : ControllerBase
         var fb = r.IsDBNull(13) ? "" : Social(r.GetString(13));
         var ig = r.IsDBNull(14) ? "" : Social(r.GetString(14));
         var other = r.IsDBNull(15) ? "" : Social(r.GetString(15));
+        var isPrem = !r.IsDBNull(16) && r.GetBoolean(16);
 
         return new
         {
@@ -207,7 +229,8 @@ public class MarketplaceController : ControllerBase
             CreatedAt = createdAt,
             FacebookUrl = fb,
             InstagramUrl = ig,
-            OtherSocialUrl = other
+            OtherSocialUrl = other,
+            IsSellerPremium = isPrem
         };
     }
 
