@@ -32,9 +32,9 @@ namespace ShoppetApp.Models
 
         public List<string> ImageList => string.IsNullOrWhiteSpace(ImageUrls)
             ? new List<string>()
-            : ImageUrls.Contains('|')
-                ? ImageUrls.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList()
-                : ImageUrls.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+            : ImageUrls.Split(new[] { ',', '|', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                       .Where(u => !string.IsNullOrWhiteSpace(u))
+                       .ToList();
 
         public bool HasImages => ImageList.Any();
         public int LikeCount { get; set; }

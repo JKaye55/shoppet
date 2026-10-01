@@ -645,6 +645,31 @@ public class ApiService
 
     // --- Community API ---
 
+    public string NormalizeMediaUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return string.Empty;
+        var host = _http.BaseAddress?.Host ?? "localhost";
+        var port = _http.BaseAddress?.Port ?? 5020;
+        var scheme = _http.BaseAddress?.Scheme ?? "http";
+        var basePrefix = $"{scheme}://{host}:{port}".TrimEnd('/');
+
+        var parts = url.Split(new[] { ',', '|', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var normalized = parts.Select(u =>
+        {
+            if (u.StartsWith("/"))
+                return basePrefix + u;
+
+#if ANDROID
+            return u.Replace("http://localhost:", $"http://{host}:", StringComparison.OrdinalIgnoreCase)
+                    .Replace("https://localhost:", $"http://{host}:", StringComparison.OrdinalIgnoreCase);
+#else
+            return u.Replace("http://10.0.2.2:", "http://localhost:", StringComparison.OrdinalIgnoreCase);
+#endif
+        });
+
+        return string.Join(",", normalized);
+    }
+
     public async Task<List<CommunityPost>> GetCommunityPostsAsync(int userId)
     {
         using var response = await _http.GetAsync($"community?userId={userId}");
@@ -657,16 +682,13 @@ public class ApiService
         var posts = await response.Content.ReadFromJsonAsync<List<CommunityPost>>()
                     ?? new List<CommunityPost>();
 
-#if ANDROID
         foreach (var post in posts)
         {
             if (!string.IsNullOrWhiteSpace(post.ImageUrls))
-                post.ImageUrls = post.ImageUrls.Replace(
-                    "http://localhost:",
-                    $"http://{_http.BaseAddress!.Host}:",
-                    StringComparison.OrdinalIgnoreCase);
+                post.ImageUrls = NormalizeMediaUrl(post.ImageUrls);
+            if (!string.IsNullOrWhiteSpace(post.ProfilePicture))
+                post.ProfilePicture = NormalizeMediaUrl(post.ProfilePicture);
         }
-#endif
 
         return posts;
     }
@@ -681,13 +703,11 @@ public class ApiService
 
             var rankings = await response.Content.ReadFromJsonAsync<List<CommunityRanking>>() ?? new List<CommunityRanking>();
 
-#if ANDROID
             foreach (var r in rankings)
             {
                 if (!string.IsNullOrWhiteSpace(r.Avatar))
-                    r.Avatar = r.Avatar.Replace("http://localhost:", $"http://{_http.BaseAddress!.Host}:", StringComparison.OrdinalIgnoreCase);
+                    r.Avatar = NormalizeMediaUrl(r.Avatar);
             }
-#endif
             return rankings;
         }
         catch (Exception ex)
@@ -699,21 +719,39 @@ public class ApiService
 
     public async Task<List<string>> UploadCommunityMediaAsync(IEnumerable<string> filePaths)
     {
-        var paths = filePaths.Where(File.Exists).Take(5).ToList();
-        if (paths.Count == 0) return new List<string>();
+        var inputList = filePaths.Take(5).ToList();
+        if (inputList.Count == 0) return new List<string>();
 
         using var form = new MultipartFormDataContent();
         var streams = new List<Stream>();
 
         try
         {
-            foreach (var path in paths)
+            foreach (var path in inputList)
             {
-                var stream = File.OpenRead(path);
-                streams.Add(stream);
+                Stream? stream = null;
+                var fileName = Path.GetFileName(path);
+                if (string.IsNullOrEmpty(fileName)) fileName = $"{Guid.NewGuid():N}.jpg";
 
+                if (File.Exists(path))
+                {
+                    stream = File.OpenRead(path);
+                }
+                else
+                {
+                    try
+                    {
+                        stream = File.Open(path, FileMode.Open, FileAccess.Read);
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+                }
+
+                streams.Add(stream);
                 var fileContent = new StreamContent(stream);
-                var extension = Path.GetExtension(path).ToLowerInvariant();
+                var extension = Path.GetExtension(fileName).ToLowerInvariant();
                 var mediaType = extension switch
                 {
                     ".png" => "image/png",
@@ -723,8 +761,10 @@ public class ApiService
                 fileContent.Headers.ContentType =
                     new System.Net.Http.Headers.MediaTypeHeaderValue(mediaType);
 
-                form.Add(fileContent, "files", Path.GetFileName(path));
+                form.Add(fileContent, "files", fileName);
             }
+
+            if (streams.Count == 0) return new List<string>();
 
             using var response = await _http.PostAsync("community/media", form);
             if (!response.IsSuccessStatusCode)
@@ -733,8 +773,10 @@ public class ApiService
                 throw new HttpRequestException($"Media upload failed ({(int)response.StatusCode}): {detail}");
             }
 
-            return await response.Content.ReadFromJsonAsync<List<string>>()
+            var uploaded = await response.Content.ReadFromJsonAsync<List<string>>()
                    ?? new List<string>();
+
+            return uploaded.Select(u => NormalizeMediaUrl(u)).ToList();
         }
         finally
         {

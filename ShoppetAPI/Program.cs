@@ -5,6 +5,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddScoped<SessionGuard>();
 builder.Services.AddControllers(o => o.Filters.AddService<SessionGuard>());
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+    });
+});
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
@@ -31,6 +38,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseCors();
+
 // Android emulator uses http://10.0.2.2:5020 during local development.
 // Do not redirect that local HTTP request to the development HTTPS certificate.
 if (!app.Environment.IsDevelopment())
@@ -42,6 +51,9 @@ var wwwrootFolder = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
 var uploadsFolder = Path.Combine(wwwrootFolder, "uploads");
 Directory.CreateDirectory(Path.Combine(uploadsFolder, "community"));
 Directory.CreateDirectory(Path.Combine(uploadsFolder, "documents"));
+Directory.CreateDirectory(Path.Combine(uploadsFolder, "pets"));
+Directory.CreateDirectory(Path.Combine(uploadsFolder, "users"));
+Directory.CreateDirectory(Path.Combine(uploadsFolder, "marketplace"));
 
 app.UseStaticFiles();
 

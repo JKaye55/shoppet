@@ -47,7 +47,7 @@ namespace ShoppetApp.ViewModels
                 AttachedMedia.Clear();
                 foreach(var img in value.ImageList)
                 {
-                    AttachedMedia.Add(new MediaAttachment { FilePath = img, IsVideo = false });
+                    AttachedMedia.Add(new MediaAttachment { FilePath = _api.NormalizeMediaUrl(img), IsVideo = false });
                 }
                 _ = LoadPetsAsync();
             }
