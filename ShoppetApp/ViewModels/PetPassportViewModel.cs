@@ -44,8 +44,11 @@ public partial class PetPassportViewModel : ObservableObject, IQueryAttributable
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
-        if (query.TryGetValue("petId", out var value))
-            PetId = Convert.ToInt32(value);
+        if (query.TryGetValue("petId", out var value) && int.TryParse(value?.ToString(), out var id))
+        {
+            PetId = id;
+            MainThread.BeginInvokeOnMainThread(async () => await LoadAsync());
+        }
     }
 
     public void Receive(DataChangedMessage message) =>

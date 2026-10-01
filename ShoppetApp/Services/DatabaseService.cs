@@ -161,15 +161,24 @@ namespace ShoppetApp.Services
             if (ApiService is null)
                 return new List<Pet>();
 
-            var apiPets = await ApiService.GetPetsAsync();
-
-            await Database.CreateTableAsync<Pet>();
-            await Database.DeleteAllAsync<Pet>();
-
-            foreach (var pet in apiPets)
-                await Database.InsertOrReplaceAsync(pet);
-
-            return apiPets;
+            try
+            {
+                var apiPets = await ApiService.GetPetsAsync();
+                await Database.CreateTableAsync<Pet>();
+                if (apiPets != null && apiPets.Count > 0)
+                {
+                    await Database.DeleteAllAsync<Pet>();
+                    foreach (var pet in apiPets)
+                        await Database.InsertOrReplaceAsync(pet);
+                }
+                return apiPets ?? new List<Pet>();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error fetching API pets, falling back to local SQLite: {ex.Message}");
+                await Database.CreateTableAsync<Pet>();
+                return await Database.Table<Pet>().ToListAsync();
+            }
         }
 
         public async Task<Pet?> GetPetAsync(int id)

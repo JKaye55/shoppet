@@ -51,13 +51,13 @@ public class PetsController : ControllerBase
                 FROM PetProfiles
                 """;
 
-            if (userId.HasValue)
+            if (userId.HasValue && userId.Value > 0)
                 query += " WHERE UserId=@UserId";
 
             query += " ORDER BY PetName;";
 
             await using var cmd = new SqlCommand(query, connection);
-            if (userId.HasValue)
+            if (userId.HasValue && userId.Value > 0)
                 cmd.Parameters.AddWithValue("@UserId", userId.Value);
 
             await using var reader = await cmd.ExecuteReaderAsync();

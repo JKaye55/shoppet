@@ -59,7 +59,7 @@ public class CommunityController : ControllerBase
             await using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
-                var postedAt = reader.GetDateTime(reader.GetOrdinal("PostedAt"));
+                var postedAt = reader.IsDBNull(reader.GetOrdinal("PostedAt")) ? DateTime.UtcNow : reader.GetDateTime(reader.GetOrdinal("PostedAt"));
                 posts.Add(new
                 {
                     Id = reader.GetInt32(reader.GetOrdinal("Id")),
@@ -69,17 +69,17 @@ public class CommunityController : ControllerBase
                     PetId = reader.IsDBNull(reader.GetOrdinal("PetId"))
                         ? (int?)null
                         : reader.GetInt32(reader.GetOrdinal("PetId")),
-                    AuthorName = reader.GetString(reader.GetOrdinal("AuthorName")),
+                    AuthorName = reader.IsDBNull(reader.GetOrdinal("AuthorName")) ? "Unknown" : reader.GetString(reader.GetOrdinal("AuthorName")),
                     ProfilePicture = string.Empty,
-                    PetName = reader.GetString(reader.GetOrdinal("PetName")),
-                    Content = reader.GetString(reader.GetOrdinal("Content")),
-                    ImageUrls = MediaUrls.Web(reader.GetString(reader.GetOrdinal("ImageUrls")),_configuration),
+                    PetName = reader.IsDBNull(reader.GetOrdinal("PetName")) ? string.Empty : reader.GetString(reader.GetOrdinal("PetName")),
+                    Content = reader.IsDBNull(reader.GetOrdinal("Content")) ? string.Empty : reader.GetString(reader.GetOrdinal("Content")),
+                    ImageUrls = MediaUrls.Web(reader.IsDBNull(reader.GetOrdinal("ImageUrls")) ? "" : reader.GetString(reader.GetOrdinal("ImageUrls")),_configuration),
                     Timestamp = postedAt,
                     CreatedAt = postedAt,
-                    IsEdited = reader.GetBoolean(reader.GetOrdinal("IsEdited")),
-                    LikesCount = reader.GetInt32(reader.GetOrdinal("LikesCount")),
-                    CommentsCount = reader.GetInt32(reader.GetOrdinal("CommentsCount")),
-                    IsLikedByMe = reader.GetBoolean(reader.GetOrdinal("IsLikedByMe"))
+                    IsEdited = !reader.IsDBNull(reader.GetOrdinal("IsEdited")) && reader.GetBoolean(reader.GetOrdinal("IsEdited")),
+                    LikesCount = reader.IsDBNull(reader.GetOrdinal("LikesCount")) ? 0 : reader.GetInt32(reader.GetOrdinal("LikesCount")),
+                    CommentsCount = reader.IsDBNull(reader.GetOrdinal("CommentsCount")) ? 0 : reader.GetInt32(reader.GetOrdinal("CommentsCount")),
+                    IsLikedByMe = !reader.IsDBNull(reader.GetOrdinal("IsLikedByMe")) && reader.GetBoolean(reader.GetOrdinal("IsLikedByMe"))
                 });
             }
 
@@ -298,19 +298,29 @@ public class CommunityController : ControllerBase
                 {
                     Id = reader.GetInt32(reader.GetOrdinal("Id")),
                     PostId = reader.GetInt32(reader.GetOrdinal("PostId")),
-                    UserId = reader.GetInt32(reader.GetOrdinal("UserId")),
+                    UserId = reader.IsDBNull(reader.GetOrdinal("UserId"))
+                        ? 0
+                        : reader.GetInt32(reader.GetOrdinal("UserId")),
                     ParentCommentId = reader.IsDBNull(reader.GetOrdinal("ParentCommentId"))
                         ? (int?)null
                         : reader.GetInt32(reader.GetOrdinal("ParentCommentId")),
-                    AuthorName = reader.GetString(reader.GetOrdinal("AuthorName")),
+                    AuthorName = reader.IsDBNull(reader.GetOrdinal("AuthorName"))
+                        ? "Unknown"
+                        : reader.GetString(reader.GetOrdinal("AuthorName")),
                     ProfilePicture = string.Empty,
                     ParentAuthorName = reader.IsDBNull(reader.GetOrdinal("ParentAuthorName"))
                         ? null
                         : reader.GetString(reader.GetOrdinal("ParentAuthorName")),
-                    Content = reader.GetString(reader.GetOrdinal("Content")),
-                    CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                    LikeCount = reader.GetInt32(reader.GetOrdinal("LikeCount")),
-                    IsLikedByMe = reader.GetBoolean(reader.GetOrdinal("IsLikedByMe"))
+                    Content = reader.IsDBNull(reader.GetOrdinal("Content"))
+                        ? string.Empty
+                        : reader.GetString(reader.GetOrdinal("Content")),
+                    CreatedAt = reader.IsDBNull(reader.GetOrdinal("CreatedAt"))
+                        ? DateTime.UtcNow
+                        : reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
+                    LikeCount = reader.IsDBNull(reader.GetOrdinal("LikeCount"))
+                        ? 0
+                        : reader.GetInt32(reader.GetOrdinal("LikeCount")),
+                    IsLikedByMe = !reader.IsDBNull(reader.GetOrdinal("IsLikedByMe")) && reader.GetBoolean(reader.GetOrdinal("IsLikedByMe"))
                 });
             }
 
