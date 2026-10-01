@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace ShoppetApp.Models
 {
@@ -29,9 +29,29 @@ namespace ShoppetApp.Models
         [ObservableProperty]
         private bool _isOptionsVisible;
 
-        public List<string> ImageList => string.IsNullOrEmpty(ImageUrls)
-            ? new List<string>()
-            : ImageUrls.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+        public List<string> ImageList
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(ImageUrls)) return new List<string>();
+                var publicWeb = Microsoft.Maui.Storage.Preferences.Get("PublicWebBaseUrl", "http://localhost:5253").TrimEnd('/');
+#if ANDROID
+                if (publicWeb.Contains("localhost")) publicWeb = publicWeb.Replace("localhost", "10.0.2.2");
+                if (publicWeb.Contains("127.0.0.1")) publicWeb = publicWeb.Replace("127.0.0.1", "10.0.2.2");
+#endif
+                return ImageUrls.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(u =>
+                    {
+                        var trimmed = u.Trim();
+                        if (trimmed.StartsWith("/")) trimmed = publicWeb + trimmed;
+#if ANDROID
+                        trimmed = trimmed.Replace("http://localhost:", "http://10.0.2.2:")
+                                         .Replace("http://127.0.0.1:", "http://10.0.2.2:");
+#endif
+                        return trimmed;
+                    }).ToList();
+            }
+        }
 
         public bool HasImages => ImageList.Any();
         public string FirstImage => ImageList.Any() ? ImageList[0] : string.Empty;

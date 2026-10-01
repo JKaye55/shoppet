@@ -252,7 +252,7 @@
                                         Clicked="OnSellerSocialClicked"
                                         CommandParameter="other" />
                             </HorizontalStackLayout>
-                            <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="8" Margin="0,8,0,0">
+                            <Grid ColumnDefinitions="*,*,Auto,Auto" ColumnSpacing="6" Margin="0,8,0,0">
                                 <Button x:Name="BtnAddToCart"
                                         Grid.Column="0"
                                         Text="Add to Cart"
@@ -260,6 +260,7 @@
                                         TextColor="White"
                                         CornerRadius="12"
                                         FontFamily="NunitoBold"
+                                        FontSize="12"
                                         Clicked="OnAddToCartClicked"/>
                                 <Button x:Name="BtnMessageSeller"
                                         Grid.Column="1"
@@ -268,8 +269,18 @@
                                         TextColor="{StaticResource Primary}"
                                         CornerRadius="12"
                                         FontFamily="NunitoBold"
+                                        FontSize="12"
                                         Clicked="OnMessageSellerClicked"/>
-                                <Button Grid.Column="2"
+                                <Button x:Name="BtnAddFriend"
+                                        Grid.Column="2"
+                                        Text="+ Friend"
+                                        BackgroundColor="{StaticResource Secondary20}"
+                                        TextColor="{StaticResource BodyText}"
+                                        CornerRadius="12"
+                                        FontFamily="NunitoBold"
+                                        FontSize="12"
+                                        Clicked="OnAddFriendClicked"/>
+                                <Button Grid.Column="3"
                                         Text="Close"
                                         BackgroundColor="{StaticResource CardBg}"
                                         TextColor="{StaticResource BodyText}"
@@ -277,6 +288,7 @@
                                         BorderWidth="1"
                                         CornerRadius="12"
                                         FontFamily="NunitoBold"
+                                        FontSize="12"
                                         Clicked="OnDismissModal"/>
                             </Grid>
                         </VerticalStackLayout>

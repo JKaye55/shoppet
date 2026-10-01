@@ -108,8 +108,11 @@ public partial class ShopPage : ContentPage
 
     private async Task LoadExploreListingsAsync()
     {
-        MarketplaceLoading.IsVisible = true;
-        MarketplaceLoading.IsRunning = true;
+        if (_allExploreListings == null || _allExploreListings.Count == 0)
+        {
+            MarketplaceLoading.IsVisible = true;
+            MarketplaceLoading.IsRunning = true;
+        }
         ExploreEmptyLabel.IsVisible = false;
 
         try
@@ -126,6 +129,7 @@ public partial class ShopPage : ContentPage
         {
             MarketplaceLoading.IsRunning = false;
             MarketplaceLoading.IsVisible = false;
+            if (ExploreRefreshView != null) ExploreRefreshView.IsRefreshing = false;
         }
     }
 
@@ -134,8 +138,11 @@ public partial class ShopPage : ContentPage
         var userId = _db.CurrentUser?.Id ?? Preferences.Get("LoggedInUserId", 0);
         if (userId <= 0) return;
 
-        MarketplaceLoading.IsVisible = true;
-        MarketplaceLoading.IsRunning = true;
+        if (MyListings.Count == 0)
+        {
+            MarketplaceLoading.IsVisible = true;
+            MarketplaceLoading.IsRunning = true;
+        }
         SellEmptyLabel.IsVisible = false;
 
         try
@@ -149,6 +156,7 @@ public partial class ShopPage : ContentPage
         {
             MarketplaceLoading.IsRunning = false;
             MarketplaceLoading.IsVisible = false;
+            if (SellRefreshView != null) SellRefreshView.IsRefreshing = false;
         }
     }
 
@@ -210,6 +218,7 @@ public partial class ShopPage : ContentPage
         var currentUserId = Preferences.Get("LoggedInUserId", 0);
         var isOwnListing = listing.UserId == currentUserId;
         BtnMessageSeller.IsVisible = !isOwnListing;
+        BtnAddFriend.IsVisible = !isOwnListing;
         BtnAddToCart.IsVisible = !isOwnListing && listing.IsAvailable;
 
         BtnSellerFacebook.IsVisible = !string.IsNullOrWhiteSpace(listing.FacebookUrl);
@@ -388,6 +397,37 @@ public partial class ShopPage : ContentPage
                 {"ListingId",_currentListing.Id.ToString()},
                 { "ContactName", _currentListing.SellerName }
             });
+        }
+    }
+
+    private async void OnAddFriendClicked(object? sender, EventArgs e)
+    {
+        if (_currentListing == null) return;
+
+        var myUserId = Preferences.Get("LoggedInUserId", 0);
+        if (myUserId <= 0)
+        {
+            await DisplayAlertAsync("Sign in required", "Please sign in before adding contacts.", "OK");
+            return;
+        }
+
+        try
+        {
+            var contact = new ShoppetApp.Models.Contact
+            {
+                Name = _currentListing.SellerName,
+                Role = $"Marketplace Seller • {_currentListing.Category}",
+                Address = _currentListing.Location,
+                Phone = "",
+                IsEmergency = false
+            };
+
+            await _db.SaveContactAsync(contact);
+            await DisplayAlertAsync("Friend & Contact Added", $"Added {_currentListing.SellerName} to your Friends & Contacts list!", "OK");
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlertAsync("Contact", $"Could not add contact: {ex.Message}", "OK");
         }
     }
     private void OnModalBodyTapped(object? sender, TappedEventArgs e) { }
