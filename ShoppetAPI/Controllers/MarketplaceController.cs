@@ -16,6 +16,7 @@ public class MarketplaceController : ControllerBase
         ?? throw new InvalidOperationException("SharedSqlServer connection is missing.");
 
     [HttpGet]
+    [HttpGet("/api/marketplacelistings")]
     public async Task<IActionResult> GetListings([FromQuery] string? category=null,[FromQuery] string? search=null)
     {
         try
@@ -215,6 +216,7 @@ public class MarketplaceController : ControllerBase
         return new
         {
             Id = id,
+            SellerUserId = userId,
             UserId = userId,
             SellerName = sellerName,
             SellerProfilePic = MediaUrls.Web(sellerPic, _configuration),
@@ -222,9 +224,11 @@ public class MarketplaceController : ControllerBase
             Description = desc,
             Price = price,
             Category = category,
+            ItemCondition = condition,
             Condition = condition,
             Location = location,
             ImageUrls = MediaUrl(imgUrlRaw),
+            Status = isAvail ? "Active" : "Unavailable",
             IsAvailable = isAvail,
             CreatedAt = createdAt,
             FacebookUrl = fb,

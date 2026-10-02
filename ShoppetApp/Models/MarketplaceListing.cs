@@ -5,6 +5,7 @@ namespace ShoppetApp.Models
     public partial class MarketplaceListing : ObservableObject
     {
         public int Id { get; set; }
+        public int SellerUserId { get; set; }
         public int UserId { get; set; }
         public string SellerName { get; set; } = string.Empty;
         public string SellerProfilePic { get; set; } = string.Empty;
@@ -12,9 +13,11 @@ namespace ShoppetApp.Models
         public string Description { get; set; } = string.Empty;
         public decimal Price { get; set; }
         public string Category { get; set; } = "General";
+        public string ItemCondition { get; set; } = "Used";
         public string Condition { get; set; } = "Used";
         public string Location { get; set; } = string.Empty;
         public string? ImageUrls { get; set; }
+        public string Status { get; set; } = "Active";
         public bool IsAvailable { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public string FacebookUrl { get; set; } = string.Empty;

@@ -27,9 +27,14 @@ public class AuthController : ControllerBase
             string.IsNullOrWhiteSpace(request.Password))
             return BadRequest("Full name, email, and password are required.");
 
-        if (request.Password.Length < 15 || request.Password.Length > 64 || request.FullName.Trim().Length > 150
+        var pwd = request.Password;
+        bool hasLetter = pwd.Any(char.IsLetter);
+        bool hasDigit = pwd.Any(char.IsDigit);
+        bool hasSpecial = pwd.Any(c => "!@#$%^&*(),.?\":{}|<>".Contains(c) || (!char.IsLetterOrDigit(c) && !char.IsWhiteSpace(c)));
+
+        if (pwd.Length < 8 || pwd.Length > 64 || !hasLetter || !hasDigit || !hasSpecial || request.FullName.Trim().Length > 150
             || !System.Net.Mail.MailAddress.TryCreate(request.Email, out var address) || address.Address != request.Email.Trim())
-            return BadRequest("Use a valid email, name, and a passphrase of 15–64 characters.");
+            return BadRequest("Must be at least 8 characters and include a letter, number, and special character.");
         try
         {
             await using var connection = new SqlConnection(ConnectionString);

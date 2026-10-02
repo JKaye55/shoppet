@@ -83,7 +83,14 @@ public class ApiService
 
     public ApiService()
     {
-        _http = new HttpClient { BaseAddress = new Uri(Preferences.Get("ApiBaseUrl",BaseUrl).TrimEnd('/') + "/"), Timeout=TimeSpan.FromSeconds(30) };
+        var rawUrl = Preferences.Get("ApiBaseUrl", BaseUrl);
+#if ANDROID
+        if (string.IsNullOrWhiteSpace(rawUrl) || rawUrl.Contains("localhost") || rawUrl.Contains("127.0.0.1"))
+        {
+            rawUrl = "http://10.0.2.2:5020/api";
+        }
+#endif
+        _http = new HttpClient { BaseAddress = new Uri(rawUrl.TrimEnd('/') + "/"), Timeout=TimeSpan.FromSeconds(30) };
     }
 
     public string ResolveDeviceUrl(string value)
@@ -899,7 +906,16 @@ public class ApiService
             if (!string.IsNullOrEmpty(category)) q.Add($"category={Uri.EscapeDataString(category)}");
             if (!string.IsNullOrEmpty(search)) q.Add($"search={Uri.EscapeDataString(search)}");
             var qs = q.Count > 0 ? "?" + string.Join("&", q) : "";
-            var listings = await _http.GetFromJsonAsync<List<MarketplaceListing>>($"marketplace{qs}") ?? new List<MarketplaceListing>();
+            List<MarketplaceListing>? listings = null;
+            try
+            {
+                listings = await _http.GetFromJsonAsync<List<MarketplaceListing>>($"marketplacelistings{qs}");
+            }
+            catch
+            {
+                listings = await _http.GetFromJsonAsync<List<MarketplaceListing>>($"marketplace{qs}");
+            }
+            listings ??= new List<MarketplaceListing>();
 #if ANDROID
             foreach (var listing in listings)
             {
@@ -910,7 +926,12 @@ public class ApiService
                         StringComparison.OrdinalIgnoreCase);
             }
 #endif
-            return listings;
+            foreach (var l in listings)
+            {
+                if (l.SellerUserId <= 0 && l.UserId > 0) l.SellerUserId = l.UserId;
+                if (string.IsNullOrWhiteSpace(l.ItemCondition) && !string.IsNullOrWhiteSpace(l.Condition)) l.ItemCondition = l.Condition;
+            }
+            return listings.Where(l => string.Equals(l.Status, "Active", StringComparison.OrdinalIgnoreCase) || string.Equals(l.Status, "Available", StringComparison.OrdinalIgnoreCase) || l.IsAvailable).ToList();
         }
         catch (Exception ex) { Console.WriteLine($"Marketplace fetch error: {ex.Message}"); return new List<MarketplaceListing>(); }
     }
