@@ -7,11 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="QRCoder" Version="1.8.0" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.3" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.12" />
-    <PackageReference Include="MySql.Data" Version="26.7.0" />
-  </ItemGroup>
+</ItemGroup>
 
+<ItemGroup><Content Include="Database/SharedIntegration.sql" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
 </Project>

@@ -77,6 +77,32 @@ public partial class AuthViewModel : ObservableObject
     private void ToggleConfirmPassword() => IsConfirmPasswordVisible = !IsConfirmPasswordVisible;
 
     [RelayCommand]
+    private void AutoFillPetOwner()
+    {
+        IsLogin = true;
+        Email = "petowner@shoppetcare.local";
+        Password = "ShoppetCarePass123!";
+        ClearErrors();
+    }
+
+    [RelayCommand]
+    private void AutoFillDemoUser(string role)
+    {
+        IsLogin = true;
+        if (role == "admin")
+        {
+            Email = "admin@shoppetcare.local";
+            Password = "ShoppetCareAdmin123!";
+        }
+        else
+        {
+            Email = "demo-owner@shoppetcare.local";
+            Password = "A happy ShoppetCare demo passphrase";
+        }
+        ClearErrors();
+    }
+
+    [RelayCommand]
     private async Task SubmitAsync()
     {
         ClearErrors();
@@ -105,6 +131,7 @@ public partial class AuthViewModel : ObservableObject
                 if (result.Success && result.Data is not null)
                 {
                     _apiService.SetToken(result.Data.Token);
+                    await SecureStorage.SetAsync("ApiToken",result.Data.Token);
 
                     // ⭐ Save user session locally for API mapping + Community RBAC
                     Preferences.Set("LoggedInUserId", result.Data.UserId);
@@ -140,6 +167,7 @@ public partial class AuthViewModel : ObservableObject
                     hasError = true;
                 }
 
+                if (Password.Length < 15 || Password.Length > 64) { PasswordError="Use a passphrase of 15–64 characters.";hasError=true; }
                 if (Password != ConfirmPassword)
                 {
                     ConfirmPasswordError = "Passwords do not match.";
@@ -153,6 +181,7 @@ public partial class AuthViewModel : ObservableObject
                 if (result.Success && result.Data is not null)
                 {
                     _apiService.SetToken(result.Data.Token);
+                    await SecureStorage.SetAsync("ApiToken",result.Data.Token);
 
                     // ⭐ Save user session locally for API mapping + Community RBAC
                     Preferences.Set("LoggedInUserId", result.Data.UserId);

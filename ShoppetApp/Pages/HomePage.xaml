@@ -15,16 +15,93 @@
             <ScrollView Grid.Row="1">
                 <VerticalStackLayout Spacing="24" Padding="20,8,20,108">
 
-                    <VerticalStackLayout Spacing="4">
+                    <VerticalStackLayout Spacing="6">
                         <Label Text="{Binding Greeting}"
                                FontFamily="NunitoSemiBold"
                                FontSize="13"
                                TextColor="{StaticResource NavMuted}" />
-                        <Label Text="How are the pets today?"
-                               FontFamily="NunitoExtraBold"
-                               FontSize="26"
-                               TextColor="{StaticResource SecondaryFg}" />
+                        <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                            <Label Text="How are the pets today?"
+                                   FontFamily="NunitoExtraBold"
+                                   FontSize="22"
+                                   TextColor="{StaticResource SecondaryFg}"
+                                   VerticalOptions="Center" />
+
+                            <!-- User Tier Badge (Free vs Premium) -->
+                            <Border Grid.Column="1"
+                                    VerticalOptions="Center"
+                                    StrokeThickness="1"
+                                    Padding="10,4">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding OpenUpgradePromptCommand}" />
+                                </Border.GestureRecognizers>
+                                <Border.Triggers>
+                                    <DataTrigger TargetType="Border" Binding="{Binding IsPremium}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="#FEF3C7" />
+                                        <Setter Property="Stroke" Value="#F59E0B" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Border" Binding="{Binding IsPremium}" Value="False">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource Secondary10}" />
+                                        <Setter Property="Stroke" Value="{StaticResource SecondaryFg}" />
+                                    </DataTrigger>
+                                </Border.Triggers>
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="12" />
+                                </Border.StrokeShape>
+                                <Label FontFamily="NunitoBold" FontSize="11" VerticalOptions="Center">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding IsPremium}" Value="True">
+                                            <Setter Property="Text" Value="🏅 Premium" />
+                                            <Setter Property="TextColor" Value="#B45309" />
+                                        </DataTrigger>
+                                        <DataTrigger TargetType="Label" Binding="{Binding IsPremium}" Value="False">
+                                            <Setter Property="Text" Value="Free · Upgrade" />
+                                            <Setter Property="TextColor" Value="{StaticResource Primary}" />
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+                            </Border>
+                        </Grid>
                     </VerticalStackLayout>
+
+                    <!-- Cross-Platform Web App Promotion Banner -->
+                    <Border BackgroundColor="#E8F5E9"
+                            Stroke="#2E7D32"
+                            StrokeThickness="1"
+                            Padding="16">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="20" />
+                        </Border.StrokeShape>
+                        <Border.Shadow>
+                            <Shadow Brush="{StaticResource SecondaryFg}" Offset="0,4" Radius="12" Opacity="0.08" />
+                        </Border.Shadow>
+                        <VerticalStackLayout Spacing="8">
+                            <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                                <Label Text="🌐" FontSize="18" VerticalOptions="Center" />
+                                <Label Text="Access ShoppetCare on the Web"
+                                       FontFamily="NunitoExtraBold"
+                                       FontSize="15"
+                                       TextColor="#1B5E20"
+                                       VerticalOptions="Center" />
+                            </HorizontalStackLayout>
+                            <Label Text="Manage your pet health records, vet visit reminders, explore marketplace listings, and stay connected with the community from your computer."
+                                   FontFamily="Nunito"
+                                   FontSize="12"
+                                   TextColor="#2E7D32"
+                                   LineBreakMode="WordWrap" />
+                            <Button Text="Launch Web App"
+                                    Command="{Binding OpenWebPortalCommand}"
+                                    BackgroundColor="#2E7D32"
+                                    TextColor="White"
+                                    FontFamily="NunitoBold"
+                                    FontSize="13"
+                                    CornerRadius="14"
+                                    HeightRequest="36"
+                                    Padding="16,0"
+                                    HorizontalOptions="Start"
+                                    Margin="0,4,0,0" />
+                        </VerticalStackLayout>
+                    </Border>
 
                     <Grid x:Name="CardsContainer"
                           HeightRequest="196"
@@ -255,6 +332,105 @@
                                        FontSize="12"
                                        TextColor="{StaticResource NavMuted}"
                                        HorizontalOptions="Center" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <!-- COMMUNITY RANKINGS LEADERBOARD -->
+                    <VerticalStackLayout Spacing="12"
+                                         IsVisible="{Binding Rankings.Count, Converter={StaticResource CountToBoolConverter}}">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="🏆 Top Community Members"
+                                   FontFamily="NunitoExtraBold"
+                                   FontSize="18"
+                                   TextColor="{StaticResource SecondaryFg}"
+                                   VerticalOptions="Center" />
+                            <Label Text="See All"
+                                   Grid.Column="1"
+                                   FontFamily="NunitoBold"
+                                   FontSize="13"
+                                   TextColor="{StaticResource Primary}"
+                                   VerticalOptions="Center">
+                                <Label.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding OpenCommunityRankingsCommand}" />
+                                </Label.GestureRecognizers>
+                            </Label>
+                        </Grid>
+
+                        <Border Stroke="{StaticResource Secondary10}"
+                                StrokeThickness="1"
+                                BackgroundColor="{StaticResource CardBg}"
+                                Padding="16">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="20" />
+                            </Border.StrokeShape>
+                            <Border.Shadow>
+                                <Shadow Brush="{StaticResource SecondaryFg}" Offset="0,4" Radius="12" Opacity="0.08" />
+                            </Border.Shadow>
+
+                            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Rankings}" Spacing="12">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="models:CommunityRanking">
+                                        <Grid ColumnDefinitions="32,40,*,Auto" ColumnSpacing="10" VerticalOptions="Center">
+                                            <!-- Rank badge / Number -->
+                                            <Label Text="{Binding RankBadge}"
+                                                   FontFamily="NunitoExtraBold"
+                                                   FontSize="18"
+                                                   HorizontalOptions="Center"
+                                                   VerticalOptions="Center" />
+
+                                            <!-- Avatar -->
+                                            <Border Grid.Column="1"
+                                                    WidthRequest="36"
+                                                    HeightRequest="36"
+                                                    BackgroundColor="{StaticResource Primary10}"
+                                                    StrokeThickness="0"
+                                                    VerticalOptions="Center">
+                                                <Border.StrokeShape>
+                                                    <RoundRectangle CornerRadius="18" />
+                                                </Border.StrokeShape>
+                                                <Grid>
+                                                    <Label Text="{Binding Initial}"
+                                                           TextColor="{StaticResource Primary}"
+                                                           FontFamily="NunitoBold"
+                                                           FontSize="13"
+                                                           HorizontalOptions="Center"
+                                                           VerticalOptions="Center" />
+                                                    <Image Source="{Binding Avatar, Converter={StaticResource UrlToImageSourceConverter}}"
+                                                           Aspect="AspectFill" />
+                                                </Grid>
+                                            </Border>
+
+                                            <!-- User Name + Role/Badge -->
+                                            <VerticalStackLayout Grid.Column="2" Spacing="1" VerticalOptions="Center">
+                                                <Label Text="{Binding FullName}"
+                                                       FontFamily="NunitoBold"
+                                                       FontSize="14"
+                                                       TextColor="{StaticResource SecondaryFg}"
+                                                       LineBreakMode="TailTruncation" />
+                                                <Label Text="{Binding Score, StringFormat='{0} pts · Active Member'}"
+                                                       FontFamily="Nunito"
+                                                       FontSize="11"
+                                                       TextColor="{StaticResource NavMuted}" />
+                                            </VerticalStackLayout>
+
+                                            <!-- Points / Post info -->
+                                            <Border Grid.Column="3"
+                                                    BackgroundColor="{StaticResource Primary10}"
+                                                    Padding="8,4"
+                                                    StrokeThickness="0"
+                                                    VerticalOptions="Center">
+                                                <Border.StrokeShape>
+                                                    <RoundRectangle CornerRadius="12" />
+                                                </Border.StrokeShape>
+                                                <Label Text="{Binding PostCount, StringFormat='{0} posts'}"
+                                                       FontFamily="NunitoBold"
+                                                       FontSize="11"
+                                                       TextColor="{StaticResource Primary}" />
+                                            </Border>
+                                        </Grid>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
                             </VerticalStackLayout>
                         </Border>
                     </VerticalStackLayout>

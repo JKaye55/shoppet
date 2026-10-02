@@ -1,7 +1,8 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:ShoppetApp.ViewModels"
+             xmlns:models="clr-namespace:ShoppetApp.Models"
              x:Class="ShoppetApp.Pages.EditPostPage"
              x:DataType="vm:EditPostViewModel"
              Shell.NavBarIsVisible="False"
@@ -37,7 +38,7 @@
                                 <Binding Path="SelectedPets" />
                             </BindableLayout.ItemsSource>
                             <BindableLayout.ItemTemplate>
-                                <DataTemplate>
+                                <DataTemplate x:DataType="models:Pet">
                                     <Border Padding="10,5" StrokeShape="RoundRectangle 10" Stroke="{StaticResource Secondary30}" BackgroundColor="{StaticResource Secondary30}" >
                                         <Label Text="{Binding Name}" TextColor="{StaticResource BodyText}" FontSize="12" />
                                     </Border>
@@ -69,7 +70,7 @@
                         <LinearItemsLayout Orientation="Horizontal" ItemSpacing="10" />
                     </CollectionView.ItemsLayout>
                     <CollectionView.ItemTemplate>
-                        <DataTemplate>
+                        <DataTemplate x:DataType="vm:MediaAttachment">
                             <Grid WidthRequest="100" HeightRequest="100" Margin="0,5">
                                 <RoundRectangle CornerRadius="10" Fill="#222222" />
                                 
@@ -99,7 +100,15 @@
 
         <!-- Bottom Action Bar -->
         <Grid Grid.Row="2" ColumnDefinitions="Auto, *, Auto" Padding="15,10,15,20" BackgroundColor="{StaticResource CardBg}">
-            <!-- Cannot add photo in edit mode -->
+            <Border Grid.Column="0" StrokeShape="RoundRectangle 8" BackgroundColor="{StaticResource Secondary30}" Padding="12,8" StrokeThickness="0">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding AttachPhotoCommand}" />
+                </Border.GestureRecognizers>
+                <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                    <Label Text="📷" FontSize="15" VerticalOptions="Center" />
+                    <Label Text="Add Photo" FontSize="13" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" VerticalOptions="Center" />
+                </HorizontalStackLayout>
+            </Border>
             
             <Button Grid.Column="2" Text="Save" 
                     BackgroundColor="{StaticResource Primary}" 
@@ -119,7 +128,7 @@
                     
                     <CollectionView ItemsSource="{Binding MyPets}" SelectedItems="{Binding SelectedPets}" SelectionMode="Multiple" HeightRequest="200">
                         <CollectionView.ItemTemplate>
-                            <DataTemplate>
+                            <DataTemplate x:DataType="models:Pet">
                                 <Grid Padding="10">
                                     <VisualStateManager.VisualStateGroups>
                                         <VisualStateGroup Name="CommonStates">

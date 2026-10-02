@@ -39,13 +39,13 @@ public partial class AuthPage : ContentPage
     {
         if (_viewModel.IsLogin)
         {
-            await Task.WhenAll(FullNameRow.FadeTo(0, 150), ConfirmPasswordRow.FadeTo(0, 150));
+            await Task.WhenAll(FullNameRow.FadeToAsync(0, 150), ConfirmPasswordRow.FadeToAsync(0, 150));
         }
         else
         {
             FullNameRow.Opacity = 0;
             ConfirmPasswordRow.Opacity = 0;
-            await Task.WhenAll(FullNameRow.FadeTo(1, 150), ConfirmPasswordRow.FadeTo(1, 150));
+            await Task.WhenAll(FullNameRow.FadeToAsync(1, 150), ConfirmPasswordRow.FadeToAsync(1, 150));
         }
     }
 }

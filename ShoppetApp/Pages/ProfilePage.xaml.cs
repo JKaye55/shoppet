@@ -51,16 +51,16 @@ public partial class ProfilePage : ContentPage
         ContactModalCard.Scale = 0.85;
         ContactModalCard.Opacity = 0;
         _ = Task.WhenAll(
-            ContactModalCard.ScaleTo(1, 220, Easing.CubicOut),
-            ContactModalCard.FadeTo(1, 180)
+            ContactModalCard.ScaleToAsync(1, 220, Easing.CubicOut),
+            ContactModalCard.FadeToAsync(1, 180)
         );
     }
 
     private void OnDismissContactModal(object? sender, EventArgs e)
     {
         _ = Task.WhenAll(
-            ContactModalCard.ScaleTo(0.88, 160, Easing.CubicIn),
-            ContactModalCard.FadeTo(0, 140)
+            ContactModalCard.ScaleToAsync(0.88, 160, Easing.CubicIn),
+            ContactModalCard.FadeToAsync(0, 140)
         ).ContinueWith(_ => MainThread.BeginInvokeOnMainThread(() =>
         {
             ContactDetailModal.IsVisible = false;
@@ -82,7 +82,7 @@ public partial class ProfilePage : ContentPage
         }
         catch
         {
-            await DisplayAlert("Phone", "Unable to open dialer.", "OK");
+            await DisplayAlertAsync("Phone", "Unable to open dialer.", "OK");
         }
     }
 }

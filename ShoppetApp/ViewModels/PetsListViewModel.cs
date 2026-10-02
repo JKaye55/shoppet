@@ -14,6 +14,8 @@ public partial class PetsListViewModel : ObservableObject, IRecipient<DataChange
 
     [ObservableProperty] private ObservableCollection<Pet> _pets = [];
     [ObservableProperty] private bool _isBusy;
+    [ObservableProperty] private bool _hasLoadError;
+    [ObservableProperty] private string _loadErrorMessage = string.Empty;
 
     public PetsListViewModel(DatabaseService db)
     {
@@ -30,16 +32,27 @@ public partial class PetsListViewModel : ObservableObject, IRecipient<DataChange
             return;
 
         IsBusy = true;
+        HasLoadError = false;
+        LoadErrorMessage = string.Empty;
         try
         {
             var pets = await _db.GetPetsAsync();
             Pets = new ObservableCollection<Pet>(pets);
+        }
+        catch (Exception ex)
+        {
+            HasLoadError = true;
+            LoadErrorMessage = "Could not load pets from Shoppet_VetClinic_DB. Check ShoppetAPI and try again.";
+            System.Diagnostics.Debug.WriteLine($"Pets load failed: {ex}");
         }
         finally
         {
             IsBusy = false;
         }
     }
+
+    [RelayCommand]
+    private async Task RetryAsync() => await LoadAsync();
 
     [RelayCommand]
     private async Task AddPetAsync() =>
@@ -56,7 +69,7 @@ public partial class PetsListViewModel : ObservableObject, IRecipient<DataChange
     [RelayCommand]
     private async Task DeletePetAsync(Pet pet)
     {
-        var confirm = await Shell.Current.DisplayAlert(
+        var confirm = await Shell.Current.DisplayAlertAsync(
             "Delete Pet",
             $"Remove {pet.Name} and all health records?",
             "Delete",

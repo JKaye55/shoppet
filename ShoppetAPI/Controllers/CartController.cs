@@ -1,248 +1,388 @@
 using Microsoft.AspNetCore.Mvc;
-using MySql.Data.MySqlClient;
-using System.Data;
+using Microsoft.Data.SqlClient;
+using ShoppetAPI.Services;
 
-namespace ShoppetAPI.Controllers
+namespace ShoppetAPI.Controllers;
+
+[Route("api/[controller]")]
+[ApiController]
+public class CartController : ControllerBase
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class CartController : ControllerBase
+    private readonly IConfiguration _configuration;
+    public CartController(IConfiguration configuration)=>_configuration=configuration;
+
+    private string ConnectionString =>
+        _configuration.GetConnectionString("SharedSqlServer")
+        ?? throw new InvalidOperationException("SharedSqlServer connection is missing.");
+
+    [HttpGet]
+    public async Task<IActionResult> GetCart([FromQuery] int userId)
     {
-        private readonly IConfiguration _configuration;
-
-        public CartController(IConfiguration configuration)
+        if(userId<=0) return BadRequest("A valid user is required.");
+        try
         {
-            _configuration = configuration;
-        }
+            await using var conn=new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
 
-        // ── Get User Cart ─────────────────────────────────────────────────────
-        [HttpGet]
-        public async Task<IActionResult> GetCart([FromQuery] int userId)
-        {
-            try
+            if(!await RbacService.IsPetOwnerAsync(conn,userId))
+                return StatusCode(403,"Access denied.");
+
+            var cartId=await EnsureCartAsync(conn,userId);
+
+            var items=new List<object>();
+            decimal total=0;
+            await using var cmd=new SqlCommand("""
+                SELECT ci.Id,ci.MarketplaceListingId,1,
+                       m.Title,m.Price,ISNULL(m.ImageUrl,'')
+                FROM MarketplaceCartItems ci
+                JOIN MarketplaceListings m ON m.Id=ci.MarketplaceListingId
+                WHERE ci.CartId=@CartId
+                ORDER BY ci.Id DESC;
+                """,conn);
+            cmd.Parameters.AddWithValue("@CartId",cartId);
+            await using var r=await cmd.ExecuteReaderAsync();
+            while(await r.ReadAsync())
             {
-                string connString = _configuration.GetConnectionString("DefaultConnection")!;
-                using (var connection = new MySqlConnection(connString))
+                var qty=r.GetInt32(2);
+                var price=r.GetDecimal(4);
+                var line=price*qty;
+                total+=line;
+                items.Add(new{
+                    Id=r.GetInt32(0),
+                    ProductId=r.GetInt32(1),
+                    ProductName=r.GetString(3),
+                    UnitPrice=price,
+                    Quantity=qty,
+                    LineTotal=line,
+                    ImageUrl=r.GetString(5)
+                });
+            }
+
+            return Ok(new{CartId=cartId,UserId=userId,Items=items,TotalAmount=total});
+        }
+        catch(Exception ex){return StatusCode(500,$"Cart error: {ex.Message}");}
+    }
+
+    [HttpPost("items")]
+    public async Task<IActionResult> AddToCart([FromBody] AddToCartRequest request)
+    {
+        if(request.UserId<=0||request.ProductId<=0)
+            return BadRequest("A valid user and listing are required.");
+        try
+        {
+            await using var conn=new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+
+            if(!await RbacService.IsPetOwnerAsync(conn,request.UserId))
+                return StatusCode(403,"Access denied.");
+
+            await using(var validate=new SqlCommand("""
+                SELECT SellerUserId,ISNULL(Status,'Available')
+                FROM MarketplaceListings
+                WHERE Id=@ListingId;
+                """,conn))
+            {
+                validate.Parameters.AddWithValue("@ListingId",request.ProductId);
+                await using var vr=await validate.ExecuteReaderAsync();
+                if(!await vr.ReadAsync()) return NotFound("Listing not found.");
+                if(vr.GetInt32(0)==request.UserId)
+                    return BadRequest("You cannot add your own listing to cart.");
+                if(!new[]{"Available","Active"}.Contains(vr.GetString(1),StringComparer.OrdinalIgnoreCase))
+                    return BadRequest("This listing has already been sold.");
+            }
+
+            var cartId=await EnsureCartAsync(conn,request.UserId);
+
+            await using var cmd=new SqlCommand("""
+                IF EXISTS(
+                    SELECT 1 FROM MarketplaceCartItems
+                    WHERE (CartId=@CartId AND MarketplaceListingId=@ListingId)
+                       OR (UserId=@UserId AND ListingId=@ListingId)
+                )
+                    UPDATE MarketplaceCartItems
+                    SET Quantity=1, CartId=@CartId, MarketplaceListingId=@ListingId, UserId=@UserId, ListingId=@ListingId
+                    WHERE (CartId=@CartId AND MarketplaceListingId=@ListingId)
+                       OR (UserId=@UserId AND ListingId=@ListingId);
+                ELSE
+                    INSERT INTO MarketplaceCartItems(CartId,MarketplaceListingId,Quantity,UserId,ListingId,AddedAt)
+                    VALUES(@CartId,@ListingId,@Quantity,@UserId,@ListingId,SYSDATETIME());
+
+                UPDATE MarketplaceCart SET UpdatedAt=SYSDATETIME() WHERE Id=@CartId;
+                """,conn);
+            cmd.Parameters.AddWithValue("@CartId",cartId);
+            cmd.Parameters.AddWithValue("@ListingId",request.ProductId);
+            cmd.Parameters.AddWithValue("@UserId",request.UserId);
+            cmd.Parameters.AddWithValue("@Quantity",1);
+            await cmd.ExecuteNonQueryAsync();
+            return await GetCart(request.UserId);
+        }
+        catch(Exception ex){return StatusCode(500,$"Add to cart error: {ex.Message}");}
+    }
+
+    [HttpPut("items/{itemId:int}")]
+    public async Task<IActionResult> UpdateItem(int itemId,[FromBody] UpdateCartItemRequest request,[FromQuery] int userId)
+    {
+        if(userId<=0) return BadRequest("A valid user is required.");
+        try
+        {
+            await using var conn=new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+            if(request.Quantity<=0)
+            {
+                await using var del=new SqlCommand("""
+                    DELETE ci FROM MarketplaceCartItems ci
+                    JOIN MarketplaceCart c ON c.Id=ci.CartId
+                    WHERE ci.Id=@Id AND c.UserId=@UserId;
+                    """,conn);
+                del.Parameters.AddWithValue("@Id",itemId);
+                del.Parameters.AddWithValue("@UserId",userId);
+                await del.ExecuteNonQueryAsync();
+            }
+            else
+            {
+                await using var cmd=new SqlCommand("""
+                    UPDATE ci SET Quantity=@Quantity
+                    FROM MarketplaceCartItems ci
+                    JOIN MarketplaceCart c ON c.Id=ci.CartId
+                    WHERE ci.Id=@Id AND c.UserId=@UserId;
+                    """,conn);
+                cmd.Parameters.AddWithValue("@Id",itemId);
+                cmd.Parameters.AddWithValue("@UserId",userId);
+                cmd.Parameters.AddWithValue("@Quantity",1);
+                await cmd.ExecuteNonQueryAsync();
+            }
+            return await GetCart(userId);
+        }
+        catch(Exception ex){return StatusCode(500,$"Update cart error: {ex.Message}");}
+    }
+
+    [HttpDelete("items/{itemId:int}")]
+    public async Task<IActionResult> RemoveItem(int itemId,[FromQuery] int userId)
+    {
+        if(userId<=0) return BadRequest("A valid user is required.");
+        try
+        {
+            await using var conn=new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+            await using var cmd=new SqlCommand("""
+                DELETE ci FROM MarketplaceCartItems ci
+                JOIN MarketplaceCart c ON c.Id=ci.CartId
+                WHERE ci.Id=@Id AND c.UserId=@UserId;
+                """,conn);
+            cmd.Parameters.AddWithValue("@Id",itemId);
+            cmd.Parameters.AddWithValue("@UserId",userId);
+            await cmd.ExecuteNonQueryAsync();
+            return await GetCart(userId);
+        }
+        catch(Exception ex){return StatusCode(500,$"Remove cart item error: {ex.Message}");}
+    }
+
+    [HttpDelete]
+    public async Task<IActionResult> ClearCart([FromQuery] int userId)
+    {
+        if(userId<=0) return BadRequest("A valid user is required.");
+        try
+        {
+            await using var conn=new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+            await using var cmd=new SqlCommand("""
+                DELETE ci FROM MarketplaceCartItems ci
+                JOIN MarketplaceCart c ON c.Id=ci.CartId
+                WHERE c.UserId=@UserId;
+                """,conn);
+            cmd.Parameters.AddWithValue("@UserId",userId);
+            await cmd.ExecuteNonQueryAsync();
+            return await GetCart(userId);
+        }
+        catch(Exception ex){return StatusCode(500,$"Clear cart error: {ex.Message}");}
+    }
+
+    [HttpPost("checkout")]
+    public async Task<IActionResult> Checkout(
+        [FromQuery] int userId,
+        [FromQuery] string paymentMethod = "GCash Mock", [FromQuery] bool simulateSuccess=true)
+    {
+        if(userId<=0) return BadRequest("A valid user is required.");
+        if(!new[]{"GCash Mock","Cash on Meet-up","GCash - Demo","Maya - Demo","Card","Credit Card","Mock Payment Gateway","Debit Card"}.Contains(paymentMethod,StringComparer.OrdinalIgnoreCase)) return BadRequest("Choose a supported simulated payment method.");
+        if(!simulateSuccess)return BadRequest("Simulated payment failed. Your cart is unchanged.");
+        try
+        {
+            await using var conn=new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+
+            if(!await RbacService.IsPetOwnerAsync(conn,userId))
+                return StatusCode(403,"Access denied.");
+
+            await using var tx=(SqlTransaction)await conn.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+
+            int? cartId=null;
+            await using(var find=new SqlCommand("SELECT Id FROM MarketplaceCart WITH(UPDLOCK,HOLDLOCK) WHERE UserId=@UserId",conn,tx))
+            {
+                find.Parameters.AddWithValue("@UserId",userId);
+                var v=await find.ExecuteScalarAsync();
+                if(v is not null) cartId=Convert.ToInt32(v);
+            }
+            if(!cartId.HasValue) return BadRequest("Cart is empty.");
+
+            var entries=new List<(int ListingId,int Qty,decimal Price,string Title,int SellerUserId)>();
+            await using(var read=new SqlCommand("""
+                SELECT ci.MarketplaceListingId,1,m.Price,m.Title,m.SellerUserId,m.Status
+                FROM MarketplaceCartItems ci
+                JOIN MarketplaceListings m WITH(UPDLOCK,HOLDLOCK) ON m.Id=ci.MarketplaceListingId
+                WHERE ci.CartId=@CartId;
+                """,conn,tx))
+            {
+                read.Parameters.AddWithValue("@CartId",cartId.Value);
+                await using var r=await read.ExecuteReaderAsync();
+                while(await r.ReadAsync())
+                { if(!new[]{"Available","Active"}.Contains(r.GetString(5),StringComparer.OrdinalIgnoreCase)) return BadRequest("A cart item is no longer available. Remove it before checkout.");
+                  entries.Add((r.GetInt32(0),1,r.GetDecimal(2),r.GetString(3),r.GetInt32(4))); }
+            }
+            if(entries.Count==0) return BadRequest("Cart is empty.");
+            if(entries.Any(x=>x.SellerUserId==userId))
+                return BadRequest("You cannot purchase your own marketplace listing.");
+
+            var total=entries.Sum(x=>x.Price*x.Qty);
+            int orderId=0;
+            foreach(var seller in entries.GroupBy(e=>e.SellerUserId))
+            {
+                var reference="MOCK-"+Guid.NewGuid().ToString("N")[..12].ToUpperInvariant();
+                var sellerTotal=seller.Sum(e=>e.Price);
+                await using(var order=new SqlCommand("INSERT INTO MarketplaceOrders(BuyerUserId,SellerUserId,Reference,PaymentMethod,Status,Subtotal,VoucherDiscount,Total,CreatedAt,CompletedAt) OUTPUT INSERTED.Id VALUES(@Buyer,@Seller,@Ref,@Method,'Completed',@Total,0,@Total,SYSDATETIME(),SYSDATETIME())",conn,tx))
+                {order.Parameters.AddWithValue("@Buyer",userId);order.Parameters.AddWithValue("@Seller",seller.Key);order.Parameters.AddWithValue("@Ref",reference);order.Parameters.AddWithValue("@Method",paymentMethod);order.Parameters.AddWithValue("@Total",sellerTotal);orderId=Convert.ToInt32(await order.ExecuteScalarAsync());}
+                foreach(var e in seller)
                 {
-                    await connection.OpenAsync();
+                    await using var line=new SqlCommand("INSERT INTO MarketplaceOrderItems(OrderId,ListingId,ListingTitle,Price) VALUES(@Order,@Listing,@Title,@Price); UPDATE MarketplaceListings SET Status='Sold',UpdatedAt=SYSDATETIME() WHERE Id=@Listing;",conn,tx);
+                    line.Parameters.AddWithValue("@Order",orderId);line.Parameters.AddWithValue("@Listing",e.ListingId);line.Parameters.AddWithValue("@Title",e.Title);line.Parameters.AddWithValue("@Price",e.Price);await line.ExecuteNonQueryAsync();
+                }
+                await using var payment=new SqlCommand("INSERT INTO Transactions(UserId,Type,Amount,Reference,PaidAt,PaymentMethod,Status) VALUES(@User,'MarketplacePurchase',@Total,@Ref,SYSDATETIME(),@Method,'SimulatedPaid')",conn,tx);
+                payment.Parameters.AddWithValue("@User",userId);payment.Parameters.AddWithValue("@Total",sellerTotal);payment.Parameters.AddWithValue("@Ref",reference);payment.Parameters.AddWithValue("@Method",paymentMethod);await payment.ExecuteNonQueryAsync();
+            }
+            await using(var notify=new SqlCommand("""
+                INSERT INTO Notifications(UserId,Title,Body,Link,Icon,IsRead,CreatedAt)
+                VALUES(@UserId,'Purchase confirmed',
+                       CONCAT('Mock order #',@OrderId,' was completed successfully.'),
+                       'orders','',0,SYSDATETIME());
+                """,conn,tx))
+            {
+                notify.Parameters.AddWithValue("@UserId",userId);
+                notify.Parameters.AddWithValue("@OrderId",orderId);
+                await notify.ExecuteNonQueryAsync();
+            }
 
-                    // Ensure cart exists
-                    var cartCmd = new MySqlCommand("SELECT Id FROM shoppingcarts WHERE UserId = @UserId", connection);
-                    cartCmd.Parameters.AddWithValue("@UserId", userId);
-                    object cartIdResult = await cartCmd.ExecuteScalarAsync();
+            await using(var clear=new SqlCommand("DELETE FROM MarketplaceCartItems WHERE CartId=@CartId",conn,tx))
+            {
+                clear.Parameters.AddWithValue("@CartId",cartId.Value);
+                await clear.ExecuteNonQueryAsync();
+            }
 
-                    int cartId = 0;
-                    if (cartIdResult == null)
+            await tx.CommitAsync();
+            return Ok(new{
+                Id=orderId,UserId=userId,TotalAmount=total,Status="Completed",
+                OrderedAt=DateTime.Now,
+                Items=entries.Select(e=>new{
+                    ProductId=e.ListingId,ProductName=e.Title,Quantity=e.Qty,
+                    UnitPrice=e.Price,LineTotal=e.Price*e.Qty
+                }).ToList()
+            });
+        }
+        catch(Exception ex){return StatusCode(500,$"Checkout error: {ex.Message}");}
+    }
+
+    [HttpGet("orders")]
+    public async Task<IActionResult> GetOrders([FromQuery] int userId)
+    {
+        try
+        {
+            var orders=new List<OrderResponse>();
+            await using var conn=new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+
+            await using(var cmd=new SqlCommand("""
+                SELECT Id,BuyerUserId,Total,Status,CreatedAt
+                FROM MarketplaceOrders
+                WHERE BuyerUserId=@UserId OR SellerUserId=@UserId
+                ORDER BY CreatedAt DESC;
+                """,conn))
+            {
+                cmd.Parameters.AddWithValue("@UserId",userId);
+                await using var r=await cmd.ExecuteReaderAsync();
+                while(await r.ReadAsync())
+                {
+                    orders.Add(new OrderResponse
                     {
-                        var createCartCmd = new MySqlCommand("INSERT INTO shoppingcarts (UserId, UpdatedAt) VALUES (@UserId, @UpdatedAt); SELECT LAST_INSERT_ID();", connection);
-                        createCartCmd.Parameters.AddWithValue("@UserId", userId);
-                        createCartCmd.Parameters.AddWithValue("@UpdatedAt", DateTime.UtcNow);
-                        cartId = Convert.ToInt32(await createCartCmd.ExecuteScalarAsync());
-                    }
-                    else
-                    {
-                        cartId = Convert.ToInt32(cartIdResult);
-                    }
-
-                    // Fetch cart items with product details
-                    var items = new List<object>();
-                    decimal totalAmount = 0;
-
-                    var itemsQuery = @"SELECT ci.Id, ci.ProductId, ci.Quantity, p.Name, p.Price, p.ImageUrl 
-                                       FROM cartitems ci 
-                                       JOIN products p ON ci.ProductId = p.Id 
-                                       WHERE ci.CartId = @CartId";
-
-                    using (var cmd = new MySqlCommand(itemsQuery, connection))
-                    {
-                        cmd.Parameters.AddWithValue("@CartId", cartId);
-                        using (var reader = await cmd.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                int qty = reader.GetInt32("Quantity");
-                                decimal price = reader.GetDecimal("Price");
-                                totalAmount += (qty * price);
-
-                                items.Add(new
-                                {
-                                    Id = reader.GetInt32("Id"),
-                                    ProductId = reader.GetInt32("ProductId"),
-                                    ProductName = reader.GetString("Name"),
-                                    UnitPrice = price,
-                                    Quantity = qty,
-                                    ImageUrl = reader.IsDBNull(reader.GetOrdinal("ImageUrl")) ? "" : reader.GetString("ImageUrl")
-                                });
-                            }
-                        }
-                    }
-
-                    return Ok(new
-                    {
-                        Id = cartId,
-                        Items = items,
-                        TotalAmount = totalAmount
+                        Id=r.GetInt32(0),
+                        UserId=r.GetInt32(1),
+                        TotalAmount=r.GetDecimal(2),
+                        Status=r.GetString(3),
+                        OrderedAt=r.GetDateTime(4)
                     });
                 }
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Error fetching cart: {ex.Message}");
-            }
-        }
 
-        // ── Add Item to Cart ──────────────────────────────────────────────────
-        [HttpPost("items")]
-        public async Task<IActionResult> AddToCart([FromBody] AddToCartRequest request)
-        {
-            try
+            foreach(var order in orders)
             {
-                string connString = _configuration.GetConnectionString("DefaultConnection")!;
-                using (var connection = new MySqlConnection(connString))
+                await using var items=new SqlCommand("""
+                    SELECT oi.ListingId,oi.ListingTitle,
+                           1,oi.Price
+                    FROM MarketplaceOrderItems oi
+                    LEFT JOIN MarketplaceListings m ON m.Id=oi.ListingId
+                    WHERE oi.OrderId=@OrderId
+                    ORDER BY oi.Id;
+                    """,conn);
+                items.Parameters.AddWithValue("@OrderId",order.Id);
+                await using var r=await items.ExecuteReaderAsync();
+                while(await r.ReadAsync())
                 {
-                    await connection.OpenAsync();
-                    int userId = request.UserId;
-
-                    // Get or create cart
-                    var cartCmd = new MySqlCommand("SELECT Id FROM shoppingcarts WHERE UserId = @UserId", connection);
-                    cartCmd.Parameters.AddWithValue("@UserId", userId);
-                    object cartIdResult = await cartCmd.ExecuteScalarAsync();
-
-                    int cartId = 0;
-                    if (cartIdResult == null)
+                    var qty=r.GetInt32(2);
+                    var price=r.GetDecimal(3);
+                    order.Items.Add(new OrderItemResponse
                     {
-                        var createCartCmd = new MySqlCommand("INSERT INTO shoppingcarts (UserId, UpdatedAt) VALUES (@UserId, @UpdatedAt); SELECT LAST_INSERT_ID();", connection);
-                        createCartCmd.Parameters.AddWithValue("@UserId", userId);
-                        createCartCmd.Parameters.AddWithValue("@UpdatedAt", DateTime.UtcNow);
-                        cartId = Convert.ToInt32(await createCartCmd.ExecuteScalarAsync());
-                    }
-                    else
-                    {
-                        cartId = Convert.ToInt32(cartIdResult);
-                    }
-
-                    // Check if item already exists in cart
-                    var checkItemCmd = new MySqlCommand("SELECT Id, Quantity FROM cartitems WHERE CartId = @CartId AND ProductId = @ProductId", connection);
-                    checkItemCmd.Parameters.AddWithValue("@CartId", cartId);
-                    checkItemCmd.Parameters.AddWithValue("@ProductId", request.ProductId);
-
-                    using (var reader = await checkItemCmd.ExecuteReaderAsync())
-                    {
-                        if (await reader.ReadAsync())
-                        {
-                            int existingId = reader.GetInt32("Id");
-                            int existingQty = reader.GetInt32("Quantity");
-                            reader.Close();
-
-                            var updateCmd = new MySqlCommand("UPDATE cartitems SET Quantity = @Qty WHERE Id = @Id", connection);
-                            updateCmd.Parameters.AddWithValue("@Qty", existingQty + request.Quantity);
-                            updateCmd.Parameters.AddWithValue("@Id", existingId);
-                            await updateCmd.ExecuteNonQueryAsync();
-                        }
-                        else
-                        {
-                            reader.Close();
-                            var insertCmd = new MySqlCommand("INSERT INTO cartitems (CartId, ProductId, Quantity) VALUES (@CartId, @ProductId, @Quantity)", connection);
-                            insertCmd.Parameters.AddWithValue("@CartId", cartId);
-                            insertCmd.Parameters.AddWithValue("@ProductId", request.ProductId);
-                            insertCmd.Parameters.AddWithValue("@Quantity", request.Quantity);
-                            await insertCmd.ExecuteNonQueryAsync();
-                        }
-                    }
-
-                    // Return updated cart
-                    return await GetCart(userId);
+                        ProductId=r.GetInt32(0),
+                        ProductName=r.GetString(1),
+                        Quantity=qty,
+                        UnitPrice=price,
+                        LineTotal=qty*price
+                    });
                 }
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Error adding to cart: {ex.Message}");
-            }
+
+            return Ok(orders);
         }
-
-        // ── Checkout ──────────────────────────────────────────────────────────
-        [HttpPost("checkout")]
-        public async Task<IActionResult> Checkout([FromQuery] int userId)
-        {
-            try
-            {
-                string connString = _configuration.GetConnectionString("DefaultConnection")!;
-                using (var connection = new MySqlConnection(connString))
-                {
-                    await connection.OpenAsync();
-
-                    // Get cart
-                    var cartCmd = new MySqlCommand("SELECT Id FROM shoppingcarts WHERE UserId = @UserId", connection);
-                    cartCmd.Parameters.AddWithValue("@UserId", userId);
-                    object cartIdResult = await cartCmd.ExecuteScalarAsync();
-
-                    if (cartIdResult == null) return BadRequest("Cart is empty.");
-                    int cartId = Convert.ToInt32(cartIdResult);
-
-                    // Calculate total and get items
-                    var cartItems = new List<(int ProductId, int Quantity, decimal Price)>();
-                    decimal totalAmount = 0;
-
-                    string query = @"SELECT ci.ProductId, ci.Quantity, p.Price 
-                                     FROM cartitems ci 
-                                     JOIN products p ON ci.ProductId = p.Id 
-                                     WHERE ci.CartId = @CartId";
-
-                    using (var cmd = new MySqlCommand(query, connection))
-                    {
-                        cmd.Parameters.AddWithValue("@CartId", cartId);
-                        using (var reader = await cmd.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                int prodId = reader.GetInt32("ProductId");
-                                int qty = reader.GetInt32("Quantity");
-                                decimal price = reader.GetDecimal("Price");
-                                totalAmount += (qty * price);
-                                cartItems.Add((prodId, qty, price));
-                            }
-                        }
-                    }
-
-                    if (cartItems.Count == 0) return BadRequest("Cart is empty.");
-
-                    // Create Order
-                    var orderCmd = new MySqlCommand("INSERT INTO orders (UserId, TotalAmount, Status, OrderedAt) VALUES (@UserId, @TotalAmount, 'Confirmed', @OrderedAt); SELECT LAST_INSERT_ID();", connection);
-                    orderCmd.Parameters.AddWithValue("@UserId", userId);
-                    orderCmd.Parameters.AddWithValue("@TotalAmount", totalAmount);
-                    orderCmd.Parameters.AddWithValue("@OrderedAt", DateTime.UtcNow);
-                    long orderId = Convert.ToInt64(await orderCmd.ExecuteScalarAsync());
-
-                    // Create Order Items
-                    foreach (var item in cartItems)
-                    {
-                        var orderItemCmd = new MySqlCommand("INSERT INTO orderitems (OrderId, ProductId, Quantity, UnitPrice) VALUES (@OrderId, @ProductId, @Quantity, @UnitPrice)", connection);
-                        orderItemCmd.Parameters.AddWithValue("@OrderId", orderId);
-                        orderItemCmd.Parameters.AddWithValue("@ProductId", item.ProductId);
-                        orderItemCmd.Parameters.AddWithValue("@Quantity", item.Quantity);
-                        orderItemCmd.Parameters.AddWithValue("@UnitPrice", item.Price);
-                        await orderItemCmd.ExecuteNonQueryAsync();
-                    }
-
-                    // Clear Cart Items
-                    var clearCmd = new MySqlCommand("DELETE FROM cartitems WHERE CartId = @CartId", connection);
-                    clearCmd.Parameters.AddWithValue("@CartId", cartId);
-                    await clearCmd.ExecuteNonQueryAsync();
-
-                    return Ok(new { OrderId = orderId, TotalAmount = totalAmount, Status = "Confirmed" });
-                }
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Checkout failed: {ex.Message}");
-            }
-        }
+        catch(Exception ex){return StatusCode(500,$"Orders error: {ex.Message}");}
     }
 
-    public class AddToCartRequest
+    private static async Task<int> EnsureCartAsync(SqlConnection conn,int userId)
     {
-        public int UserId { get; set; }
-        public int ProductId { get; set; }
-        public int Quantity { get; set; }
+        await using var transaction=(SqlTransaction)await conn.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        await using var q=new SqlCommand("IF NOT EXISTS(SELECT 1 FROM MarketplaceCart WITH(UPDLOCK,HOLDLOCK) WHERE UserId=@U) INSERT INTO MarketplaceCart(UserId) VALUES(@U); SELECT Id FROM MarketplaceCart WHERE UserId=@U;",conn,transaction);
+        q.Parameters.AddWithValue("@U",userId);var id=Convert.ToInt32(await q.ExecuteScalarAsync());await transaction.CommitAsync();return id;
     }
+
 }
+
+public class OrderResponse
+{
+    public int Id{get;set;}
+    public int UserId{get;set;}
+    public decimal TotalAmount{get;set;}
+    public string Status{get;set;}=string.Empty;
+    public DateTime OrderedAt{get;set;}
+    public List<OrderItemResponse> Items{get;set;}=new();
+}
+public class OrderItemResponse
+{
+    public int ProductId{get;set;}
+    public string ProductName{get;set;}=string.Empty;
+    public int Quantity{get;set;}
+    public decimal UnitPrice{get;set;}
+    public decimal LineTotal{get;set;}
+}
+
+public class AddToCartRequest
+{
+    public int UserId{get;set;}
+    public int ProductId{get;set;}
+    public int Quantity{get;set;}=1;
+}
+public class UpdateCartItemRequest{public int Quantity{get;set;}}

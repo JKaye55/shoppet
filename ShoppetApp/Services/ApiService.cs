@@ -1,15 +1,15 @@
-﻿using ShoppetApp.Models;
+using ShoppetApp.Models;
 using ShoppetApp.ViewModels;
 using System.Net.Http.Json;
 
 namespace ShoppetApp.Services;
 
-public class UserSearchResult 
-{ 
-    public int UserId { get; set; } 
-    public string FullName { get; set; } = string.Empty; 
+public class UserSearchResult
+{
+    public int UserId { get; set; }
+    public string FullName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
-    public string ProfilePicture { get; set; } = string.Empty; 
+    public string ProfilePicture { get; set; } = string.Empty;
 }
 
 public class ApiService
@@ -24,12 +24,20 @@ public class ApiService
     private const string BaseUrl = "http://localhost:5020/api";
 #endif
 
-    private readonly HttpClient _http;
+    private HttpClient _http;
     private string? _token;
         public class UserProfileDto
         {
             public string FullName { get; set; } = string.Empty;
             public string ProfilePicture { get; set; } = string.Empty;
+            public string FacebookUrl { get; set; } = string.Empty;
+            public string InstagramUrl { get; set; } = string.Empty;
+            public string OtherSocialUrl { get; set; } = string.Empty;
+            public bool ShowSocialLinksOnMarketplace { get; set; } = true;
+            public string MobileNumber { get; set; } = string.Empty;
+            public bool ShowMobileOnPublicPetId { get; set; }
+            public bool IsPremium { get; set; }
+            public string Role { get; set; } = "Pet Owner";
         }
 
         public async Task<UserProfileDto?> GetProfileAsync(int userId)
@@ -41,11 +49,31 @@ public class ApiService
             catch { return null; }
         }
 
-        public async Task<bool> UpdateProfileAsync(int userId, string fullName, string profilePicBase64)
+        public async Task<bool> UpdateProfileAsync(
+            int userId,
+            string fullName,
+            string profilePicBase64,
+            string facebookUrl,
+            string instagramUrl,
+            string otherSocialUrl,
+            bool showSocialLinksOnMarketplace,
+            string mobileNumber,
+            bool showMobileOnPublicPetId)
         {
             try
             {
-                var req = new { UserId = userId, FullName = fullName, ProfilePictureBase64 = profilePicBase64 };
+                var req = new
+                {
+                    UserId = userId,
+                    FullName = fullName,
+                    ProfilePictureBase64 = profilePicBase64,
+                    FacebookUrl = facebookUrl,
+                    InstagramUrl = instagramUrl,
+                    OtherSocialUrl = otherSocialUrl,
+                    ShowSocialLinksOnMarketplace = showSocialLinksOnMarketplace,
+                    MobileNumber = mobileNumber,
+                    ShowMobileOnPublicPetId = showMobileOnPublicPetId
+                };
                 var res = await _http.PutAsJsonAsync("Profile/update", req);
                 return res.IsSuccessStatusCode;
             }
@@ -55,9 +83,49 @@ public class ApiService
 
     public ApiService()
     {
-        _http = new HttpClient { BaseAddress = new Uri(BaseUrl + "/") };
+        var rawUrl = Preferences.Get("ApiBaseUrl", BaseUrl);
+#if ANDROID
+        if (string.IsNullOrWhiteSpace(rawUrl) || rawUrl.Contains("localhost") || rawUrl.Contains("127.0.0.1"))
+        {
+            rawUrl = "http://10.0.2.2:5020/api";
+        }
+#endif
+        _http = new HttpClient { BaseAddress = new Uri(rawUrl.TrimEnd('/') + "/"), Timeout=TimeSpan.FromSeconds(30) };
     }
 
+    public string ResolveDeviceUrl(string value)
+    {
+#if ANDROID
+        return value.Replace("http://localhost:",$"http://{_http.BaseAddress!.Host}:",StringComparison.OrdinalIgnoreCase).Replace("http://127.0.0.1:",$"http://{_http.BaseAddress!.Host}:",StringComparison.OrdinalIgnoreCase);
+#else
+        return value;
+#endif
+    }
+    public async Task OpenCareDocumentAsync(string path)
+    {
+        if(Uri.TryCreate(path,UriKind.Absolute,out var u)&&u.Scheme is "https" or "http")await Launcher.Default.OpenAsync(ResolveDeviceUrl(path));
+        else if(File.Exists(path))await Launcher.Default.OpenAsync(new OpenFileRequest("Care document",new ReadOnlyFile(path)));
+        else throw new ArgumentException("This old document is unavailable on this device. Reattach and upload it from the original device.");
+    }
+    public string CurrentBaseUrl=>_http.BaseAddress!.ToString().TrimEnd('/');
+    public void ConfigureConnection(string apiUrl,string webUrl)
+    {
+        if(!Uri.TryCreate(apiUrl.Trim(),UriKind.Absolute,out var a)||a.Scheme is not ("http" or "https")||!a.AbsolutePath.TrimEnd('/').EndsWith("/api",StringComparison.OrdinalIgnoreCase))throw new ArgumentException("Enter an HTTP or HTTPS API URL ending in /api.");
+        if(!Uri.TryCreate(webUrl.Trim(),UriKind.Absolute,out var w)||w.Scheme is not ("http" or "https"))throw new ArgumentException("Enter a complete web URL.");
+        Preferences.Set("ApiBaseUrl",a.AbsoluteUri.TrimEnd('/'));Preferences.Set("PublicWebBaseUrl",w.AbsoluteUri.TrimEnd('/'));
+        _http.Dispose();_http=new HttpClient{BaseAddress=new Uri(a.AbsoluteUri.TrimEnd('/')+"/"),Timeout=TimeSpan.FromSeconds(30)};
+        if(!string.IsNullOrEmpty(_token))SetToken(_token);
+    }
+    public string PetQrUrl(string cardId)=>_http.BaseAddress+"publicpetid/"+Uri.EscapeDataString(cardId)+"/qr";
+    public async Task<List<string>> UploadDocumentsAsync(IEnumerable<string> paths)
+    {
+        using var form=new MultipartFormDataContent();foreach(var path in paths){var bytes=await File.ReadAllBytesAsync(path);form.Add(new ByteArrayContent(bytes),"files",Path.GetFileName(path));}
+        var response=await _http.PostAsync("documents",form);response.EnsureSuccessStatusCode();return await response.Content.ReadFromJsonAsync<List<string>>()??new();
+    }
+    public async Task<List<ShoppetApp.Models.VetVisit>> GetVetVisitsAsync()=>await _http.GetFromJsonAsync<List<ShoppetApp.Models.VetVisit>>($"vetvisits?userId={Preferences.Get("LoggedInUserId",0)}")??new();
+    public async Task<bool> SaveVetVisitAsync(ShoppetApp.Models.VetVisit x){x.UserId=Preferences.Get("LoggedInUserId",0);var r=x.Id==0?await _http.PostAsJsonAsync("vetvisits",x):await _http.PutAsJsonAsync($"vetvisits/{x.Id}",x);return r.IsSuccessStatusCode;}
+    public async Task<bool> DeleteVetVisitAsync(int id)=>(await _http.DeleteAsync($"vetvisits/{id}?userId={Preferences.Get("LoggedInUserId",0)}")).IsSuccessStatusCode;
+    public async Task<bool> SetListingStatusAsync(int id,string status)=>(await _http.PutAsync($"marketplace/{id}/status?userId={Preferences.Get("LoggedInUserId",0)}&status={Uri.EscapeDataString(status)}",null)).IsSuccessStatusCode;
     // -- Token management ------------------------------------------------------
 
     public void SetToken(string token)
@@ -83,7 +151,12 @@ public class ApiService
         {
             var res = await _http.PostAsJsonAsync("auth/register", new { fullName, email, password });
             if (res.IsSuccessStatusCode)
-                return ApiResult<AuthResponse>.Ok(await res.Content.ReadFromJsonAsync<AuthResponse>()!);
+            {
+                var data = await res.Content.ReadFromJsonAsync<AuthResponse>();
+                return data is not null
+                    ? ApiResult<AuthResponse>.Ok(data)
+                    : ApiResult<AuthResponse>.Fail("Server returned an empty registration response.");
+            }
             var err = await res.Content.ReadAsStringAsync();
             return ApiResult<AuthResponse>.Fail(res.StatusCode == System.Net.HttpStatusCode.Conflict
                 ? "Email is already registered." : $"Registration failed: {err}");
@@ -100,8 +173,22 @@ public class ApiService
         {
             var res = await _http.PostAsJsonAsync("auth/login", new { email, password });
             if (res.IsSuccessStatusCode)
-                return ApiResult<AuthResponse>.Ok(await res.Content.ReadFromJsonAsync<AuthResponse>()!);
-            return ApiResult<AuthResponse>.Fail("Invalid email or password.");
+            {
+                var data = await res.Content.ReadFromJsonAsync<AuthResponse>();
+                return data is not null
+                    ? ApiResult<AuthResponse>.Ok(data)
+                    : ApiResult<AuthResponse>.Fail("Server returned an empty login response.");
+            }
+            var message = res.StatusCode switch
+            {
+                System.Net.HttpStatusCode.Unauthorized => "Invalid email or password. Check that the API and web use the same database.",
+                System.Net.HttpStatusCode.Forbidden => "This account is disabled or its role cannot sign in. Contact the administrator.",
+                System.Net.HttpStatusCode.BadRequest => "Enter your email and password.",
+                System.Net.HttpStatusCode.NotFound => "Sign-in endpoint not found. Check the API URL in Connection Settings.",
+                _ when (int)res.StatusCode >= 500 => $"The sign-in server returned an error (HTTP {(int)res.StatusCode}). Check the API terminal and database connection.",
+                _ => $"Sign-in failed (HTTP {(int)res.StatusCode}). Check the API connection and try again."
+            };
+            return ApiResult<AuthResponse>.Fail(message);
         }
         catch (Exception ex)
         {
@@ -113,8 +200,26 @@ public class ApiService
 
     public async Task<List<Pet>> GetPetsAsync()
     {
-        try { return await _http.GetFromJsonAsync<List<Pet>>($"pets?userId={Microsoft.Maui.Storage.Preferences.Get("LoggedInUserId", 0)}") ?? []; }
-        catch { return []; }
+        var userId = Microsoft.Maui.Storage.Preferences.Get("LoggedInUserId", 0);
+        using var response = await _http.GetAsync($"pets?userId={userId}");
+        if (!response.IsSuccessStatusCode)
+        {
+            var detail = await response.Content.ReadAsStringAsync();
+            throw new HttpRequestException($"Pets API returned {(int)response.StatusCode}: {detail}");
+        }
+
+        var pets = await response.Content.ReadFromJsonAsync<List<Pet>>() ?? [];
+#if ANDROID
+        foreach (var pet in pets)
+        {
+            if (!string.IsNullOrWhiteSpace(pet.PhotoUrl))
+                pet.PhotoUrl = pet.PhotoUrl.Replace(
+                    "http://localhost:",
+                    $"http://{_http.BaseAddress!.Host}:",
+                    StringComparison.OrdinalIgnoreCase);
+        }
+#endif
+        return pets;
     }
 
     public async Task<Pet?> SavePetAsync(Pet pet)
@@ -129,7 +234,9 @@ public class ApiService
                 pet.Breed,
                 pet.AgeYears,
                 pet.Weight,
-                pet.PhotoUrl
+                pet.PhotoUrl,
+                pet.Diet,
+                pet.CardTheme
             };
 
             HttpResponseMessage res;
@@ -150,7 +257,11 @@ public class ApiService
 
     public async Task<bool> DeletePetAsync(int petId)
     {
-        try { return (await _http.DeleteAsync($"pets/{petId}")).IsSuccessStatusCode; }
+        try
+        {
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            return (await _http.DeleteAsync($"pets/{petId}?userId={userId}")).IsSuccessStatusCode;
+        }
         catch { return false; }
     }
 
@@ -158,8 +269,25 @@ public class ApiService
 
     public async Task<List<HealthLog>> GetHealthLogsAsync(int petId)
     {
-        try { return await _http.GetFromJsonAsync<List<HealthLog>>($"pets/{petId}/healthlogs") ?? []; }
-        catch { return []; }
+        using var response = await _http.GetAsync($"pets/{petId}/healthlogs");
+        if (!response.IsSuccessStatusCode)
+        {
+            var detail = await response.Content.ReadAsStringAsync();
+            throw new HttpRequestException($"Health API returned {(int)response.StatusCode}: {detail}");
+        }
+
+        var logs = await response.Content.ReadFromJsonAsync<List<HealthLog>>() ?? [];
+        foreach (var log in logs)
+        {
+            if (log.Completed)
+                log.Status = "Completed";
+            else if (DateTime.TryParse(log.DueDate, out var due))
+                log.Status = due <= DateTime.Now.AddDays(7) ? "Action Required" : "Pending";
+            else
+                log.Status = "Pending";
+        }
+
+        return logs;
     }
 
     public async Task<HealthLog?> SaveHealthLogAsync(int petId, HealthLog log)
@@ -170,6 +298,7 @@ public class ApiService
             {
                 log.Type,
                 log.Name,
+                log.Notes,log.VetName,log.RecordDate,
                 log.DueDate,
                 log.Completed,
                 log.DateAdministered,
@@ -202,12 +331,12 @@ public class ApiService
         try { return (await _http.PutAsync($"pets/{petId}/foodlogs/{id}/complete", null)).IsSuccessStatusCode; }
         catch { return false; }
     }
-    
+
     public async Task<bool> CompleteHealthLogAsync(int petId, int id, string nextDueDate)
     {
-        try { 
+        try {
             var body = new { NextDueDate = nextDueDate };
-            return (await _http.PutAsJsonAsync($"pets/{petId}/healthlogs/{id}/complete", body)).IsSuccessStatusCode; 
+            return (await _http.PutAsJsonAsync($"pets/{petId}/healthlogs/{id}/complete", body)).IsSuccessStatusCode;
         }
         catch { return false; }
     }
@@ -222,8 +351,14 @@ public class ApiService
 
     public async Task<List<FoodLog>> GetFoodLogsAsync(int petId)
     {
-        try { return await _http.GetFromJsonAsync<List<FoodLog>>($"pets/{petId}/foodlogs") ?? []; }
-        catch { return []; }
+        using var response = await _http.GetAsync($"pets/{petId}/foodlogs");
+        if (!response.IsSuccessStatusCode)
+        {
+            var detail = await response.Content.ReadAsStringAsync();
+            throw new HttpRequestException($"Food API returned {(int)response.StatusCode}: {detail}");
+        }
+
+        return await response.Content.ReadFromJsonAsync<List<FoodLog>>() ?? [];
     }
 
     public async Task<FoodLog?> SaveFoodLogAsync(int petId, FoodLog log)
@@ -304,7 +439,11 @@ public class ApiService
 
     public async Task<bool> DeleteContactAsync(int contactId)
     {
-        try { return (await _http.DeleteAsync($"contacts/{contactId}")).IsSuccessStatusCode; }
+        try
+        {
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            return (await _http.DeleteAsync($"contacts/{contactId}?userId={userId}")).IsSuccessStatusCode;
+        }
         catch { return false; }
     }
 
@@ -334,7 +473,29 @@ public class ApiService
 
     public async Task<CartDto?> GetCartAsync()
     {
-        try { return await _http.GetFromJsonAsync<CartDto>("cart"); }
+        try
+        {
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            var cart = await _http.GetFromJsonAsync<CartDto>($"cart?userId={userId}");
+#if ANDROID
+            if (cart != null)
+            {
+                cart = cart with
+                {
+                    Items = cart.Items.Select(item => item with
+                    {
+                        ImageUrl = string.IsNullOrWhiteSpace(item.ImageUrl)
+                            ? string.Empty
+                            : item.ImageUrl.Replace(
+                                "http://localhost:",
+                                $"http://{_http.BaseAddress!.Host}:",
+                                StringComparison.OrdinalIgnoreCase)
+                    }).ToList()
+                };
+            }
+#endif
+            return cart;
+        }
         catch { return null; }
     }
 
@@ -342,7 +503,9 @@ public class ApiService
     {
         try
         {
-            var res = await _http.PostAsJsonAsync("cart/items", request);
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            var res = await _http.PostAsJsonAsync("cart/items",
+                new { UserId = userId, request.ProductId, request.Quantity });
             if (res.IsSuccessStatusCode) return await res.Content.ReadFromJsonAsync<CartDto>();
         }
         catch { }
@@ -353,7 +516,8 @@ public class ApiService
     {
         try
         {
-            var res = await _http.PutAsJsonAsync($"cart/items/{itemId}", request);
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            var res = await _http.PutAsJsonAsync($"cart/items/{itemId}?userId={userId}", request);
             if (res.IsSuccessStatusCode) return await res.Content.ReadFromJsonAsync<CartDto>();
         }
         catch { }
@@ -364,7 +528,8 @@ public class ApiService
     {
         try
         {
-            var res = await _http.DeleteAsync($"cart/items/{itemId}");
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            var res = await _http.DeleteAsync($"cart/items/{itemId}?userId={userId}");
             if (res.IsSuccessStatusCode) return await res.Content.ReadFromJsonAsync<CartDto>();
         }
         catch { }
@@ -375,19 +540,25 @@ public class ApiService
     {
         try
         {
-            var res = await _http.DeleteAsync("cart");
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            var res = await _http.DeleteAsync($"cart?userId={userId}");
             if (res.IsSuccessStatusCode) return await res.Content.ReadFromJsonAsync<CartDto>();
         }
         catch { }
         return null;
     }
 
-    public async Task<OrderDto?> CheckoutAsync()
+    public async Task<OrderDto?> CheckoutAsync(string paymentMethod, bool simulateSuccess = true)
     {
         try
         {
-            var res = await _http.PostAsync("cart/checkout", null);
-            if (res.IsSuccessStatusCode) return await res.Content.ReadFromJsonAsync<OrderDto>();
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            var method = Uri.EscapeDataString(paymentMethod);
+            var res = await _http.PostAsync(
+                $"cart/checkout?userId={userId}&paymentMethod={method}&simulateSuccess={simulateSuccess}",
+                null);
+            if (res.IsSuccessStatusCode)
+                return await res.Content.ReadFromJsonAsync<OrderDto>();
         }
         catch { }
         return null;
@@ -395,22 +566,229 @@ public class ApiService
 
     public async Task<List<OrderDto>> GetOrdersAsync()
     {
-        try { return await _http.GetFromJsonAsync<List<OrderDto>>("cart/orders") ?? []; }
+        try
+        {
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            return await _http.GetFromJsonAsync<List<OrderDto>>($"cart/orders?userId={userId}") ?? [];
+        }
         catch { return []; }
+    }
+
+    // --- Notifications / Premium ---------------------------------------------
+
+    public async Task<List<NotificationItem>> GetNotificationsAsync()
+    {
+        try
+        {
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            return await _http.GetFromJsonAsync<List<NotificationItem>>(
+                $"notifications?userId={userId}") ?? [];
+        }
+        catch { return []; }
+    }
+
+    public async Task<int> GetUnreadNotificationCountAsync()
+    {
+        try
+        {
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            return await _http.GetFromJsonAsync<int>(
+                $"notifications/unread-count?userId={userId}");
+        }
+        catch { return 0; }
+    }
+
+    public async Task<bool> MarkNotificationReadAsync(int notificationId)
+    {
+        try
+        {
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            return (await _http.PostAsync(
+                $"notifications/{notificationId}/read?userId={userId}", null)).IsSuccessStatusCode;
+        }
+        catch { return false; }
+    }
+
+    public async Task<bool> MarkAllNotificationsReadAsync()
+    {
+        try
+        {
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            return (await _http.PostAsync(
+                $"notifications/read-all?userId={userId}", null)).IsSuccessStatusCode;
+        }
+        catch { return false; }
+    }
+
+    public class PremiumStatusDto
+    {
+        public bool IsPremium { get; set; }
+        public DateTime? ActivatedAt { get; set; }
+        public string Reference { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+    }
+
+    public async Task<PremiumStatusDto?> GetPremiumStatusAsync()
+    {
+        try
+        {
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            return await _http.GetFromJsonAsync<PremiumStatusDto>(
+                $"premium/status?userId={userId}");
+        }
+        catch { return null; }
+    }
+
+    public async Task<bool> ActivatePremiumAsync()
+    {
+        try
+        {
+            var userId = Preferences.Get("LoggedInUserId", 0);
+            return (await _http.PostAsync(
+                $"premium/activate?userId={userId}", null)).IsSuccessStatusCode;
+        }
+        catch { return false; }
     }
 
     // --- Community API ---
 
+    public string NormalizeMediaUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return string.Empty;
+        var host = _http.BaseAddress?.Host ?? "localhost";
+        var port = _http.BaseAddress?.Port ?? 5020;
+        var scheme = _http.BaseAddress?.Scheme ?? "http";
+        var basePrefix = $"{scheme}://{host}:{port}".TrimEnd('/');
+
+        var parts = url.Split(new[] { ',', '|', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var normalized = parts.Select(u =>
+        {
+            if (u.StartsWith("/"))
+                return basePrefix + u;
+
+#if ANDROID
+            return u.Replace("http://localhost:", $"http://{host}:", StringComparison.OrdinalIgnoreCase)
+                    .Replace("https://localhost:", $"http://{host}:", StringComparison.OrdinalIgnoreCase);
+#else
+            return u.Replace("http://10.0.2.2:", "http://localhost:", StringComparison.OrdinalIgnoreCase);
+#endif
+        });
+
+        return string.Join(",", normalized);
+    }
+
     public async Task<List<CommunityPost>> GetCommunityPostsAsync(int userId)
+    {
+        using var response = await _http.GetAsync($"community?userId={userId}");
+        if (!response.IsSuccessStatusCode)
+        {
+            var detail = await response.Content.ReadAsStringAsync();
+            throw new HttpRequestException($"Community API returned {(int)response.StatusCode}: {detail}");
+        }
+
+        var posts = await response.Content.ReadFromJsonAsync<List<CommunityPost>>()
+                    ?? new List<CommunityPost>();
+
+        foreach (var post in posts)
+        {
+            if (!string.IsNullOrWhiteSpace(post.ImageUrls))
+                post.ImageUrls = NormalizeMediaUrl(post.ImageUrls);
+            if (!string.IsNullOrWhiteSpace(post.ProfilePicture))
+                post.ProfilePicture = NormalizeMediaUrl(post.ProfilePicture);
+        }
+
+        return posts;
+    }
+
+    public async Task<List<CommunityRanking>> GetCommunityRankingsAsync(int limit = 20)
     {
         try
         {
-            return await _http.GetFromJsonAsync<List<CommunityPost>>($"community?userId={userId}") ?? new List<CommunityPost>();
+            using var response = await _http.GetAsync($"community/rankings?limit={limit}");
+            if (!response.IsSuccessStatusCode)
+                return new List<CommunityRanking>();
+
+            var rankings = await response.Content.ReadFromJsonAsync<List<CommunityRanking>>() ?? new List<CommunityRanking>();
+
+            foreach (var r in rankings)
+            {
+                if (!string.IsNullOrWhiteSpace(r.Avatar))
+                    r.Avatar = NormalizeMediaUrl(r.Avatar);
+            }
+            return rankings;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error fetching posts: {ex.Message}");
-            return new List<CommunityPost>();
+            Console.WriteLine($"Error fetching rankings: {ex.Message}");
+            return new List<CommunityRanking>();
+        }
+    }
+
+    public async Task<List<string>> UploadCommunityMediaAsync(IEnumerable<string> filePaths)
+    {
+        var inputList = filePaths.Take(5).ToList();
+        if (inputList.Count == 0) return new List<string>();
+
+        using var form = new MultipartFormDataContent();
+        var streams = new List<Stream>();
+
+        try
+        {
+            foreach (var path in inputList)
+            {
+                Stream? stream = null;
+                var fileName = Path.GetFileName(path);
+                if (string.IsNullOrEmpty(fileName)) fileName = $"{Guid.NewGuid():N}.jpg";
+
+                if (File.Exists(path))
+                {
+                    stream = File.OpenRead(path);
+                }
+                else
+                {
+                    try
+                    {
+                        stream = File.Open(path, FileMode.Open, FileAccess.Read);
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+                }
+
+                streams.Add(stream);
+                var fileContent = new StreamContent(stream);
+                var extension = Path.GetExtension(fileName).ToLowerInvariant();
+                var mediaType = extension switch
+                {
+                    ".png" => "image/png",
+                    ".webp" => "image/webp",
+                    _ => "image/jpeg"
+                };
+                fileContent.Headers.ContentType =
+                    new System.Net.Http.Headers.MediaTypeHeaderValue(mediaType);
+
+                form.Add(fileContent, "files", fileName);
+            }
+
+            if (streams.Count == 0) return new List<string>();
+
+            using var response = await _http.PostAsync("community/media", form);
+            if (!response.IsSuccessStatusCode)
+            {
+                var detail = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"Media upload failed ({(int)response.StatusCode}): {detail}");
+            }
+
+            var uploaded = await response.Content.ReadFromJsonAsync<List<string>>()
+                   ?? new List<string>();
+
+            return uploaded.Select(u => NormalizeMediaUrl(u)).ToList();
+        }
+        finally
+        {
+            foreach (var stream in streams)
+                stream.Dispose();
         }
     }
 
@@ -484,8 +862,8 @@ public class ApiService
         {
             try
             {
-                var res = await _http.PostAsJsonAsync($"community/{postId}/comments", new 
-                { 
+                var res = await _http.PostAsJsonAsync($"community/{postId}/comments", new
+                {
                     UserId = userId,
                     Content = content,
                     ParentCommentId = parentCommentId
@@ -497,13 +875,24 @@ public class ApiService
 
         public async Task<bool> DeletePostAsync(int postId)
         {
-            try { return (await _http.DeleteAsync($"community/{postId}")).IsSuccessStatusCode; }
+            try
+            {
+                var userId = Preferences.Get("LoggedInUserId", 0);
+                return (await _http.DeleteAsync($"community/{postId}?userId={userId}")).IsSuccessStatusCode;
+            }
             catch { return false; }
         }
 
         public async Task<bool> EditPostAsync(int postId, string newContent, string imageUrls, int? petId, string petName)
         {
-            try { return (await _http.PutAsJsonAsync($"community/{postId}", new { Content = newContent, ImageUrls = imageUrls, PetId = petId, PetName = petName })).IsSuccessStatusCode; }
+            try
+            {
+                var userId = Preferences.Get("LoggedInUserId", 0);
+                return (await _http.PutAsJsonAsync(
+                    $"community/{postId}",
+                    new { UserId = userId, Content = newContent, ImageUrls = imageUrls, PetId = petId, PetName = petName }))
+                    .IsSuccessStatusCode;
+            }
             catch { return false; }
         }
 
@@ -517,14 +906,53 @@ public class ApiService
             if (!string.IsNullOrEmpty(category)) q.Add($"category={Uri.EscapeDataString(category)}");
             if (!string.IsNullOrEmpty(search)) q.Add($"search={Uri.EscapeDataString(search)}");
             var qs = q.Count > 0 ? "?" + string.Join("&", q) : "";
-            return await _http.GetFromJsonAsync<List<MarketplaceListing>>($"marketplace{qs}") ?? new List<MarketplaceListing>();
+            List<MarketplaceListing>? listings = null;
+            try
+            {
+                listings = await _http.GetFromJsonAsync<List<MarketplaceListing>>($"marketplacelistings{qs}");
+            }
+            catch
+            {
+                listings = await _http.GetFromJsonAsync<List<MarketplaceListing>>($"marketplace{qs}");
+            }
+            listings ??= new List<MarketplaceListing>();
+#if ANDROID
+            foreach (var listing in listings)
+            {
+                if (!string.IsNullOrWhiteSpace(listing.ImageUrls))
+                    listing.ImageUrls = listing.ImageUrls.Replace(
+                        "http://localhost:",
+                        $"http://{_http.BaseAddress!.Host}:",
+                        StringComparison.OrdinalIgnoreCase);
+            }
+#endif
+            foreach (var l in listings)
+            {
+                if (l.SellerUserId <= 0 && l.UserId > 0) l.SellerUserId = l.UserId;
+                if (string.IsNullOrWhiteSpace(l.ItemCondition) && !string.IsNullOrWhiteSpace(l.Condition)) l.ItemCondition = l.Condition;
+            }
+            return listings.Where(l => string.Equals(l.Status, "Active", StringComparison.OrdinalIgnoreCase) || string.Equals(l.Status, "Available", StringComparison.OrdinalIgnoreCase) || l.IsAvailable).ToList();
         }
         catch (Exception ex) { Console.WriteLine($"Marketplace fetch error: {ex.Message}"); return new List<MarketplaceListing>(); }
     }
 
     public async Task<List<MarketplaceListing>> GetMyListingsAsync(int userId)
     {
-        try { return await _http.GetFromJsonAsync<List<MarketplaceListing>>($"marketplace/my/{userId}") ?? new List<MarketplaceListing>(); }
+        try
+        {
+            var listings = await _http.GetFromJsonAsync<List<MarketplaceListing>>($"marketplace/my/{userId}") ?? new List<MarketplaceListing>();
+#if ANDROID
+            foreach (var listing in listings)
+            {
+                if (!string.IsNullOrWhiteSpace(listing.ImageUrls))
+                    listing.ImageUrls = listing.ImageUrls.Replace(
+                        "http://localhost:",
+                        $"http://{_http.BaseAddress!.Host}:",
+                        StringComparison.OrdinalIgnoreCase);
+            }
+#endif
+            return listings;
+        }
         catch (Exception ex) { Console.WriteLine($"My listings fetch error: {ex.Message}"); return new List<MarketplaceListing>(); }
     }
 
@@ -547,11 +975,16 @@ public class ApiService
     }
         public async Task<bool> DeleteCommentAsync(int commentId)
         {
-            try { return (await _http.DeleteAsync($"community/comments/{commentId}")).IsSuccessStatusCode; }
+            try
+            {
+                var userId = Preferences.Get("LoggedInUserId", 0);
+                return (await _http.DeleteAsync(
+                    $"community/comments/{commentId}?userId={userId}")).IsSuccessStatusCode;
+            }
             catch { return false; }
         }
 
-        
+
 
 
         public async Task<List<UserSearchResult>> SearchUsersAsync(string query)
@@ -569,7 +1002,7 @@ public class ApiService
             try
             {
                 var userId = Preferences.Get("LoggedInUserId", 0);
-                return await _http.GetFromJsonAsync<IEnumerable<Conversation>>($"messages/{userId}");
+                return await _http.GetFromJsonAsync<IEnumerable<Conversation>>($"messages/{userId}") ?? Enumerable.Empty<Conversation>();
             }
             catch { return new List<Conversation>(); }
         }
@@ -579,7 +1012,8 @@ public class ApiService
             try
             {
                 var userId = Preferences.Get("LoggedInUserId", 0);
-                var result = await _http.GetFromJsonAsync<IEnumerable<ChatMessage>>($"messages/chat/{userId}/{contactId}");
+                var result = await _http.GetFromJsonAsync<IEnumerable<ChatMessage>>($"messages/chat/{userId}/{contactId}")
+                             ?? Enumerable.Empty<ChatMessage>();
                 foreach(var msg in result)
                 {
                     msg.IsMine = msg.SenderId == userId;

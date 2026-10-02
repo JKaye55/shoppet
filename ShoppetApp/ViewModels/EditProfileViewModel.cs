@@ -21,6 +21,24 @@ namespace ShoppetApp.ViewModels
         private string _profilePictureBase64 = string.Empty;
 
         [ObservableProperty]
+        private string _facebookUrl = string.Empty;
+
+        [ObservableProperty]
+        private string _instagramUrl = string.Empty;
+
+        [ObservableProperty]
+        private string _otherSocialUrl = string.Empty;
+
+        [ObservableProperty]
+        private bool _showSocialLinksOnMarketplace = true;
+
+        [ObservableProperty]
+        private string _mobileNumber = string.Empty;
+
+        [ObservableProperty]
+        private bool _showMobileOnPublicPetId;
+
+        [ObservableProperty]
         private ImageSource? _profileImageSource;
 
         [ObservableProperty]
@@ -39,6 +57,12 @@ namespace ShoppetApp.ViewModels
                 {
                     FullName = profile.FullName;
                     ProfilePictureBase64 = profile.ProfilePicture;
+                    FacebookUrl = profile.FacebookUrl;
+                    InstagramUrl = profile.InstagramUrl;
+                    OtherSocialUrl = profile.OtherSocialUrl;
+                    ShowSocialLinksOnMarketplace = profile.ShowSocialLinksOnMarketplace;
+                    MobileNumber = profile.MobileNumber;
+                    ShowMobileOnPublicPetId = profile.ShowMobileOnPublicPetId;
                     
                     if (!string.IsNullOrEmpty(ProfilePictureBase64))
                     {
@@ -61,7 +85,8 @@ namespace ShoppetApp.ViewModels
         {
             try
             {
-                var photo = await MediaPicker.PickPhotoAsync();
+                var photos = await MediaPicker.Default.PickPhotosAsync(new MediaPickerOptions { Title = "Choose profile photo" });
+                var photo = photos?.FirstOrDefault();
                 if (photo != null)
                 {
                     using var stream = await photo.OpenReadAsync();
@@ -75,7 +100,7 @@ namespace ShoppetApp.ViewModels
             }
             catch (Exception ex)
             {
-                await Application.Current!.MainPage!.DisplayAlert("Photo Error", ex.Message, "OK");
+                await Shell.Current.DisplayAlertAsync("Photo Error", ex.Message, "OK");
             }
         }
 
@@ -84,7 +109,7 @@ namespace ShoppetApp.ViewModels
         {
             if (string.IsNullOrWhiteSpace(FullName))
             {
-                await Application.Current!.MainPage!.DisplayAlert("Error", "Name cannot be empty", "OK");
+                await Shell.Current.DisplayAlertAsync("Error", "Name cannot be empty", "OK");
                 return;
             }
 
@@ -92,7 +117,16 @@ namespace ShoppetApp.ViewModels
             try
             {
                 var userId = Preferences.Get("LoggedInUserId", 0);
-                var success = await _api.UpdateProfileAsync(userId, FullName, ProfilePictureBase64);
+                var success = await _api.UpdateProfileAsync(
+                    userId,
+                    FullName,
+                    ProfilePictureBase64,
+                    FacebookUrl.Trim(),
+                    InstagramUrl.Trim(),
+                    OtherSocialUrl.Trim(),
+                    ShowSocialLinksOnMarketplace,
+                    MobileNumber.Trim(),
+                    ShowMobileOnPublicPetId);
                 if (success)
                 {
                     Preferences.Set("LoggedInUserName", FullName);
@@ -101,7 +135,7 @@ namespace ShoppetApp.ViewModels
                 }
                 else
                 {
-                    await Application.Current!.MainPage!.DisplayAlert("Error", "Failed to update profile", "OK");
+                    await Shell.Current.DisplayAlertAsync("Error", "Failed to update profile", "OK");
                 }
             }
             finally { IsBusy = false; }

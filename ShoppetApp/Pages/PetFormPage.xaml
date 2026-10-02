@@ -45,11 +45,13 @@
                 <Grid>
                     <Image Source="{Binding PhotoUrl, Converter={StaticResource UrlToImageSourceConverter}}"
                            Aspect="AspectFill" />
-                    <Label Text="📷"
-                           FontSize="28"
-                           HorizontalOptions="Center"
-                           VerticalOptions="Center"
-                           TextColor="{StaticResource Secondary}" />
+                    <Path Data="{StaticResource IconCamera}"
+                          Fill="{StaticResource Secondary}"
+                          WidthRequest="30"
+                          HeightRequest="30"
+                          Aspect="Uniform"
+                          HorizontalOptions="Center"
+                          VerticalOptions="Center" />
                     <Border WidthRequest="28"
                             HeightRequest="28"
                             BackgroundColor="{StaticResource Primary}"
@@ -60,11 +62,13 @@
                         <Border.StrokeShape>
                             <RoundRectangle CornerRadius="14" />
                         </Border.StrokeShape>
-                        <Label Text="📷"
-                               FontSize="12"
-                               HorizontalOptions="Center"
-                               VerticalOptions="Center"
-                               TextColor="White" />
+                        <Path Data="{StaticResource IconCamera}"
+                              Fill="White"
+                              WidthRequest="14"
+                              HeightRequest="14"
+                              Aspect="Uniform"
+                              HorizontalOptions="Center"
+                              VerticalOptions="Center" />
                     </Border>
                 </Grid>
             </Border>
@@ -107,7 +111,13 @@
                 <Label Text="Weight (kg)" FontFamily="NunitoSemiBold" FontSize="13" />
                 <Border Stroke="{StaticResource Secondary30}" StrokeThickness="1" Padding="12,0">
                     <Border.StrokeShape><RoundRectangle CornerRadius="20" /></Border.StrokeShape>
-                    <Entry Text="{Binding Weight}" Keyboard="Numeric" MaxLength="2" Placeholder="25" HeightRequest="52" />
+                    <Entry Text="{Binding Weight}" Keyboard="Numeric" Placeholder="25" HeightRequest="52" />
+                </Border>
+
+                <Label Text="Diet / Feeding Notes" FontFamily="NunitoSemiBold" FontSize="13" />
+                <Border Stroke="{StaticResource Secondary30}" StrokeThickness="1" Padding="12,0">
+                    <Border.StrokeShape><RoundRectangle CornerRadius="20" /></Border.StrokeShape>
+                    <Entry Text="{Binding Diet}" Placeholder="e.g. Dry food, twice daily" HeightRequest="52" />
                 </Border>
             </VerticalStackLayout>
 

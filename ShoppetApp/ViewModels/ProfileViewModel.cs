@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using ShoppetApp.Helpers;
@@ -14,9 +14,9 @@ namespace ShoppetApp.ViewModels
 
         [ObservableProperty] private System.Collections.ObjectModel.ObservableCollection<ContactModel> _contacts = [];
         [ObservableProperty] private bool _isBusy;
-                        [ObservableProperty] private string _fullName = string.Empty;
+        [ObservableProperty] private string _fullName = string.Empty;
         [ObservableProperty] private bool _isAdmin;
-        [ObservableProperty] private bool _isBusinessOwner;
+        [ObservableProperty] private bool _isPremium;
         [ObservableProperty] private ImageSource? _profileImageSource;
         private readonly ShoppetApp.Services.ApiService _api;
 
@@ -47,22 +47,37 @@ namespace ShoppetApp.ViewModels
             IsBusy = true;
             try
             {
-                                if (_db.CurrentUser != null)
-                {
-                    FullName = _db.CurrentUser.FullName;
+                var userId = _db.CurrentUser?.Id ?? Preferences.Get("LoggedInUserId", 0);
+                var savedName = _db.CurrentUser?.FullName ?? Preferences.Get("LoggedInUserName", "User");
+                var role = _db.CurrentUser?.Role ?? Preferences.Get("LoggedInUserRole", "Pet Owner");
 
-                    // RBAC Role check
-                    IsAdmin = _db.CurrentUser.Role == "Admin";
-                    IsBusinessOwner = _db.CurrentUser.Role == "BusinessOwner";
-                    
-                    var profile = await _api.GetProfileAsync(Preferences.Get("LoggedInUserId", 0));
+                FullName = savedName;
+                IsAdmin = role.Equals("Admin", StringComparison.OrdinalIgnoreCase)
+                       || role.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase)
+                       || role.Equals("Super Admin", StringComparison.OrdinalIgnoreCase);
+                IsPremium = _db.CurrentUser?.IsPremium ?? Preferences.Get("LoggedInUserIsPremium", false);
+
+                if (userId > 0)
+                {
+                    var profile = await _api.GetProfileAsync(userId);
                     if (profile != null)
                     {
                         FullName = profile.FullName;
+                        IsPremium = profile.IsPremium;
+                        Preferences.Set("LoggedInUserName", FullName);
+                        Preferences.Set("LoggedInUserIsPremium", profile.IsPremium);
+
                         if (!string.IsNullOrEmpty(profile.ProfilePicture))
                         {
-                            var bytes = Convert.FromBase64String(profile.ProfilePicture);
-                            ProfileImageSource = ImageSource.FromStream(() => new MemoryStream(bytes));
+                            try
+                            {
+                                var bytes = Convert.FromBase64String(profile.ProfilePicture);
+                                ProfileImageSource = ImageSource.FromStream(() => new MemoryStream(bytes));
+                            }
+                            catch
+                            {
+                                ProfileImageSource = null;
+                            }
                         }
                     }
                 }
@@ -98,14 +113,14 @@ namespace ShoppetApp.ViewModels
             }
             catch
             {
-                await Shell.Current.DisplayAlert("Phone", "Unable to open dialer.", "OK");
+                await Shell.Current.DisplayAlertAsync("Phone", "Unable to open dialer.", "OK");
             }
         }
 
         [RelayCommand]
         private async Task DeleteContactAsync(ContactModel contact)
         {
-            bool confirm = await Shell.Current.DisplayAlert("Delete", $"Are you sure you want to delete {contact.Name}?", "Yes", "No");
+            bool confirm = await Shell.Current.DisplayAlertAsync("Delete", $"Are you sure you want to delete {contact.Name}?", "Yes", "No");
             if (!confirm)
                 return;
 
@@ -116,19 +131,27 @@ namespace ShoppetApp.ViewModels
 
         [RelayCommand]
         private async Task OpenAdminPanelAsync() =>
-            await Shell.Current.DisplayAlert("Admin", "Opening Platform Admin Console...", "OK");
-
-        [RelayCommand]
-        private async Task OpenBusinessPanelAsync() =>
-            await Shell.Current.DisplayAlert("Business Owner", "Opening Clinic Counter & Inventory Desk...", "OK");
+            await Shell.Current.DisplayAlertAsync("Admin", "Opening Platform Admin Console...", "OK");
 
         [RelayCommand]
         private async Task OpenLocalShopsAsync() =>
-            await Shell.Current.DisplayAlert("Directory", "Opening Local Pet Shops & Clinics around Lipa...", "OK");
+            await Shell.Current.DisplayAlertAsync("Directory", "Opening Local Pet Shops & Clinics around Lipa...", "OK");
 
         [RelayCommand]
         private async Task OpenPostSettingsAsync() =>
             await Shell.Current.GoToAsync("PostSettingsPage");
+
+        [RelayCommand]
+        private async Task OpenNotificationsAsync() =>
+            await Shell.Current.GoToAsync("notifications");
+
+        [RelayCommand]
+        private async Task OpenOrdersAsync() =>
+            await Shell.Current.GoToAsync("orders");
+
+        [RelayCommand]
+        private async Task OpenPremiumAsync() =>
+            await Shell.Current.GoToAsync("premium");
 
         [RelayCommand]
         private void ViewContact(ShoppetApp.Models.Contact contact)
@@ -136,6 +159,8 @@ namespace ShoppetApp.ViewModels
             ShowContactRequested?.Invoke(this, contact);
         }
 
+        [RelayCommand] private async Task OpenVetVisitsAsync()=>await Shell.Current.GoToAsync(nameof(ShoppetApp.Pages.VetVisitsPage));
+        [RelayCommand] private async Task OpenConnectionSettingsAsync()=>await Shell.Current.GoToAsync(nameof(ShoppetApp.Pages.ConnectionSettingsPage));
         [RelayCommand]
         private void Logout() => NavigationHelper.GoToAuth();
     }

@@ -8,15 +8,14 @@ namespace ShoppetApp;
 
 public static class MauiProgram
 {
-    public static IServiceProvider Services { get; private set; }
+    public static IServiceProvider Services { get; private set; } = null!;
     public static MauiApp CreateMauiApp()
     {
         var builder = MauiApp.CreateBuilder();
         builder
             .UseMauiApp<App>()
             .UseMauiCommunityToolkit()
-            .UseMauiCommunityToolkitMediaElement(false)
-            .ConfigureFonts(fonts =>
+                        .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("Nunito-Regular.ttf", "Nunito");
                 fonts.AddFont("Nunito-SemiBold.ttf", "NunitoSemiBold");
@@ -26,6 +25,11 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
 
+#if ANDROID
+        if(OperatingSystem.IsAndroidVersionAtLeast(26))builder.UseMauiCommunityToolkitMediaElement(false);
+#else
+        builder.UseMauiCommunityToolkitMediaElement(false);
+#endif
 #if DEBUG
         builder.Logging.AddDebug();
 #endif
@@ -38,6 +42,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<CartService>();
 
         builder.Services.AddTransient<SplashPage>();
+        builder.Services.AddTransient<VetVisitsPage>();
+        builder.Services.AddTransient<ConnectionSettingsPage>();
         builder.Services.AddTransient<OnboardingPage>();
         builder.Services.AddTransient<AuthPage>();
         builder.Services.AddTransient<AuthViewModel>();
@@ -76,6 +82,9 @@ public static class MauiProgram
         builder.Services.AddTransient<EditProfileViewModel>();
         builder.Services.AddTransient<PostDetailsPage>();
         builder.Services.AddTransient<PostDetailsViewModel>();
+        builder.Services.AddTransient<NotificationsPage>();
+        builder.Services.AddTransient<OrdersPage>();
+        builder.Services.AddTransient<PremiumPage>();
 
         var app = builder.Build();
         Services = app.Services;

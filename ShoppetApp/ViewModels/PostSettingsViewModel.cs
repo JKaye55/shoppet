@@ -26,12 +26,13 @@ namespace ShoppetApp.ViewModels
         [RelayCommand]
         public async Task LoadMyPostsAsync()
         {
-            if (_db.CurrentUser == null) return;
+            var userId = _db.CurrentUser?.Id ?? Preferences.Get("LoggedInUserId", 0);
+            if (userId <= 0) return;
             IsBusy = true;
             try
             {
-                var allPosts = await _api.GetCommunityPostsAsync(_db.CurrentUser.Id);
-                var myPosts = allPosts.Where(p => p.UserId == _db.CurrentUser.Id).ToList();
+                var allPosts = await _api.GetCommunityPostsAsync(userId);
+                var myPosts = allPosts.Where(p => p.UserId == userId).ToList();
                 MyPosts.Clear();
                 foreach (var p in myPosts) MyPosts.Add(p);
             }
@@ -69,7 +70,7 @@ namespace ShoppetApp.ViewModels
         {
             if (post == null) return;
             post.IsOptionsVisible = false;
-            bool confirm = await Shell.Current.DisplayAlert("Delete Post", "Are you sure you want to delete this post?", "Yes", "No");
+            bool confirm = await Shell.Current.DisplayAlertAsync("Delete Post", "Are you sure you want to delete this post?", "Yes", "No");
             if (!confirm) return;
 
             bool success = await _api.DeletePostAsync(post.Id);
@@ -79,17 +80,19 @@ namespace ShoppetApp.ViewModels
             }
             else
             {
-                await Shell.Current.DisplayAlert("Error", "Failed to delete post.", "OK");
+                await Shell.Current.DisplayAlertAsync("Error", "Failed to delete post.", "OK");
             }
         }
         
         [RelayCommand]
         private async Task ToggleLikeAsync(CommunityPost post)
         {
-            if (post == null || _db.CurrentUser == null) return;
+            if (post == null) return;
+            var userId = _db.CurrentUser?.Id ?? Preferences.Get("LoggedInUserId", 0);
+            if (userId <= 0) return;
             post.IsLikedByMe = !post.IsLikedByMe;
             post.LikesCount += post.IsLikedByMe ? 1 : -1;
-            await _api.ToggleLikeAsync(post.Id, _db.CurrentUser.Id);
+            await _api.ToggleLikeAsync(post.Id, userId);
         }
 
         [RelayCommand]

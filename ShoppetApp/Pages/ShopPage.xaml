@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:controls="clr-namespace:ShoppetApp.Controls"
@@ -16,14 +16,29 @@
             <!-- Header -->
             <Border Grid.Row="1" BackgroundColor="{StaticResource CardBg}" StrokeThickness="0" Padding="16,12,16,0">
                 <VerticalStackLayout Spacing="12">
-                    <HorizontalStackLayout>
-                        <Label Text="Marketplace" FontFamily="NunitoExtraBold" FontSize="26" TextColor="{StaticResource BodyText}" VerticalOptions="Center" HorizontalOptions="FillAndExpand"/>
-                        <Label Text="&#x2315;" FontSize="22" TextColor="{StaticResource BodyText}" VerticalOptions="Center" Margin="0,0,10,0">
-                            <Label.GestureRecognizers>
-                                <TapGestureRecognizer Tapped="OnSearchTapped"/>
-                            </Label.GestureRecognizers>
-                        </Label>
-                    </HorizontalStackLayout>
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                        <Label Text="Marketplace" FontFamily="NunitoExtraBold" FontSize="26" TextColor="{StaticResource BodyText}" VerticalOptions="Center"/>
+                        <Button Grid.Column="1"
+                                Text="Search"
+                                BackgroundColor="{StaticResource Primary10}"
+                                TextColor="{StaticResource Primary}"
+                                FontFamily="NunitoBold"
+                                FontSize="12"
+                                CornerRadius="18"
+                                HeightRequest="38"
+                                Padding="14,0"
+                                Clicked="OnSearchButtonClicked"/>
+                        <Button Grid.Column="2"
+                                Text="Cart"
+                                BackgroundColor="{StaticResource Primary}"
+                                TextColor="White"
+                                FontFamily="NunitoBold"
+                                FontSize="12"
+                                CornerRadius="18"
+                                HeightRequest="38"
+                                Padding="14,0"
+                                Clicked="OnCartClicked"/>
+                    </Grid>
 
                     <!-- Filter Tabs -->
                     <HorizontalStackLayout Spacing="0">
@@ -43,6 +58,16 @@
             <!-- Content Panel -->
             <Grid Grid.Row="3">
 
+                <ActivityIndicator x:Name="MarketplaceLoading"
+                                   IsVisible="False"
+                                   IsRunning="False"
+                                   Color="{StaticResource Primary}"
+                                   WidthRequest="36"
+                                   HeightRequest="36"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center"
+                                   ZIndex="20" />
+
                 <!-- EXPLORE TAB -->
                 <Grid x:Name="ExplorePanel" RowDefinitions="Auto,*">
                     <!-- Category pills -->
@@ -57,15 +82,20 @@
                         </HorizontalStackLayout>
                     </ScrollView>
 
-                    <!-- Explore Grid -->
-                    <ScrollView Grid.Row="1">
-                        <VerticalStackLayout Padding="8,0,8,100">
-                            <Label Text="New for you" FontFamily="NunitoBold" FontSize="16" TextColor="{StaticResource BodyText}" Margin="8,8,8,8"/>
-                            <Label x:Name="ExploreEmptyLabel" Text="No listings yet. Be the first to post!" TextColor="#888" HorizontalOptions="Center" Margin="0,40" IsVisible="False"/>
+                    <!-- Explore Grid with RefreshView -->
+                    <Grid Grid.Row="1">
+                        <Label x:Name="ExploreEmptyLabel" Text="No listings yet. Be the first to post!" TextColor="#888" HorizontalOptions="Center" VerticalOptions="Center" IsVisible="False"/>
+                        <RefreshView x:Name="ExploreRefreshView" Refreshing="OnMarketplaceRefresh" RefreshColor="{StaticResource Primary}">
                             <CollectionView x:Name="ExploreGrid"
                                             ItemsLayout="VerticalGrid, 2"
                                             SelectionMode="Single"
-                                            SelectionChanged="OnListingTapped">
+                                            SelectionChanged="OnListingTapped"
+                                            Margin="8,0,8,10">
+                                <CollectionView.Header>
+                                    <VerticalStackLayout Padding="8,6,8,8">
+                                        <Label Text="New for you" FontFamily="NunitoBold" FontSize="16" TextColor="{StaticResource BodyText}"/>
+                                    </VerticalStackLayout>
+                                </CollectionView.Header>
                                 <CollectionView.ItemTemplate>
                                     <DataTemplate x:DataType="models:MarketplaceListing">
                                         <Grid Padding="6">
@@ -81,8 +111,16 @@
                                                     <!-- Info -->
                                                     <VerticalStackLayout Padding="8,6" Spacing="2">
                                                         <Label Text="{Binding Title}" TextColor="{StaticResource BodyText}" FontFamily="NunitoBold" FontSize="13" LineBreakMode="TailTruncation" MaxLines="2"/>
-                                                        <Label Text="{Binding SellerName}" TextColor="#888" FontSize="11"/>
+                                                        <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
+                                                            <Label Text="{Binding SellerName}" TextColor="#888" FontSize="11" LineBreakMode="TailTruncation"/>
+                                                            <Label Text="🏅" FontSize="10" TextColor="#B45309" IsVisible="{Binding IsSellerPremium}"/>
+                                                        </HorizontalStackLayout>
                                                         <Label Text="{Binding TimeAgo}" TextColor="#aaa" FontSize="10"/>
+                                                        <HorizontalStackLayout Spacing="4" VerticalOptions="Center" Margin="0,2,0,0">
+                                                            <Label Text="{Binding Sku}" TextColor="#7E22CE" FontFamily="NunitoBold" FontSize="10"/>
+                                                            <Label Text="•" TextColor="#ccc" FontSize="10"/>
+                                                            <Label Text="{Binding StockDisplay}" TextColor="#16A34A" FontSize="10"/>
+                                                        </HorizontalStackLayout>
                                                     </VerticalStackLayout>
                                                 </VerticalStackLayout>
                                             </Border>
@@ -90,8 +128,8 @@
                                     </DataTemplate>
                                 </CollectionView.ItemTemplate>
                             </CollectionView>
-                        </VerticalStackLayout>
-                    </ScrollView>
+                        </RefreshView>
+                    </Grid>
                 </Grid>
 
                 <!-- SELL TAB -->
@@ -102,8 +140,9 @@
                     </Border>
 
                     <!-- My Listings -->
-                    <ScrollView Grid.Row="1">
-                        <VerticalStackLayout Padding="16,8,16,100" Spacing="12">
+                    <RefreshView Grid.Row="1" x:Name="SellRefreshView" Refreshing="OnMarketplaceRefresh" RefreshColor="{StaticResource Primary}">
+                        <ScrollView>
+                            <VerticalStackLayout Padding="16,8,16,100" Spacing="12">
                             <Label Text="Your Listings" FontFamily="NunitoBold" FontSize="16" TextColor="{StaticResource BodyText}"/>
                             <Label x:Name="SellEmptyLabel" Text="You have no listings yet. Tap '+ Post a Pet Item' to start selling!" TextColor="#888" HorizontalOptions="Center" IsVisible="False" HorizontalTextAlignment="Center" Margin="0,30"/>
                             <VerticalStackLayout x:Name="MyListingsContainer" Spacing="12" BindableLayout.ItemsSource="{Binding MyListings}">
@@ -125,9 +164,10 @@
                                                     <Label Text="{Binding Description}" TextColor="{StaticResource BodyText}" FontSize="13" LineBreakMode="TailTruncation" MaxLines="2"/>
                                                 </VerticalStackLayout>
                                                 <!-- Actions -->
-                                                <Grid ColumnDefinitions="*,*" Padding="12,0">
+                                                <Grid ColumnDefinitions="*,*,*" Padding="12,0">
                                                     <Button Grid.Column="0" Text="Edit" BackgroundColor="{StaticResource CardBg}" TextColor="{StaticResource Primary}" BorderColor="{StaticResource Primary}" BorderWidth="1" CornerRadius="8" FontFamily="NunitoBold" Clicked="OnEditListingClicked" CommandParameter="{Binding .}"/>
-                                                    <Button Grid.Column="1" Text="Delete" BackgroundColor="{StaticResource CardBg}" TextColor="{StaticResource StatusOverdue}" BorderColor="{StaticResource StatusOverdue}" BorderWidth="1" CornerRadius="8" FontFamily="NunitoBold" Margin="8,0,0,0" Clicked="OnDeleteListingClicked" CommandParameter="{Binding .}"/>
+                                <Button Grid.Column="1" Text="Status" Clicked="OnStatusClicked" CommandParameter="{Binding .}" />
+                                                    <Button Grid.Column="2" Text="Delete" BackgroundColor="{StaticResource CardBg}" TextColor="{StaticResource StatusOverdue}" BorderColor="{StaticResource StatusOverdue}" BorderWidth="1" CornerRadius="8" FontFamily="NunitoBold" Margin="8,0,0,0" Clicked="OnDeleteListingClicked" CommandParameter="{Binding .}"/>
                                                 </Grid>
                                             </VerticalStackLayout>
                                         </Border>
@@ -136,6 +176,7 @@
                             </VerticalStackLayout>
                         </VerticalStackLayout>
                     </ScrollView>
+                    </RefreshView>
                 </Grid>
             </Grid>
         </Grid>
@@ -165,10 +206,14 @@
                                 <Label x:Name="DetailTitle" Grid.Column="0" TextColor="{StaticResource BodyText}" FontFamily="NunitoBold" FontSize="20"/>
                                 <Label x:Name="DetailPrice" Grid.Column="1" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" FontSize="20"/>
                             </Grid>
-                            <HorizontalStackLayout Spacing="8">
+                            <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
                                 <Label x:Name="DetailCategory" TextColor="#888" FontSize="13"/>
                                 <Label Text="|" TextColor="#ddd"/>
                                 <Label x:Name="DetailCondition" TextColor="#888" FontSize="13"/>
+                                <Label Text="|" TextColor="#ddd"/>
+                                <Label x:Name="DetailSku" TextColor="#7E22CE" FontFamily="NunitoBold" FontSize="12"/>
+                                <Label Text="|" TextColor="#ddd"/>
+                                <Label x:Name="DetailStock" TextColor="#16A34A" FontFamily="NunitoBold" FontSize="12"/>
                             </HorizontalStackLayout>
                             <BoxView HeightRequest="1" Color="{StaticResource Secondary30}" Margin="0,4"/>
                             <Label Text="Description" FontFamily="NunitoBold" FontSize="14" TextColor="{StaticResource BodyText}"/>
@@ -179,33 +224,323 @@
                                     <Grid><Label x:Name="DetailSellerInitial" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" FontFamily="NunitoBold" FontSize="16"/><Image x:Name="DetailSellerImage" Aspect="AspectFill"/></Grid>
                                 </Border>
                                 <VerticalStackLayout VerticalOptions="Center">
-                                    <Label x:Name="DetailSellerName" TextColor="{StaticResource BodyText}" FontFamily="NunitoBold" FontSize="14"/>
+                                    <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                                        <Label x:Name="DetailSellerName" TextColor="{StaticResource BodyText}" FontFamily="NunitoBold" FontSize="14"/>
+                                        <Border x:Name="DetailSellerPremiumBadge" BackgroundColor="#FEF3C7" Stroke="#F59E0B" StrokeThickness="1" StrokeShape="RoundRectangle 8" Padding="5,1" IsVisible="False" VerticalOptions="Center">
+                                            <Label Text="🏅 Premium Seller" FontSize="10" FontFamily="NunitoBold" TextColor="#B45309" />
+                                        </Border>
+                                    </HorizontalStackLayout>
                                     <Label x:Name="DetailLocation" TextColor="#888" FontSize="12"/>
                                 </VerticalStackLayout>
                             </HorizontalStackLayout>
                             <Label x:Name="DetailTime" TextColor="#aaa" FontSize="11"/>
-                            <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Margin="0,8,0,0">
-                                <Button x:Name="BtnMessageSeller"
+
+                            <HorizontalStackLayout x:Name="SellerSocialLinksRow"
+                                                   Spacing="8"
+                                                   IsVisible="False">
+                                <Button x:Name="BtnSellerFacebook"
+                                        Text="Facebook"
+                                        FontSize="11"
+                                        HeightRequest="34"
+                                        Padding="12,0"
+                                        CornerRadius="16"
+                                        BackgroundColor="{StaticResource Primary10}"
+                                        TextColor="{StaticResource Primary}"
+                                        Clicked="OnSellerSocialClicked"
+                                        CommandParameter="facebook" />
+                                <Button x:Name="BtnSellerInstagram"
+                                        Text="Instagram"
+                                        FontSize="11"
+                                        HeightRequest="34"
+                                        Padding="12,0"
+                                        CornerRadius="16"
+                                        BackgroundColor="{StaticResource Primary10}"
+                                        TextColor="{StaticResource Primary}"
+                                        Clicked="OnSellerSocialClicked"
+                                        CommandParameter="instagram" />
+                                <Button x:Name="BtnSellerOther"
+                                        Text="Other"
+                                        FontSize="11"
+                                        HeightRequest="34"
+                                        Padding="12,0"
+                                        CornerRadius="16"
+                                        BackgroundColor="{StaticResource Primary10}"
+                                        TextColor="{StaticResource Primary}"
+                                        Clicked="OnSellerSocialClicked"
+                                        CommandParameter="other" />
+                            </HorizontalStackLayout>
+                            <Grid ColumnDefinitions="*,*,Auto,Auto" ColumnSpacing="6" Margin="0,8,0,0">
+                                <Button x:Name="BtnAddToCart"
                                         Grid.Column="0"
-                                        Text="&#x1F4AC; Message"
+                                        Text="Add to Cart"
                                         BackgroundColor="{StaticResource Primary}"
                                         TextColor="White"
-                                        CornerRadius="10"
+                                        CornerRadius="12"
                                         FontFamily="NunitoBold"
+                                        FontSize="12"
+                                        Clicked="OnAddToCartClicked"/>
+                                <Button x:Name="BtnMessageSeller"
+                                        Grid.Column="1"
+                                        Text="Message"
+                                        BackgroundColor="{StaticResource Primary10}"
+                                        TextColor="{StaticResource Primary}"
+                                        CornerRadius="12"
+                                        FontFamily="NunitoBold"
+                                        FontSize="12"
                                         Clicked="OnMessageSellerClicked"/>
-                                <Button Grid.Column="1"
+                                <Button x:Name="BtnAddFriend"
+                                        Grid.Column="2"
+                                        Text="+ Friend"
+                                        BackgroundColor="{StaticResource Secondary20}"
+                                        TextColor="{StaticResource BodyText}"
+                                        CornerRadius="12"
+                                        FontFamily="NunitoBold"
+                                        FontSize="12"
+                                        Clicked="OnAddFriendClicked"/>
+                                <Button Grid.Column="3"
                                         Text="Close"
                                         BackgroundColor="{StaticResource CardBg}"
                                         TextColor="{StaticResource BodyText}"
                                         BorderColor="{StaticResource Secondary30}"
                                         BorderWidth="1"
-                                        CornerRadius="10"
+                                        CornerRadius="12"
                                         FontFamily="NunitoBold"
+                                        FontSize="12"
                                         Clicked="OnDismissModal"/>
                             </Grid>
                         </VerticalStackLayout>
                     </VerticalStackLayout>
                 </ScrollView>
+            </Border>
+        </Grid>
+
+        <!-- Cart / Mock Checkout Modal -->
+        <Grid x:Name="CartModal" IsVisible="False" BackgroundColor="#99000000" ZIndex="30">
+            <Border BackgroundColor="{StaticResource CardBg}"
+                    StrokeThickness="0"
+                    StrokeShape="RoundRectangle 24"
+                    Margin="18,70,18,80"
+                    VerticalOptions="Fill"
+                    HorizontalOptions="Fill">
+                <Grid RowDefinitions="Auto,*,Auto" Padding="18">
+                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="Your Cart" FontFamily="NunitoExtraBold" FontSize="22" TextColor="{StaticResource BodyText}" />
+                            <Label Text="Marketplace items ready for mock checkout" FontSize="12" TextColor="{StaticResource NavMuted}" />
+                        </VerticalStackLayout>
+                        <Button Grid.Column="1"
+                                Text="Close"
+                                BackgroundColor="Transparent"
+                                TextColor="{StaticResource Primary}"
+                                FontFamily="NunitoBold"
+                                Clicked="OnCloseCartClicked" />
+                    </Grid>
+
+                    <CollectionView Grid.Row="1"
+                                    x:Name="CartItemsView"
+                                    SelectionMode="None">
+                        <CollectionView.EmptyView>
+                            <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="8">
+                                <Label Text="Your cart is empty" FontFamily="NunitoBold" FontSize="17" TextColor="{StaticResource BodyText}" />
+                                <Label Text="Add a marketplace item to continue." FontSize="13" TextColor="{StaticResource NavMuted}" />
+                            </VerticalStackLayout>
+                        </CollectionView.EmptyView>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:CartItemDto">
+                                <Border BackgroundColor="{StaticResource AppBackground}"
+                                        Stroke="{StaticResource Secondary20}"
+                                        StrokeThickness="1"
+                                        StrokeShape="RoundRectangle 18"
+                                        Padding="12"
+                                        Margin="0,0,0,10">
+                                    <Grid ColumnDefinitions="64,*,Auto" ColumnSpacing="12">
+                                        <Border WidthRequest="64" HeightRequest="64" StrokeThickness="0" StrokeShape="RoundRectangle 14" BackgroundColor="{StaticResource Secondary10}">
+                                            <Image Source="{Binding ImageUrl}" Aspect="AspectFill" />
+                                        </Border>
+                                        <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="3">
+                                            <Label Text="{Binding ProductName}" FontFamily="NunitoBold" FontSize="14" TextColor="{StaticResource BodyText}" MaxLines="2" />
+                                            <Label Text="{Binding UnitPrice, StringFormat='₱{0:N0}'}" FontSize="12" TextColor="{StaticResource Primary}" />
+                                            <Label Text="{Binding Quantity, StringFormat='Quantity: {0}'}" FontSize="11" TextColor="{StaticResource NavMuted}" />
+                                        </VerticalStackLayout>
+                                        <VerticalStackLayout Grid.Column="2" VerticalOptions="Center" HorizontalOptions="End" Spacing="6">
+                                            <Label Text="{Binding LineTotal, StringFormat='₱{0:N0}'}" FontFamily="NunitoBold" FontSize="13" TextColor="{StaticResource BodyText}" HorizontalTextAlignment="End" />
+                                            <Button Text="Remove"
+                                                    FontSize="11"
+                                                    HeightRequest="32"
+                                                    Padding="10,0"
+                                                    CornerRadius="14"
+                                                    BackgroundColor="{StaticResource StatusOverdueBg}"
+                                                    TextColor="{StaticResource StatusOverdue}"
+                                                    Clicked="OnRemoveCartItemClicked"
+                                                    CommandParameter="{Binding .}" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <VerticalStackLayout Grid.Row="2" Spacing="10" Margin="0,12,0,0">
+                        <BoxView HeightRequest="1" Color="{StaticResource Secondary20}" />
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="Total" FontFamily="NunitoBold" FontSize="15" TextColor="{StaticResource BodyText}" />
+                            <Label x:Name="CartTotalLabel" Grid.Column="1" Text="₱0" FontFamily="NunitoExtraBold" FontSize="18" TextColor="{StaticResource Primary}" />
+                        </Grid>
+                        <Button x:Name="CheckoutButton"
+                                Text="Complete Mock Checkout"
+                                BackgroundColor="{StaticResource Primary}"
+                                TextColor="White"
+                                FontFamily="NunitoBold"
+                                CornerRadius="18"
+                                HeightRequest="50"
+                                Clicked="OnCheckoutClicked" />
+                    </VerticalStackLayout>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Mock Payment Gateway Modal -->
+        <Grid x:Name="PaymentModal" IsVisible="False" BackgroundColor="#99000000" ZIndex="40">
+            <Border BackgroundColor="{StaticResource CardBg}"
+                    StrokeThickness="0"
+                    StrokeShape="RoundRectangle 24"
+                    Margin="20,40,20,40"
+                    VerticalOptions="Center"
+                    HorizontalOptions="Fill">
+                <ScrollView MaximumHeightRequest="600">
+                    <VerticalStackLayout Padding="22" Spacing="12">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <VerticalStackLayout Spacing="2">
+                                <Label Text="Mock Payment Gateway" FontFamily="NunitoExtraBold" FontSize="20" TextColor="{StaticResource BodyText}" />
+                                <Label Text="🔒 256-Bit Simulated SSL Sandbox" FontSize="11" TextColor="{StaticResource NavMuted}" />
+                            </VerticalStackLayout>
+                            <Border Grid.Column="1" BackgroundColor="{StaticResource Primary10}" StrokeThickness="0" Padding="8,4" StrokeShape="RoundRectangle 10" VerticalOptions="Start">
+                                <Label Text="Demo Sandbox" FontSize="10" FontFamily="NunitoBold" TextColor="{StaticResource Primary}" />
+                            </Border>
+                        </Grid>
+
+                        <Border BackgroundColor="{StaticResource AppBackground}" Stroke="{StaticResource Secondary20}" StrokeThickness="1" StrokeShape="RoundRectangle 14" Padding="12,10">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="Total Amount Due" FontFamily="NunitoBold" FontSize="13" TextColor="{StaticResource BodyText}" VerticalOptions="Center" />
+                                <Label x:Name="PaymentDueLabel" Grid.Column="1" Text="₱0.00" FontFamily="NunitoExtraBold" FontSize="18" TextColor="{StaticResource Primary}" VerticalOptions="Center" />
+                            </Grid>
+                        </Border>
+
+                        <Label Text="Predefined Demo Payment Method *" TextColor="{StaticResource BodyText}" FontSize="12" FontFamily="NunitoBold" />
+                        <Border BackgroundColor="{StaticResource AppBackground}" Stroke="{StaticResource Secondary30}" StrokeThickness="1" StrokeShape="RoundRectangle 12" Padding="4,0">
+                            <Picker x:Name="PickerMockPaymentMethod" SelectedIndex="0" TextColor="{StaticResource BodyText}" BackgroundColor="Transparent" FontSize="13" SelectedIndexChanged="OnMockMethodChanged">
+                                <Picker.Items>
+                                    <x:String>💳 Demo Visa (•••• 4242) — Pre-approved Sandbox</x:String>
+                                    <x:String>💳 Demo Mastercard (•••• 5555) — Pre-approved Sandbox</x:String>
+                                    <x:String>📱 GCash Mock (0917-•••-1234) — Instant Approval</x:String>
+                                    <x:String>🤝 Cash on Meet-up — Handover Arrangement</x:String>
+                                </Picker.Items>
+                            </Picker>
+                        </Border>
+
+                        <Label Text="Simulation Outcome *" TextColor="{StaticResource BodyText}" FontSize="12" FontFamily="NunitoBold" />
+                        <Border BackgroundColor="{StaticResource AppBackground}" Stroke="{StaticResource Secondary30}" StrokeThickness="1" StrokeShape="RoundRectangle 12" Padding="4,0">
+                            <Picker x:Name="PickerSimulationOutcome" SelectedIndex="0" TextColor="{StaticResource BodyText}" BackgroundColor="Transparent" FontSize="13">
+                                <Picker.Items>
+                                    <x:String>Simulate Success (Complete Order)</x:String>
+                                    <x:String>Simulate Failure (Decline / Keep Cart)</x:String>
+                                </Picker.Items>
+                            </Picker>
+                        </Border>
+
+                        <!-- Predefined Demo Sandbox Information (Read-only) -->
+                        <Border BackgroundColor="#F0FDFC" Stroke="#2DD4BF" StrokeThickness="1" StrokeShape="RoundRectangle 14" Padding="12,10">
+                            <VerticalStackLayout Spacing="4">
+                                <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                                    <Label Text="🛡️" FontSize="14" VerticalOptions="Center" />
+                                    <Label x:Name="DemoCredentialsTitle" Text="Demo Visa •••• 4242" FontFamily="NunitoBold" FontSize="12" TextColor="#0F766E" VerticalOptions="Center" />
+                                </HorizontalStackLayout>
+                                <Label x:Name="DemoCredentialsDetail" Text="Holder: ShoppetCare Demo Tester | Exp: 12/28 | CVV: •••" FontFamily="Nunito" FontSize="11" TextColor="#115E59" />
+                                <Label Text="Simulated academic demo only. Predefined mock choices are used — real payment credentials and banking information are never accepted or processed." FontSize="10" TextColor="#0D9488" Margin="0,2,0,0" LineBreakMode="WordWrap" />
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <Label x:Name="PaymentErrorLabel" TextColor="{StaticResource StatusOverdue}" FontSize="12" FontFamily="NunitoBold" IsVisible="False" />
+
+                        <!-- 1.5s Processing Indicator -->
+                        <VerticalStackLayout x:Name="PaymentProcessingPanel" Spacing="8" IsVisible="False" HorizontalOptions="Center" Margin="0,8">
+                            <ActivityIndicator IsRunning="True" Color="{StaticResource Primary}" WidthRequest="32" HeightRequest="32" />
+                            <Label Text="Authorizing simulated card payment..." FontSize="12" TextColor="{StaticResource Primary}" FontFamily="NunitoBold" HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Margin="0,10,0,0">
+                            <Button Grid.Column="0"
+                                    x:Name="BtnCancelPayment"
+                                    Text="Cancel"
+                                    BackgroundColor="{StaticResource CardBg}"
+                                    TextColor="{StaticResource BodyText}"
+                                    BorderColor="{StaticResource Secondary30}"
+                                    BorderWidth="1"
+                                    CornerRadius="14"
+                                    FontFamily="NunitoBold"
+                                    HeightRequest="46"
+                                    Clicked="OnCancelPaymentClicked" />
+                            <Button Grid.Column="1"
+                                    x:Name="BtnSubmitPayment"
+                                    Text="Authorize Pay"
+                                    BackgroundColor="{StaticResource Primary}"
+                                    TextColor="White"
+                                    CornerRadius="14"
+                                    FontFamily="NunitoBold"
+                                    HeightRequest="46"
+                                    Clicked="OnSubmitPaymentClicked" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </ScrollView>
+            </Border>
+        </Grid>
+
+        <!-- Verified Order Confirmation Modal -->
+        <Grid x:Name="OrderConfirmationModal" IsVisible="False" BackgroundColor="#99000000" ZIndex="50">
+            <Border BackgroundColor="{StaticResource CardBg}"
+                    StrokeThickness="0"
+                    StrokeShape="RoundRectangle 24"
+                    Margin="24,60"
+                    VerticalOptions="Center"
+                    HorizontalOptions="Fill">
+                <VerticalStackLayout Padding="24" Spacing="14" HorizontalOptions="Center">
+                    <Border WidthRequest="64" HeightRequest="64" BackgroundColor="{StaticResource Primary10}" StrokeThickness="0" StrokeShape="RoundRectangle 32" HorizontalOptions="Center">
+                        <Label Text="✓" FontSize="32" TextColor="{StaticResource Primary}" FontFamily="NunitoExtraBold" HorizontalOptions="Center" VerticalOptions="Center" />
+                    </Border>
+
+                    <Label Text="Order Verified &amp; Confirmed!" FontFamily="NunitoExtraBold" FontSize="20" TextColor="{StaticResource BodyText}" HorizontalTextAlignment="Center" />
+                    <Label Text="Your mock purchase was verified and logged to your transaction records." FontSize="12" TextColor="{StaticResource NavMuted}" HorizontalTextAlignment="Center" />
+
+                    <Border BackgroundColor="{StaticResource AppBackground}" Stroke="{StaticResource Secondary20}" StrokeThickness="1" StrokeShape="RoundRectangle 16" Padding="16,12" HorizontalOptions="Fill">
+                        <VerticalStackLayout Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="Order ID" FontSize="12" TextColor="{StaticResource NavMuted}" />
+                                <Label x:Name="ConfirmOrderIdLabel" Grid.Column="1" Text="#0000" FontFamily="NunitoBold" FontSize="13" TextColor="{StaticResource BodyText}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="Payment Method" FontSize="12" TextColor="{StaticResource NavMuted}" />
+                                <Label Text="Mock Credit Card" Grid.Column="1" FontFamily="NunitoBold" FontSize="12" TextColor="{StaticResource Primary}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="Amount Paid" FontSize="12" TextColor="{StaticResource NavMuted}" />
+                                <Label x:Name="ConfirmTotalLabel" Grid.Column="1" Text="₱0.00" FontFamily="NunitoExtraBold" FontSize="14" TextColor="{StaticResource Primary}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="Status" FontSize="12" TextColor="{StaticResource NavMuted}" />
+                                <Label Text="Completed (Verified)" Grid.Column="1" FontFamily="NunitoBold" FontSize="12" TextColor="{StaticResource StatusHealthy}" />
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Button Text="Continue Shopping"
+                            BackgroundColor="{StaticResource Primary}"
+                            TextColor="White"
+                            FontFamily="NunitoBold"
+                            CornerRadius="16"
+                            HeightRequest="48"
+                            HorizontalOptions="Fill"
+                            Clicked="OnCloseConfirmationClicked" />
+                </VerticalStackLayout>
             </Border>
         </Grid>
 

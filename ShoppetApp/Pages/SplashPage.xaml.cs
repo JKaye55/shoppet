@@ -17,8 +17,8 @@ public partial class SplashPage : ContentPage
         base.OnAppearing();
 
         await Task.WhenAll(
-            SplashContent.FadeTo(1, 500, Easing.SinOut),
-            SplashContent.ScaleTo(1, 500, Easing.SinOut));
+            SplashContent.FadeToAsync(1, 500, Easing.SinOut),
+            SplashContent.ScaleToAsync(1, 500, Easing.SinOut));
 
         await Task.Delay(2000);
 
@@ -30,13 +30,17 @@ public partial class SplashPage : ContentPage
         // Check if user session already exists locally
         int savedUserId = Preferences.Get("LoggedInUserId", 0);
 
-        if (savedUserId > 0)
+        string? token=null;try{token=await SecureStorage.GetAsync("ApiToken");}catch{SecureStorage.Remove("ApiToken");}
+        if (savedUserId > 0 && !string.IsNullOrWhiteSpace(token))
         {
+            App.Services.GetRequiredService<ShoppetApp.Services.ApiService>().SetToken(token);
+            App.Services.GetRequiredService<ShoppetApp.Services.DatabaseService>().CurrentUser=new ShoppetApp.Models.User { Id=savedUserId, FullName=Preferences.Get("LoggedInUserName",""), Role=Preferences.Get("LoggedInUserRole","Pet Owner") };
             // Already logged in! Bypass onboarding/login and go straight to the main app shell
             NavigationHelper.SetRoot(new AppShell());
         }
         else
         {
+            Preferences.Remove("LoggedInUserId");Preferences.Remove("LoggedInUserName");Preferences.Remove("LoggedInUserRole");
             // Not logged in, send them to onboarding/login
             var onboarding = App.Services.GetRequiredService<OnboardingPage>();
             NavigationHelper.SetRoot(new NavigationPage(onboarding)

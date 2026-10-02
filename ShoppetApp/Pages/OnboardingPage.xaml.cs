@@ -19,6 +19,7 @@ public partial class OnboardingPage : ContentPage
     public OnboardingPage()
     {
         InitializeComponent();
+        ToolbarItems.Add(new ToolbarItem("Server",null,async()=>await Navigation.PushAsync(App.Services.GetRequiredService<ConnectionSettingsPage>())));
         NavigationPage.SetHasBackButton(this, false);
         ApplySlide(animate: false);
     }
@@ -37,9 +38,9 @@ public partial class OnboardingPage : ContentPage
 
     private async Task AnimateSlideChange()
     {
-        await TextContent.FadeTo(0, 125, Easing.Linear);
+        await TextContent.FadeToAsync(0, 125, Easing.Linear);
         ApplySlide(animate: true);
-        await TextContent.FadeTo(1, 125, Easing.Linear);
+        await TextContent.FadeToAsync(1, 125, Easing.Linear);
     }
 
     private void ApplySlide(bool animate)

@@ -15,3 +15,6 @@ obj/
 # NuGet
 *.nupkg
 packages/
+
+# Local integration reports and demo credentials
+artifacts/integration/

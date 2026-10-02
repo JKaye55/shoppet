@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ShoppetApp.Models;
@@ -37,8 +37,15 @@ namespace ShoppetApp.ViewModels
         [ObservableProperty]
         private bool _isPetModalVisible;
 
-        public string UserFullName => _db.CurrentUser?.FullName ?? "User";
-        public string UserInitials => string.IsNullOrWhiteSpace(UserFullName) ? "U" : UserFullName.Substring(0, 1).ToUpper();
+        [ObservableProperty]
+        private bool _isPosting;
+
+        public string UserFullName => _db.CurrentUser?.FullName
+            ?? Preferences.Get("LoggedInUserName", "User");
+
+        public string UserInitials => string.IsNullOrWhiteSpace(UserFullName)
+            ? "U"
+            : UserFullName.Trim()[0].ToString().ToUpperInvariant();
 
         public CreatePostViewModel(ApiService api, DatabaseService db)
         {
@@ -104,48 +111,98 @@ namespace ShoppetApp.ViewModels
                     {
                         if (AttachedMedia.Count >= 5)
                         {
-                            await Shell.Current.DisplayAlert("Limit Reached", "You can only attach a maximum of 5 photos.", "OK");
+                            await Shell.Current.DisplayAlertAsync("Limit Reached", "You can only attach a maximum of 5 photos.", "OK");
                             break;
                         }
 
-                        AttachedMedia.Add(new MediaAttachment { FilePath = file.FullPath, IsVideo = false });
+                        // Copy photo stream to local cache directory for Android photo provider compatibility
+                        var localCachePath = Path.Combine(FileSystem.CacheDirectory, $"{Guid.NewGuid():N}_{file.FileName}");
+                        using (var sourceStream = await file.OpenReadAsync())
+                        using (var targetStream = File.Create(localCachePath))
+                        {
+                            await sourceStream.CopyToAsync(targetStream);
+                        }
+
+                        AttachedMedia.Add(new MediaAttachment { FilePath = localCachePath, IsVideo = false });
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
+                Console.WriteLine($"Photo pick error: {ex.Message}");
             }
         }
 
         [RelayCommand]
         private async Task PostAsync()
         {
+            if (IsPosting) return;
+
             if (string.IsNullOrWhiteSpace(Content) && AttachedMedia.Count == 0)
+            {
+                await Shell.Current.DisplayAlertAsync("Nothing to post", "Write something or attach a photo first.", "OK");
                 return;
+            }
 
-            if (_db.CurrentUser == null) return;
+            var userId = _db.CurrentUser?.Id ?? Preferences.Get("LoggedInUserId", 0);
+            var userName = _db.CurrentUser?.FullName ?? Preferences.Get("LoggedInUserName", "User");
 
-            var mediaPaths = string.Join(",", AttachedMedia.Select(m => m.FilePath));
-
-            var request = new 
+            if (userId <= 0)
             {
-                UserId = _db.CurrentUser.Id,
-                PetId = SelectedPets.FirstOrDefault() is Pet firstPet ? (int?)firstPet.Id : null,
-                AuthorName = _db.CurrentUser.FullName,
-                PetName = SelectedPets.Count > 0 ? string.Join(" and ", SelectedPets.Cast<Pet>().Select(p => p.Name)) : "",
-                Content = Content,
-                ImageUrls = mediaPaths
-            };
+                await Shell.Current.DisplayAlertAsync("Sign in required", "Please sign in before creating a post.", "OK");
+                return;
+            }
 
-            var success = await _api.CreateCommunityPostAsync(request);
-            if (success)
+            IsPosting = true;
+            try
             {
+                var uploadedUrls = AttachedMedia.Count == 0
+                    ? new List<string>()
+                    : await _api.UploadCommunityMediaAsync(AttachedMedia.Select(m => m.FilePath));
+
+                if (AttachedMedia.Count > 0 && uploadedUrls.Count != AttachedMedia.Count)
+                {
+                    await Shell.Current.DisplayAlertAsync("Upload failed", "One or more photos could not be uploaded. Please try again.", "OK");
+                    return;
+                }
+
+                var selectedPet = SelectedPets.OfType<Pet>().FirstOrDefault();
+
+                var request = new
+                {
+                    UserId = userId,
+                    PetId = selectedPet is null ? (int?)null : selectedPet.Id,
+                    AuthorName = userName,
+                    PetName = SelectedPets.Count > 0
+                        ? string.Join(" and ", SelectedPets.OfType<Pet>().Select(p => p.Name))
+                        : string.Empty,
+                    Content = Content.Trim(),
+                    ImageUrls = uploadedUrls.Count > 0
+                        ? string.Join(",", uploadedUrls)
+                        : null
+                };
+
+                var success = await _api.CreateCommunityPostAsync(request);
+                if (!success)
+                {
+                    await Shell.Current.DisplayAlertAsync("Post failed", "The post could not be saved. Check the API connection and try again.", "OK");
+                    return;
+                }
+
+                Content = string.Empty;
+                AttachedMedia.Clear();
+                SelectedPets.Clear();
+
                 await Shell.Current.GoToAsync("..");
             }
-            else
+            catch (Exception ex)
             {
-                await Shell.Current.DisplayAlert("Error", "Failed to post story. Try again.", "OK");
+                System.Diagnostics.Debug.WriteLine($"Create post failed: {ex}");
+                await Shell.Current.DisplayAlertAsync("Post failed", "Could not reach ShoppetAPI or upload the selected photo.", "OK");
+            }
+            finally
+            {
+                IsPosting = false;
             }
         }
     }

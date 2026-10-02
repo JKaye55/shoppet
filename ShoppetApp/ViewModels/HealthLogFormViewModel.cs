@@ -10,6 +10,9 @@ namespace ShoppetApp.ViewModels;
 public partial class HealthLogFormViewModel : ObservableObject, IQueryAttributable
 {
     private readonly ApiService _api;
+    private int originalRemaining,originalTotal;private string originalDate="";
+    [ObservableProperty]private string notes="";
+    [ObservableProperty]private string vetName="";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsVaccine))]
@@ -33,7 +36,7 @@ public partial class HealthLogFormViewModel : ObservableObject, IQueryAttributab
     [ObservableProperty] private TimeSpan _timeStartedTime = DateTime.Now.TimeOfDay;
     [ObservableProperty] private bool _isEditMode;
 
-    public List<string> DocumentPathsList { get; } = new();
+    public System.Collections.ObjectModel.ObservableCollection<string> DocumentPathsList { get; } = new();
 
     public IList<string> TypeOptions { get; } = ["vaccine", "medication", "vital"];
     public IList<string> ValidityUnitOptions { get; } = ["Days", "Weeks", "Months", "Years"];
@@ -65,6 +68,8 @@ public partial class HealthLogFormViewModel : ObservableObject, IQueryAttributab
         LogType = TypeOptions.FirstOrDefault(t => string.Equals(t, log.Type, StringComparison.OrdinalIgnoreCase)) ?? log.Type;
         Name = log.Name;
         Completed = log.Completed;
+        originalRemaining=log.DosageRemaining;originalTotal=log.DosageTotal;originalDate=log.RecordDate;Notes=log.Notes;VetName=log.VetName;
+        DocumentPathsList.Clear();foreach(var path in log.DocumentsList)DocumentPathsList.Add(path);
         ValidityIntervalText = log.ValidityInterval.ToString();
         ValidityUnit = ValidityUnitOptions.FirstOrDefault(u => string.Equals(u, log.ValidityUnit, StringComparison.OrdinalIgnoreCase)) ?? (string.IsNullOrEmpty(log.ValidityUnit) ? "Months" : log.ValidityUnit);
         MedicationIntervalHoursText = log.MedicationIntervalHours.ToString();
@@ -94,6 +99,9 @@ public partial class HealthLogFormViewModel : ObservableObject, IQueryAttributab
     }
 
     [RelayCommand]
+    private async Task OpenDocumentAsync(string path)
+    {try{await _api.OpenCareDocumentAsync(path);}catch(Exception){await Shell.Current.DisplayAlertAsync("Document unavailable","Check the connection, or reattach an old local-only document.","OK");}}
+    [RelayCommand]
     private async Task CloseAsync() => await Shell.Current.GoToAsync("..");
 
     [RelayCommand]
@@ -104,12 +112,14 @@ public partial class HealthLogFormViewModel : ObservableObject, IQueryAttributab
             var result = await FilePicker.Default.PickAsync();
             if (result != null)
             {
-                DocumentPathsList.Add(result.FullPath);
+                var path=Path.Combine(FileSystem.CacheDirectory,Guid.NewGuid().ToString("N")+Path.GetExtension(result.FileName));
+                await using(var source=await result.OpenReadAsync())await using(var target=File.Create(path))await source.CopyToAsync(target);
+                DocumentPathsList.Add(path);
             }
         }
         catch (Exception ex)
         {
-            await Shell.Current.DisplayAlert("Error", $"Could not attach document: {ex.Message}", "OK");
+            await Shell.Current.DisplayAlertAsync("Error", $"Could not attach document: {ex.Message}", "OK");
         }
     }
 
@@ -125,7 +135,7 @@ public partial class HealthLogFormViewModel : ObservableObject, IQueryAttributab
     {
         if (string.IsNullOrWhiteSpace(Name))
         {
-            await Shell.Current.DisplayAlert("Validation", "Record name is required.", "OK");
+            await Shell.Current.DisplayAlertAsync("Validation", "Record name is required.", "OK");
             return;
         }
 
@@ -133,6 +143,10 @@ public partial class HealthLogFormViewModel : ObservableObject, IQueryAttributab
         double.TryParse(MedicationIntervalHoursText, out var medInterval);
         int.TryParse(DosageTotalText, out var dosageTotal);
 
+        if(validityInterval<0||medInterval<0||dosageTotal<0){await Shell.Current.DisplayAlertAsync("Validation","Care values cannot be negative.","OK");return;}
+        var local=DocumentPathsList.Where(p=>!Uri.TryCreate(p,UriKind.Absolute,out var u)||u.Scheme is not ("http" or "https")).ToList();
+        try{if(local.Count>0){var urls=await _api.UploadDocumentsAsync(local);foreach(var p in local)DocumentPathsList.Remove(p);foreach(var url in urls)DocumentPathsList.Add(url);}}
+        catch{await Shell.Current.DisplayAlertAsync("Upload failed","Documents could not be uploaded. Your form is unchanged.","OK");return;}
         var finalDueDate = DueDate.Date.Add(DueTime);
         var finalTimeStarted = TimeStartedDate.Date.Add(TimeStartedTime);
 
@@ -142,6 +156,7 @@ public partial class HealthLogFormViewModel : ObservableObject, IQueryAttributab
             PetId = PetId,
             Type = LogType,
             Name = Name.Trim(),
+            Notes=Notes,VetName=VetName,RecordDate=LogId>0?originalDate:DateTime.Now.ToString("O"),
             DueDate = finalDueDate.ToString("yyyy/MM/dd, HH:mm"),
             Completed = Completed,
             DateAdministered = DateAdministered.ToString("yyyy/MM/dd, 00:00"),
@@ -150,9 +165,9 @@ public partial class HealthLogFormViewModel : ObservableObject, IQueryAttributab
             MedicationIntervalHours = medInterval,
             TimeStarted = finalTimeStarted.ToString("yyyy/MM/dd, HH:mm"),
             DosageTotal = dosageTotal,
-            DosageRemaining = dosageTotal,
+            DosageRemaining = LogId>0?Math.Clamp(originalRemaining+dosageTotal-originalTotal,0,dosageTotal):dosageTotal,
             CheckupDate = CheckupDate.ToString("yyyy/MM/dd, 00:00"),
-            DocumentPaths = string.Join(";", DocumentPathsList)
+            DocumentPaths = string.Join("|", DocumentPathsList)
         };
 
         var result = await _api.SaveHealthLogAsync(PetId, log);
@@ -163,7 +178,7 @@ public partial class HealthLogFormViewModel : ObservableObject, IQueryAttributab
         }
         else
         {
-            await Shell.Current.DisplayAlert("Error", "Failed to save health record to server.", "OK");
+            await Shell.Current.DisplayAlertAsync("Error", "Failed to save health record to server.", "OK");
         }
     }
 
@@ -174,7 +189,7 @@ public partial class HealthLogFormViewModel : ObservableObject, IQueryAttributab
         var log = (await _api.GetHealthLogsAsync(PetId)).FirstOrDefault(l => l.Id == LogId);
         if (log is null) return;
 
-        bool confirm = await Shell.Current.DisplayAlert("Delete", $"Remove {log.Name}?", "Delete", "Cancel");
+        bool confirm = await Shell.Current.DisplayAlertAsync("Delete", $"Remove {log.Name}?", "Delete", "Cancel");
         if (!confirm) return;
 
         await _api.DeleteHealthLogAsync(PetId, log.Id);

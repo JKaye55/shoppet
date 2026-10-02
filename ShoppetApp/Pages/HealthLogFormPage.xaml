@@ -22,11 +22,11 @@
                     <Border.StrokeShape>
                         <RoundRectangle CornerRadius="20" />
                     </Border.StrokeShape>
-                    <Picker ItemsSource="{Binding TypeOptions}" 
-                            SelectedItem="{Binding LogType}" ItemDisplayBinding="{Binding .}" 
-                            Title="Select Type" 
+                    <Picker ItemsSource="{Binding TypeOptions}"
+                            SelectedItem="{Binding LogType}" ItemDisplayBinding="{Binding .}"
+                            Title="Select Type"
                             TitleColor="Gray"
-                            TextColor="Black" BackgroundColor="Transparent" 
+                            TextColor="Black" BackgroundColor="Transparent"
                             HeightRequest="44" />
                 </Border>
 
@@ -61,11 +61,11 @@
                             <Border.StrokeShape>
                                 <RoundRectangle CornerRadius="20" />
                             </Border.StrokeShape>
-                            <Picker ItemsSource="{Binding ValidityUnitOptions}" 
-                                    SelectedItem="{Binding ValidityUnit}" ItemDisplayBinding="{Binding .}" 
+                            <Picker ItemsSource="{Binding ValidityUnitOptions}"
+                                    SelectedItem="{Binding ValidityUnit}" ItemDisplayBinding="{Binding .}"
                                     Title="Unit"
                                     TitleColor="Gray"
-                                    TextColor="Black" BackgroundColor="Transparent" 
+                                    TextColor="Black" BackgroundColor="Transparent"
                                     HeightRequest="44" />
                         </Border>
                     </Grid>
@@ -123,7 +123,7 @@
                         <CollectionView.ItemTemplate>
                             <DataTemplate x:DataType="x:String">
                                 <Grid ColumnDefinitions="*,Auto" Margin="0,4">
-                                    <Label Text="{Binding .}" VerticalOptions="Center" LineBreakMode="TailTruncation" FontFamily="Nunito" FontSize="12" />
+                                    <Button Text="Open care document" BackgroundColor="Transparent" TextColor="{StaticResource Primary}" Command="{Binding Source={RelativeSource AncestorType={x:Type vm:HealthLogFormViewModel}}, Path=OpenDocumentCommand}" CommandParameter="{Binding .}" />
                                     <Button Grid.Column="1" Text="✕" WidthRequest="32" HeightRequest="32" Padding="0" BackgroundColor="Transparent" TextColor="{StaticResource StatusOverdue}" Command="{Binding Source={RelativeSource AncestorType={x:Type vm:HealthLogFormViewModel}}, Path=RemoveDocumentCommand}" CommandParameter="{Binding .}" />
                                 </Grid>
                             </DataTemplate>
@@ -154,6 +154,8 @@
                 </HorizontalStackLayout>
             </VerticalStackLayout>
 
+            <Label Text="Veterinarian" FontFamily="NunitoSemiBold" /><Entry Text="{Binding VetName}" Placeholder="Veterinarian name" MaxLength="150" />
+            <Label Text="Notes" FontFamily="NunitoSemiBold" /><Editor Text="{Binding Notes}" Placeholder="Care notes" AutoSize="TextChanges" MaxLength="1000" />
             <Button Text="Save Record" Command="{Binding SaveCommand}" HeightRequest="52" CornerRadius="24" BackgroundColor="{StaticResource Primary}" TextColor="{StaticResource PrimaryFg}" FontFamily="NunitoBold" Margin="0,24,0,0" />
             <Button Text="Delete Record" IsVisible="{Binding CanDelete}" Command="{Binding DeleteCommand}" BackgroundColor="Transparent" TextColor="{StaticResource StatusOverdue}" FontFamily="Nunito" FontSize="14" />
         </VerticalStackLayout>

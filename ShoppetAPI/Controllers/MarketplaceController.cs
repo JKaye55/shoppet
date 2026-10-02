@@ -1,160 +1,308 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using MySql.Data.MySqlClient;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
+using ShoppetAPI.Services;
 
-namespace ShoppetAPI.Controllers
+namespace ShoppetAPI.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class MarketplaceController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class MarketplaceController : ControllerBase
+    private readonly IConfiguration _configuration;
+    public MarketplaceController(IConfiguration configuration)=>_configuration=configuration;
+
+    private string ConnectionString =>
+        _configuration.GetConnectionString("SharedSqlServer")
+        ?? throw new InvalidOperationException("SharedSqlServer connection is missing.");
+
+    [HttpGet]
+    [HttpGet("/api/marketplacelistings")]
+    public async Task<IActionResult> GetListings([FromQuery] string? category=null,[FromQuery] string? search=null)
     {
-        private readonly IConfiguration _configuration;
-        public MarketplaceController(IConfiguration configuration) => _configuration = configuration;
-
-        [HttpGet]
-        public async Task<IActionResult> GetListings([FromQuery] string? category = null, [FromQuery] string? search = null)
+        try
         {
-            try
-            {
-                string conn = _configuration.GetConnectionString("DefaultConnection")!;
-                using var connection = new MySqlConnection(conn);
-                await connection.OpenAsync();
-                var conditions = new List<string> { "m.IsAvailable = 1" };
-                if (!string.IsNullOrWhiteSpace(category)) conditions.Add("m.Category = @Category");
-                if (!string.IsNullOrWhiteSpace(search)) conditions.Add("(m.Title LIKE @Search OR m.Description LIKE @Search OR m.Category LIKE @Search)");
-                var where = "WHERE " + string.Join(" AND ", conditions);
-                var query = $@"SELECT m.*, u.FullName AS SellerFullName, u.ProfilePicture AS SellerProfilePic FROM marketplacelistings m LEFT JOIN users u ON m.UserId = u.Id {where} ORDER BY m.CreatedAt DESC;";
-                using var cmd = new MySqlCommand(query, connection);
-                if (!string.IsNullOrWhiteSpace(category)) cmd.Parameters.AddWithValue("@Category", category);
-                if (!string.IsNullOrWhiteSpace(search)) cmd.Parameters.AddWithValue("@Search", $"%{search}%");
-                var listings = new List<object>();
-                using var reader = await cmd.ExecuteReaderAsync();
-                while (await reader.ReadAsync())
-                {
-                    listings.Add(new {
-                        Id = Convert.ToInt32(reader["Id"]),
-                        UserId = Convert.ToInt32(reader["UserId"]),
-                        SellerName = reader["SellerFullName"] == DBNull.Value ? reader["SellerName"].ToString() : reader["SellerFullName"].ToString(),
-                        SellerProfilePic = reader["SellerProfilePic"] == DBNull.Value ? string.Empty : reader["SellerProfilePic"].ToString(),
-                        Title = reader["Title"].ToString(),
-                        Description = reader["Description"].ToString(),
-                        Price = Convert.ToDecimal(reader["Price"]),
-                        Category = reader["Category"].ToString(),
-                        Condition = reader["Condition_"].ToString(),
-                        Location = reader["Location_"].ToString(),
-                        ImageUrls = reader["ImageUrls"] == DBNull.Value ? "" : reader["ImageUrls"].ToString(),
-                        IsAvailable = Convert.ToBoolean(reader["IsAvailable"]),
-                        CreatedAt = Convert.ToDateTime(reader["CreatedAt"]),
-                    });
-                }
-                return Ok(listings);
-            }
-            catch (Exception ex) { return StatusCode(500, $"Error: {ex.Message}"); }
-        }
+            var list=new List<object>();
+            await using var conn=new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
 
-        [HttpGet("my/{userId}")]
-        public async Task<IActionResult> GetMyListings(int userId)
-        {
-            try
-            {
-                string conn = _configuration.GetConnectionString("DefaultConnection")!;
-                using var connection = new MySqlConnection(conn);
-                await connection.OpenAsync();
-                var query = @"SELECT m.*, u.FullName AS SellerFullName, u.ProfilePicture AS SellerProfilePic FROM marketplacelistings m LEFT JOIN users u ON m.UserId = u.Id WHERE m.UserId = @UserId ORDER BY m.CreatedAt DESC;";
-                using var cmd = new MySqlCommand(query, connection);
-                cmd.Parameters.AddWithValue("@UserId", userId);
-                var listings = new List<object>();
-                using var reader = await cmd.ExecuteReaderAsync();
-                while (await reader.ReadAsync())
-                {
-                    listings.Add(new {
-                        Id = Convert.ToInt32(reader["Id"]),
-                        UserId = Convert.ToInt32(reader["UserId"]),
-                        SellerName = reader["SellerFullName"] == DBNull.Value ? reader["SellerName"].ToString() : reader["SellerFullName"].ToString(),
-                        SellerProfilePic = reader["SellerProfilePic"] == DBNull.Value ? string.Empty : reader["SellerProfilePic"].ToString(),
-                        Title = reader["Title"].ToString(),
-                        Description = reader["Description"].ToString(),
-                        Price = Convert.ToDecimal(reader["Price"]),
-                        Category = reader["Category"].ToString(),
-                        Condition = reader["Condition_"].ToString(),
-                        Location = reader["Location_"].ToString(),
-                        ImageUrls = reader["ImageUrls"] == DBNull.Value ? "" : reader["ImageUrls"].ToString(),
-                        IsAvailable = Convert.ToBoolean(reader["IsAvailable"]),
-                        CreatedAt = Convert.ToDateTime(reader["CreatedAt"]),
-                    });
-                }
-                return Ok(listings);
-            }
-            catch (Exception ex) { return StatusCode(500, $"Error: {ex.Message}"); }
-        }
+            var conditions=new List<string>{"ISNULL(m.Status,'Available') IN ('Available','Active')"};
+            if(!string.IsNullOrWhiteSpace(category)&&!category.Equals("All",StringComparison.OrdinalIgnoreCase))
+                conditions.Add("m.Category=@Category");
+            if(!string.IsNullOrWhiteSpace(search))
+                conditions.Add("(m.Title LIKE @Search OR ISNULL(m.Description,'') LIKE @Search OR m.Category LIKE @Search)");
 
-        [HttpPost]
-        public async Task<IActionResult> CreateListing([FromBody] CreateListingRequest request)
-        {
-            try
-            {
-                string conn = _configuration.GetConnectionString("DefaultConnection")!;
-                using var connection = new MySqlConnection(conn);
-                await connection.OpenAsync();
-                var query = @"INSERT INTO marketplacelistings (UserId, SellerName, Title, Description, Price, Category, Condition_, Location_, ImageUrls, IsAvailable, CreatedAt, UpdatedAt) VALUES (@UserId, @SellerName, @Title, @Description, @Price, @Category, @Condition, @Location, @ImageUrls, 1, NOW(), NOW()); SELECT LAST_INSERT_ID();";
-                using var cmd = new MySqlCommand(query, connection);
-                cmd.Parameters.AddWithValue("@UserId", request.UserId);
-                cmd.Parameters.AddWithValue("@SellerName", request.SellerName ?? "");
-                cmd.Parameters.AddWithValue("@Title", request.Title ?? "");
-                cmd.Parameters.AddWithValue("@Description", request.Description ?? "");
-                cmd.Parameters.AddWithValue("@Price", request.Price);
-                cmd.Parameters.AddWithValue("@Category", request.Category ?? "General");
-                cmd.Parameters.AddWithValue("@Condition", request.Condition ?? "Used");
-                cmd.Parameters.AddWithValue("@Location", request.Location ?? "");
-                cmd.Parameters.AddWithValue("@ImageUrls", (object?)request.ImageUrls ?? DBNull.Value);
-                var newId = Convert.ToInt32(await cmd.ExecuteScalarAsync());
-                return Ok(new { success = true, id = newId });
-            }
-            catch (Exception ex) { return StatusCode(500, $"Error: {ex.Message}"); }
-        }
+            var sql=$"""
+                SELECT m.Id,m.SellerUserId,ISNULL(u.FullName,'Unknown'),
+                       ISNULL(u.ProfilePicture,''),m.Title,ISNULL(m.Description,''),
+                       m.Price,m.Category,ISNULL(m.ItemCondition,'Used'),
+                       ISNULL(m.Location,''),ISNULL(m.ImageUrl,''),
+                       CASE WHEN ISNULL(m.Status,'Available') IN('Available','Active') THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END,
+                       m.CreatedAt,
+                       CASE WHEN ISNULL(u.ShowSocialLinksOnMarketplace,1)=1 THEN ISNULL(u.FacebookUrl,'') ELSE '' END,
+                       CASE WHEN ISNULL(u.ShowSocialLinksOnMarketplace,1)=1 THEN ISNULL(u.InstagramUrl,'') ELSE '' END,
+                       CASE WHEN ISNULL(u.ShowSocialLinksOnMarketplace,1)=1 THEN ISNULL(u.OtherSocialUrl,'') ELSE '' END,
+                       ISNULL(u.IsPremium, 0)
+                FROM MarketplaceListings m
+                LEFT JOIN UserAccounts u ON u.Id=m.SellerUserId
+                WHERE {string.Join(" AND ",conditions)}
+                ORDER BY m.CreatedAt DESC;
+                """;
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> EditListing(int id, [FromBody] EditListingRequest request)
-        {
-            try
-            {
-                string conn = _configuration.GetConnectionString("DefaultConnection")!;
-                using var connection = new MySqlConnection(conn);
-                await connection.OpenAsync();
-                var query = @"UPDATE marketplacelistings SET Title=@Title, Description=@Description, Price=@Price, Category=@Category, Condition_=@Condition, Location_=@Location, UpdatedAt=NOW() WHERE Id=@Id AND UserId=@UserId;";
-                using var cmd = new MySqlCommand(query, connection);
-                cmd.Parameters.AddWithValue("@Id", id);
-                cmd.Parameters.AddWithValue("@UserId", request.UserId);
-                cmd.Parameters.AddWithValue("@Title", request.Title ?? "");
-                cmd.Parameters.AddWithValue("@Description", request.Description ?? "");
-                cmd.Parameters.AddWithValue("@Price", request.Price);
-                cmd.Parameters.AddWithValue("@Category", request.Category ?? "General");
-                cmd.Parameters.AddWithValue("@Condition", request.Condition ?? "Used");
-                cmd.Parameters.AddWithValue("@Location", request.Location ?? "");
-                await cmd.ExecuteNonQueryAsync();
-                return Ok(new { success = true });
-            }
-            catch (Exception ex) { return StatusCode(500, $"Error: {ex.Message}"); }
-        }
+            await using var cmd=new SqlCommand(sql,conn);
+            if(!string.IsNullOrWhiteSpace(category)&&!category.Equals("All",StringComparison.OrdinalIgnoreCase))
+                cmd.Parameters.AddWithValue("@Category",category);
+            if(!string.IsNullOrWhiteSpace(search))
+                cmd.Parameters.AddWithValue("@Search",$"%{search.Trim()}%");
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteListing(int id, [FromQuery] int userId)
-        {
-            try
-            {
-                string conn = _configuration.GetConnectionString("DefaultConnection")!;
-                using var connection = new MySqlConnection(conn);
-                await connection.OpenAsync();
-                var query = "DELETE FROM marketplacelistings WHERE Id=@Id AND UserId=@UserId;";
-                using var cmd = new MySqlCommand(query, connection);
-                cmd.Parameters.AddWithValue("@Id", id);
-                cmd.Parameters.AddWithValue("@UserId", userId);
-                await cmd.ExecuteNonQueryAsync();
-                return Ok(new { success = true });
-            }
-            catch (Exception ex) { return StatusCode(500, $"Error: {ex.Message}"); }
+            await using var r=await cmd.ExecuteReaderAsync();
+            while(await r.ReadAsync()) list.Add(Map(r));
+            return Ok(list);
         }
+        catch(Exception ex){return StatusCode(500,$"Marketplace error: {ex.Message}");}
     }
 
-    public class CreateListingRequest { public int UserId { get; set; } public string? SellerName { get; set; } public string? Title { get; set; } public string? Description { get; set; } public decimal Price { get; set; } public string? Category { get; set; } public string? Condition { get; set; } public string? Location { get; set; } public string? ImageUrls { get; set; } }
-    public class EditListingRequest { public int UserId { get; set; } public string? Title { get; set; } public string? Description { get; set; } public decimal Price { get; set; } public string? Category { get; set; } public string? Condition { get; set; } public string? Location { get; set; } }
+    [HttpGet("my/{userId:int}")]
+    public async Task<IActionResult> GetMyListings(int userId)
+    {
+        try
+        {
+            var list=new List<object>();
+            await using var conn=new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+            await using var cmd=new SqlCommand("""
+                SELECT m.Id,m.SellerUserId,ISNULL(u.FullName,'Unknown'),
+                       ISNULL(u.ProfilePicture,''),m.Title,ISNULL(m.Description,''),
+                       m.Price,m.Category,ISNULL(m.ItemCondition,'Used'),
+                       ISNULL(m.Location,''),ISNULL(m.ImageUrl,''),
+                       CASE WHEN ISNULL(m.Status,'Available') IN('Available','Active') THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END,
+                       m.CreatedAt,
+                       CASE WHEN ISNULL(u.ShowSocialLinksOnMarketplace,1)=1 THEN ISNULL(u.FacebookUrl,'') ELSE '' END,
+                       CASE WHEN ISNULL(u.ShowSocialLinksOnMarketplace,1)=1 THEN ISNULL(u.InstagramUrl,'') ELSE '' END,
+                       CASE WHEN ISNULL(u.ShowSocialLinksOnMarketplace,1)=1 THEN ISNULL(u.OtherSocialUrl,'') ELSE '' END,
+                       ISNULL(u.IsPremium, 0)
+                FROM MarketplaceListings m
+                LEFT JOIN UserAccounts u ON u.Id=m.SellerUserId
+                WHERE m.SellerUserId=@UserId AND m.Status<>'Deleted'
+                ORDER BY m.CreatedAt DESC;
+                """,conn);
+            cmd.Parameters.AddWithValue("@UserId",userId);
+            await using var r=await cmd.ExecuteReaderAsync();
+            while(await r.ReadAsync()) list.Add(Map(r));
+            return Ok(list);
+        }
+        catch(Exception ex){return StatusCode(500,$"Marketplace error: {ex.Message}");}
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> CreateListing([FromBody] CreateListingRequest x)
+    {
+        if(x.UserId<=0||string.IsNullOrWhiteSpace(x.Title)||x.Title.Length>150||x.Price<=0)
+            return BadRequest("A valid seller and title are required.");
+        try
+        {
+            await using var conn=new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+
+            if(!await RbacService.IsPetOwnerAsync(conn,x.UserId))
+                return StatusCode(403,"Access denied.");
+
+            // Enforce free listing limit: Free users max 5 listings
+            await using (var checkCmd = new SqlCommand("SELECT ISNULL(IsPremium, 0) FROM UserAccounts WHERE Id = @UserId", conn))
+            {
+                checkCmd.Parameters.AddWithValue("@UserId", x.UserId);
+                var isPremObj = await checkCmd.ExecuteScalarAsync();
+                bool isPrem = isPremObj != null && Convert.ToBoolean(isPremObj);
+
+                if (!isPrem)
+                {
+                    await using var countCmd = new SqlCommand("SELECT COUNT(*) FROM MarketplaceListings WHERE SellerUserId = @UserId AND Status <> 'Deleted'", conn);
+                    countCmd.Parameters.AddWithValue("@UserId", x.UserId);
+                    var count = Convert.ToInt32(await countCmd.ExecuteScalarAsync());
+                    if (count >= 5)
+                    {
+                        return BadRequest("Free accounts can create up to 5 marketplace listings. Upgrade to Premium (₱150 for 2 months) for unlimited listings.");
+                    }
+                }
+            }
+
+            await using var cmd=new SqlCommand("""
+                INSERT INTO MarketplaceListings
+                (SellerUserId,Title,Category,ItemCondition,Price,Description,Location,ImageUrl,Status,CreatedAt)
+                OUTPUT INSERTED.Id
+                VALUES(@UserId,@Title,@Category,@Condition,@Price,@Description,@Location,@ImageUrl,'Available',SYSDATETIME());
+                """,conn);
+            Bind(cmd,x);
+            var id=Convert.ToInt32(await cmd.ExecuteScalarAsync());
+            return Ok(new{success=true,id});
+        }
+        catch(Exception ex){return StatusCode(500,$"Listing save error: {ex.Message}");}
+    }
+
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> EditListing(int id,[FromBody] EditListingRequest x)
+    {
+        if(string.IsNullOrWhiteSpace(x.Title)||x.Title.Length>150||x.Price<=0)return BadRequest("Enter a title and positive price.");
+        try
+        {
+            await using var conn=new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+
+            if(!await RbacService.IsPetOwnerAsync(conn,x.UserId))
+                return StatusCode(403,"Access denied.");
+
+            await using var cmd=new SqlCommand("""
+                UPDATE MarketplaceListings
+                SET Title=@Title,Description=@Description,Price=@Price,Category=@Category,
+                    ItemCondition=@Condition,Location=@Location,ImageUrl=@ImageUrl
+                WHERE Id=@Id AND SellerUserId=@UserId;
+                """,conn);
+            cmd.Parameters.AddWithValue("@Id",id);
+            cmd.Parameters.AddWithValue("@UserId",x.UserId);
+            cmd.Parameters.AddWithValue("@Title",x.Title??string.Empty);
+            cmd.Parameters.AddWithValue("@Description",x.Description??string.Empty);
+            cmd.Parameters.AddWithValue("@Price",x.Price);
+            cmd.Parameters.AddWithValue("@Category",x.Category??"General");
+            cmd.Parameters.AddWithValue("@Condition",x.Condition??"Used");
+            cmd.Parameters.AddWithValue("@Location",x.Location??string.Empty);
+            cmd.Parameters.AddWithValue("@ImageUrl",MediaUrls.Canonical(x.ImageUrls));
+            return await cmd.ExecuteNonQueryAsync()==0?NotFound():Ok(new{success=true});
+        }
+        catch(Exception ex){return StatusCode(500,$"Listing update error: {ex.Message}");}
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> DeleteListing(int id,[FromQuery] int userId)
+    {
+        try
+        {
+            await using var conn=new SqlConnection(ConnectionString);
+            await conn.OpenAsync();
+
+            var role = await RbacService.GetActiveRoleAsync(conn,userId);
+            if(role is null) return Unauthorized();
+
+            var sql = RbacService.IsAdmin(role)
+                ? "UPDATE MarketplaceListings SET Status='Deleted',UpdatedAt=SYSDATETIME() WHERE Id=@Id"
+                : "UPDATE MarketplaceListings SET Status='Deleted',UpdatedAt=SYSDATETIME() WHERE Id=@Id AND SellerUserId=@UserId";
+
+            await using var cmd=new SqlCommand(sql,conn);
+            cmd.Parameters.AddWithValue("@Id",id);
+            cmd.Parameters.AddWithValue("@UserId",userId);
+            return await cmd.ExecuteNonQueryAsync()==0?NotFound():Ok(new{success=true});
+        }
+        catch(Exception ex){return StatusCode(500,$"Listing delete error: {ex.Message}");}
+    }
+
+    private object Map(SqlDataReader r)
+    {
+        var id = r.GetInt32(0);
+        var userId = r.IsDBNull(1) ? 0 : r.GetInt32(1);
+        var sellerName = r.IsDBNull(2) ? "Unknown" : r.GetString(2);
+        var sellerPic = r.IsDBNull(3) ? "" : r.GetString(3);
+        var title = r.IsDBNull(4) ? "" : r.GetString(4);
+        var desc = r.IsDBNull(5) ? "" : r.GetString(5);
+        var price = r.IsDBNull(6) ? 0m : r.GetDecimal(6);
+        var category = r.IsDBNull(7) ? "General" : r.GetString(7);
+        var condition = r.IsDBNull(8) ? "Used" : r.GetString(8);
+        var location = r.IsDBNull(9) ? "" : r.GetString(9);
+        var imgUrlRaw = r.IsDBNull(10) ? "" : r.GetString(10);
+        var isAvail = !r.IsDBNull(11) && r.GetBoolean(11);
+        var createdAt = r.IsDBNull(12) ? DateTime.UtcNow : r.GetDateTime(12);
+        var fb = r.IsDBNull(13) ? "" : Social(r.GetString(13));
+        var ig = r.IsDBNull(14) ? "" : Social(r.GetString(14));
+        var other = r.IsDBNull(15) ? "" : Social(r.GetString(15));
+        var isPrem = !r.IsDBNull(16) && r.GetBoolean(16);
+
+        return new
+        {
+            Id = id,
+            SellerUserId = userId,
+            UserId = userId,
+            SellerName = sellerName,
+            SellerProfilePic = MediaUrls.Web(sellerPic, _configuration),
+            Title = title,
+            Description = desc,
+            Price = price,
+            Category = category,
+            ItemCondition = condition,
+            Condition = condition,
+            Location = location,
+            ImageUrls = MediaUrl(imgUrlRaw),
+            Status = isAvail ? "Active" : "Unavailable",
+            IsAvailable = isAvail,
+            CreatedAt = createdAt,
+            FacebookUrl = fb,
+            InstagramUrl = ig,
+            OtherSocialUrl = other,
+            IsSellerPremium = isPrem
+        };
+    }
+
+    private string MediaUrl(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return string.Empty;
+        var publicWeb = (_configuration["PublicWebBaseUrl"] ?? "http://localhost:5253").TrimEnd('/');
+        return string.Join(",", value.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(u =>
+            {
+                var trimmed = u.Trim();
+                if (trimmed.StartsWith("/")) return publicWeb + trimmed;
+                return trimmed;
+            }));
+    }
+
+    [HttpPut("{id:int}/status")]
+    public async Task<IActionResult> SetStatus(int id,[FromQuery]int userId,[FromQuery]string status)
+    {
+        if(!new[]{"Available","Sold","Unavailable"}.Contains(status))return BadRequest("Invalid listing status.");
+        await using var c=new SqlConnection(ConnectionString);await c.OpenAsync();
+        await using var q=new SqlCommand("UPDATE MarketplaceListings SET Status=@Status,UpdatedAt=SYSDATETIME() WHERE Id=@Id AND SellerUserId=@U AND Status<>'Deleted' AND (@Status<>'Available' OR NOT EXISTS(SELECT 1 FROM MarketplaceOrderItems WHERE ListingId=@Id))",c);
+        q.Parameters.AddWithValue("@Id",id);q.Parameters.AddWithValue("@U",userId);q.Parameters.AddWithValue("@Status",status);
+        return await q.ExecuteNonQueryAsync()>0?Ok(new{success=true}):BadRequest("Purchased listings cannot be reopened.");
+    }
+
+    private static string Social(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return string.Empty;
+        var trimmed = url.Trim();
+        if (Uri.TryCreate(trimmed, UriKind.Absolute, out var u) && (u.Scheme == "https" || u.Scheme == "http"))
+            return trimmed;
+        if (trimmed.StartsWith("www.", StringComparison.OrdinalIgnoreCase) || (trimmed.Contains('.') && !trimmed.Contains(' ')))
+            return "https://" + trimmed;
+        return trimmed;
+    }
+    private static void Bind(SqlCommand cmd,CreateListingRequest x)
+    {
+        cmd.Parameters.AddWithValue("@UserId",x.UserId);
+        cmd.Parameters.AddWithValue("@Title",x.Title??string.Empty);
+        cmd.Parameters.AddWithValue("@Category",x.Category??"General");
+        cmd.Parameters.AddWithValue("@Condition",x.Condition??"Used");
+        cmd.Parameters.AddWithValue("@Price",x.Price);
+        cmd.Parameters.AddWithValue("@Description",x.Description??string.Empty);
+        cmd.Parameters.AddWithValue("@Location",x.Location??string.Empty);
+        cmd.Parameters.AddWithValue("@ImageUrl",MediaUrls.Canonical(x.ImageUrls));
+    }
+}
+public class CreateListingRequest
+{
+    public int UserId{get;set;}
+    public string? SellerName{get;set;}
+    public string? Title{get;set;}
+    public string? Description{get;set;}
+    public decimal Price{get;set;}
+    public string? Category{get;set;}
+    public string? Condition{get;set;}
+    public string? Location{get;set;}
+    public string? ImageUrls{get;set;}
+}
+public class EditListingRequest
+{
+    public int UserId{get;set;}
+    public string? Title{get;set;}
+    public string? Description{get;set;}
+    public decimal Price{get;set;}
+    public string? Category{get;set;}
+    public string? Condition{get;set;}
+    public string? Location{get;set;}
+    public string? ImageUrls{get;set;}
 }

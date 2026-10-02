@@ -5,7 +5,7 @@ namespace ShoppetApp.Pages;
 
 public partial class PostDetailsPage : ContentPage
 {
-    private PostDetailsViewModel _vm => BindingContext as PostDetailsViewModel;
+    private PostDetailsViewModel? _vm => BindingContext as PostDetailsViewModel;
 
     public PostDetailsPage(PostDetailsViewModel vm)
     {
@@ -13,7 +13,7 @@ public partial class PostDetailsPage : ContentPage
         BindingContext = vm;
     }
 
-    private void OnCommentLikeTapped(object sender, TappedEventArgs e)
+    private void OnCommentLikeTapped(object? sender, TappedEventArgs e)
     {
         if (sender is Label label && label.BindingContext is CommunityComment comment)
         {
@@ -21,7 +21,7 @@ public partial class PostDetailsPage : ContentPage
         }
     }
 
-    private void OnReplyTapped(object sender, TappedEventArgs e)
+    private void OnReplyTapped(object? sender, TappedEventArgs e)
     {
         if (sender is Label label && label.BindingContext is CommunityComment comment)
         {

@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace ShoppetApp.Models
@@ -15,6 +15,8 @@ namespace ShoppetApp.Models
         public string? ImageUrls { get; set; }
         public DateTime Timestamp { get; set; } = DateTime.Now;
         public bool IsEdited { get; set; } = false;
+        public bool IsAuthorPremium { get; set; }
+        public string AuthorRole { get; set; } = string.Empty;
 
         [ObservableProperty]
         private int _likesCount;
@@ -28,9 +30,11 @@ namespace ShoppetApp.Models
         [ObservableProperty]
         private bool _isOptionsVisible;
 
-        public List<string> ImageList => string.IsNullOrEmpty(ImageUrls)
+        public List<string> ImageList => string.IsNullOrWhiteSpace(ImageUrls)
             ? new List<string>()
-            : ImageUrls.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+            : ImageUrls.Split(new[] { ',', '|', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                       .Where(u => !string.IsNullOrWhiteSpace(u))
+                       .ToList();
 
         public bool HasImages => ImageList.Any();
         public int LikeCount { get; set; }

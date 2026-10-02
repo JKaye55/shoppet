@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace ShoppetApp.Models
 {
@@ -11,6 +11,7 @@ namespace ShoppetApp.Models
         public string AuthorName { get; set; } = string.Empty;
         public string ProfilePicture { get; set; } = string.Empty;
         public string AuthorRole { get; set; } = string.Empty;
+        public bool IsAuthorPremium { get; set; }
         public string? ParentAuthorName { get; set; }
         public string Content { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
@@ -43,7 +44,7 @@ namespace ShoppetApp.Models
 
         public System.Collections.ObjectModel.ObservableCollection<CommunityComment> Replies { get; } = new();
 
-        public CommunityComment TopLevelParent { get; set; }
+        public CommunityComment? TopLevelParent { get; set; }
         public System.Collections.Generic.List<CommunityComment> AllDescendants { get; set; } = new();
         
         [ObservableProperty]

@@ -66,7 +66,7 @@
                                 <RoundRectangle CornerRadius="20" />
                             </Border.StrokeShape>
                             <Grid ColumnDefinitions="Auto,*" HeightRequest="52">
-                                <Label Text="👤" FontSize="18" Grid.Column="0" VerticalOptions="Center" Margin="0,0,8,0" />
+                                <Path Data="{StaticResource IconUser}" Fill="{StaticResource Primary}" WidthRequest="18" HeightRequest="18" Aspect="Uniform" Grid.Column="0" VerticalOptions="Center" Margin="0,0,8,0" />
                                 <Entry Grid.Column="1"
                                        Text="{Binding FullName}"
                                        Placeholder="Alex Johnson"
@@ -83,7 +83,7 @@
                                 <RoundRectangle CornerRadius="20" />
                             </Border.StrokeShape>
                             <Grid ColumnDefinitions="Auto,*" HeightRequest="52">
-                                <Label Text="📧" FontSize="18" Grid.Column="0" VerticalOptions="Center" Margin="0,0,8,0" />
+                                <Path Data="{StaticResource IconEmail}" Fill="{StaticResource Primary}" WidthRequest="18" HeightRequest="18" Aspect="Uniform" Grid.Column="0" VerticalOptions="Center" Margin="0,0,8,0" />
                                 <Entry Grid.Column="1"
                                        Text="{Binding Email}"
                                        Keyboard="Email"
@@ -101,7 +101,7 @@
                                 <RoundRectangle CornerRadius="20" />
                             </Border.StrokeShape>
                             <Grid ColumnDefinitions="Auto,*,Auto" HeightRequest="52">
-                                <Label Text="🔒" FontSize="18" Grid.Column="0" VerticalOptions="Center" Margin="0,0,8,0" />
+                                <Path Data="{StaticResource IconLock}" Fill="{StaticResource Primary}" WidthRequest="18" HeightRequest="18" Aspect="Uniform" Grid.Column="0" VerticalOptions="Center" Margin="0,0,8,0" />
                                 <Entry Grid.Column="1"
                                        Text="{Binding Password}"
                                        IsPassword="{Binding IsPasswordVisible, Converter={StaticResource InverseBoolConverter}}"
@@ -111,8 +111,8 @@
                                     <Grid.GestureRecognizers>
                                         <TapGestureRecognizer Command="{Binding TogglePasswordCommand}" />
                                     </Grid.GestureRecognizers>
-                                    <Label Text="🙈" FontSize="18" HorizontalOptions="Center" VerticalOptions="Center" IsVisible="{Binding IsPasswordVisible}" />
-                                    <Label Text="👁️" FontSize="18" HorizontalOptions="Center" VerticalOptions="Center" IsVisible="{Binding IsPasswordVisible, Converter={StaticResource InverseBoolConverter}}" />
+                                    <Path Data="{StaticResource IconEyeOff}" Fill="{StaticResource Secondary}" WidthRequest="20" HeightRequest="20" Aspect="Uniform" HorizontalOptions="Center" VerticalOptions="Center" IsVisible="{Binding IsPasswordVisible}" />
+                                    <Path Data="{StaticResource IconEye}" Fill="{StaticResource Secondary}" WidthRequest="20" HeightRequest="20" Aspect="Uniform" HorizontalOptions="Center" VerticalOptions="Center" IsVisible="{Binding IsPasswordVisible, Converter={StaticResource InverseBoolConverter}}" />
                                 </Grid>
                             </Grid>
                         </Border>
@@ -129,7 +129,7 @@
                                 <RoundRectangle CornerRadius="20" />
                             </Border.StrokeShape>
                             <Grid ColumnDefinitions="Auto,*,Auto" HeightRequest="52">
-                                <Label Text="🔒" FontSize="18" Grid.Column="0" VerticalOptions="Center" Margin="0,0,8,0" />
+                                <Path Data="{StaticResource IconLock}" Fill="{StaticResource Primary}" WidthRequest="18" HeightRequest="18" Aspect="Uniform" Grid.Column="0" VerticalOptions="Center" Margin="0,0,8,0" />
                                 <Entry Grid.Column="1"
                                        Text="{Binding ConfirmPassword}"
                                        IsPassword="{Binding IsConfirmPasswordVisible, Converter={StaticResource InverseBoolConverter}}"
@@ -139,8 +139,8 @@
                                     <Grid.GestureRecognizers>
                                         <TapGestureRecognizer Command="{Binding ToggleConfirmPasswordCommand}" />
                                     </Grid.GestureRecognizers>
-                                    <Label Text="🙈" FontSize="18" HorizontalOptions="Center" VerticalOptions="Center" IsVisible="{Binding IsConfirmPasswordVisible}" />
-                                    <Label Text="👁️" FontSize="18" HorizontalOptions="Center" VerticalOptions="Center" IsVisible="{Binding IsConfirmPasswordVisible, Converter={StaticResource InverseBoolConverter}}" />
+                                    <Path Data="{StaticResource IconEyeOff}" Fill="{StaticResource Secondary}" WidthRequest="20" HeightRequest="20" Aspect="Uniform" HorizontalOptions="Center" VerticalOptions="Center" IsVisible="{Binding IsConfirmPasswordVisible}" />
+                                    <Path Data="{StaticResource IconEye}" Fill="{StaticResource Secondary}" WidthRequest="20" HeightRequest="20" Aspect="Uniform" HorizontalOptions="Center" VerticalOptions="Center" IsVisible="{Binding IsConfirmPasswordVisible, Converter={StaticResource InverseBoolConverter}}" />
                                 </Grid>
                             </Grid>
                         </Border>
@@ -175,6 +175,41 @@
                     BackgroundColor="{StaticResource Primary}"
                     TextColor="{StaticResource PrimaryFg}"
                     FontFamily="NunitoBold" />
+
+            <Border BackgroundColor="{StaticResource CardBg}"
+                    StrokeThickness="1"
+                    Stroke="{StaticResource Secondary20}"
+                    Padding="14"
+                    Margin="24,12,24,0"
+                    IsVisible="{Binding IsLogin}">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="16" />
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Quick Fill (No Manual Typing):" FontSize="12" FontFamily="NunitoSemiBold" TextColor="{StaticResource SecondaryFg}" HorizontalOptions="Center"/>
+                    <HorizontalStackLayout Spacing="10" HorizontalOptions="Center">
+                        <Button Text="🐾 Pet Owner"
+                                Command="{Binding AutoFillPetOwnerCommand}"
+                                HeightRequest="36"
+                                Padding="12,0"
+                                FontSize="12"
+                                CornerRadius="14"
+                                BackgroundColor="{StaticResource Secondary10}"
+                                TextColor="{StaticResource Primary}"
+                                FontFamily="NunitoBold"/>
+                        <Button Text="⭐ Demo Account"
+                                Command="{Binding AutoFillDemoUserCommand}"
+                                CommandParameter="demo"
+                                HeightRequest="36"
+                                Padding="12,0"
+                                FontSize="12"
+                                CornerRadius="14"
+                                BackgroundColor="{StaticResource Secondary10}"
+                                TextColor="{StaticResource Primary}"
+                                FontFamily="NunitoBold"/>
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Border>
 
             <Label Text="{Binding ToggleText}"
                    FontFamily="Nunito"

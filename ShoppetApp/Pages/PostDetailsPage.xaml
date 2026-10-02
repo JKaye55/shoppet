@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
@@ -33,8 +33,11 @@
                                     <Label Text="{Binding Post.Initials}" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" FontSize="16" FontFamily="NunitoBold" />
                                 </Border>
                                 <VerticalStackLayout VerticalOptions="Center">
-                                    <HorizontalStackLayout Spacing="5">
+                                    <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
                                         <Label Text="{Binding Post.AuthorName}" TextColor="{StaticResource BodyText}" FontFamily="NunitoBold" FontSize="16" />
+                                        <Border BackgroundColor="#FEF3C7" Stroke="#F59E0B" StrokeThickness="1" StrokeShape="RoundRectangle 8" Padding="5,1" IsVisible="{Binding Post.IsAuthorPremium}" VerticalOptions="Center">
+                                            <Label Text="🏅 Premium" FontSize="10" FontFamily="NunitoBold" TextColor="#B45309" />
+                                        </Border>
                                         <Label Text="{Binding Post.PetName, StringFormat=' is with {0}'}" TextColor="#666666" FontSize="14" IsVisible="{Binding Post.PetName, Converter={StaticResource IsNotNullOrEmptyConverter}}" />
                                     </HorizontalStackLayout>
                                     <Label Text="{Binding Post.TimeAgo}" TextColor="#888888" FontSize="12" />
@@ -86,10 +89,13 @@
                                     </Border>
                                     
                                     <!-- Thread Content -->
-                                    <VerticalStackLayout Grid.Column="1" HorizontalOptions="FillAndExpand" Spacing="2">
+                                    <VerticalStackLayout Grid.Column="1" HorizontalOptions="Fill" Spacing="2">
                                         <!-- Author Name ? ParentName -->
                                         <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
                                             <Label Text="{Binding AuthorName}" TextColor="#AAAAAA" FontFamily="NunitoBold" FontSize="13" VerticalOptions="Center" />
+                                            <Border BackgroundColor="#FEF3C7" Stroke="#F59E0B" StrokeThickness="1" StrokeShape="RoundRectangle 6" Padding="4,1" IsVisible="{Binding IsAuthorPremium}" VerticalOptions="Center">
+                                                <Label Text="🏅" FontSize="9" TextColor="#B45309" VerticalOptions="Center" />
+                                            </Border>
                                             <Label Text="&#x25B6;" TextColor="#666666" FontSize="10" VerticalOptions="Center" IsVisible="{Binding HasParentQuote}" />
                                             <Label Text="{Binding ParentAuthorName}" TextColor="#AAAAAA" FontSize="13" FontFamily="NunitoBold" VerticalOptions="Center" IsVisible="{Binding HasParentQuote}" />
                                         </HorizontalStackLayout>

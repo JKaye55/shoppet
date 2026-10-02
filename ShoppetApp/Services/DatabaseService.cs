@@ -1,4 +1,3 @@
-using MySqlConnector;
 using ShoppetApp.Models;
 using SQLite;
 using AppContact = ShoppetApp.Models.Contact;
@@ -13,8 +12,6 @@ namespace ShoppetApp.Services
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "shoppet.db"
         );
-
-        private readonly string _mysqlConnectionString = "Server=localhost;Database=shoppetdb;Uid=root;Pwd=;";
 
         public User? CurrentUser { get; set; }
         public ApiService? ApiService { get; set; }
@@ -85,299 +82,75 @@ namespace ShoppetApp.Services
         public void Logout() => CurrentUser = null;
 
         // =====================================================
-        // --- Community Posts (MySQL Real-time) ---
+        // --- Community Posts (shared ShoppetAPI / SQL Server) ---
         // =====================================================
-
-        /// <summary>
-        /// Loads all posts with like/comment counts and whether the viewer liked each one.
-        /// </summary>
         public async Task<List<CommunityPost>> GetCommunityPostsAsync(int viewerUserId = 0)
         {
-            var posts = new List<CommunityPost>();
-            try
-            {
-                using var connection = new MySqlConnection(_mysqlConnectionString);
-                await connection.OpenAsync();
-
-                string query = @"
-                    SELECT 
-                        p.Id, p.AuthorName, p.PetName, p.Content, p.ImageUrl,
-                        p.Timestamp, p.IsEdited, p.UserId, p.PetId,
-                        (SELECT COUNT(*) FROM communitylikes l WHERE l.PostId = p.Id) AS LikeCount,
-                        (SELECT COUNT(*) FROM communitycomments c WHERE c.PostId = p.Id) AS CommentCount,
-                        (SELECT COUNT(*) FROM communitylikes l2 
-                         WHERE l2.PostId = p.Id AND l2.UserId = @ViewerUserId) AS IsLikedByMe
-                    FROM communityposts p
-                    ORDER BY p.Timestamp DESC;";
-
-                using var command = new MySqlCommand(query, connection);
-                command.Parameters.AddWithValue("@ViewerUserId", viewerUserId);
-
-                using var reader = await command.ExecuteReaderAsync();
-
-                while (await reader.ReadAsync())
-                {
-                    posts.Add(new CommunityPost
-                    {
-                        Id = reader.GetInt32("Id"),
-                        AuthorName = reader.GetString("AuthorName"),
-                        PetName = reader.GetString("PetName"),
-                        Content = reader.GetString("Content"),
-                        ImageUrls = reader.IsDBNull(reader.GetOrdinal("ImageUrl"))
-                            ? null : reader.GetString("ImageUrl"),
-                        Timestamp = reader.GetDateTime("Timestamp"),
-                        IsEdited = reader.GetBoolean("IsEdited"),
-                        UserId = reader.GetInt32("UserId"),
-                        PetId = reader.IsDBNull(reader.GetOrdinal("PetId"))
-                            ? null : reader.GetInt32("PetId"),
-                        LikeCount = reader.GetInt32("LikeCount"),
-                        CommentCount = reader.GetInt32("CommentCount"),
-                        IsLikedByMe = reader.GetInt32("IsLikedByMe") > 0
-                    });
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Database Error (GetPosts): {ex.Message}");
-            }
-            return posts;
+            if (ApiService is null) return new List<CommunityPost>();
+            try { return await ApiService.GetCommunityPostsAsync(viewerUserId); }
+            catch { return new List<CommunityPost>(); }
         }
 
         public async Task<int> SaveCommunityPostAsync(CommunityPost post)
         {
-            try
+            if (ApiService is null) return 0;
+            var ok = await ApiService.CreateCommunityPostAsync(new
             {
-                using var connection = new MySqlConnection(_mysqlConnectionString);
-                await connection.OpenAsync();
-
-                string query = @"
-                    INSERT INTO communityposts 
-                        (AuthorName, PetName, Content, ImageUrl, Timestamp, IsEdited, UserId, PetId) 
-                    VALUES 
-                        (@AuthorName, @PetName, @Content, @ImageUrl, @Timestamp, @IsEdited, @UserId, @PetId);
-                    SELECT LAST_INSERT_ID();";
-
-                using var command = new MySqlCommand(query, connection);
-                command.Parameters.AddWithValue("@AuthorName", post.AuthorName);
-                command.Parameters.AddWithValue("@PetName", post.PetName);
-                command.Parameters.AddWithValue("@Content", post.Content);
-                command.Parameters.AddWithValue("@ImageUrl", (object?)post.ImageUrls ?? DBNull.Value);
-                command.Parameters.AddWithValue("@Timestamp", post.Timestamp);
-                command.Parameters.AddWithValue("@IsEdited", post.IsEdited);
-                command.Parameters.AddWithValue("@UserId", post.UserId);
-                command.Parameters.AddWithValue("@PetId", (object?)post.PetId ?? DBNull.Value);
-
-                var result = await command.ExecuteScalarAsync();
-                return Convert.ToInt32(result);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Database Error (SavePost): {ex.Message}");
-                return 0;
-            }
+                post.UserId,
+                post.PetId,
+                post.AuthorName,
+                post.PetName,
+                post.Content,
+                post.ImageUrls
+            });
+            return ok ? 1 : 0;
         }
 
         public async Task<bool> UpdateCommunityPostAsync(CommunityPost post)
         {
-            try
-            {
-                using var connection = new MySqlConnection(_mysqlConnectionString);
-                await connection.OpenAsync();
-
-                string query = @"
-                    UPDATE communityposts 
-                    SET Content = @Content, 
-                        ImageUrl = @ImageUrl, 
-                        PetName = @PetName,
-                        IsEdited = @IsEdited 
-                    WHERE Id = @Id;";
-
-                using var command = new MySqlCommand(query, connection);
-                command.Parameters.AddWithValue("@Content", post.Content);
-                command.Parameters.AddWithValue("@ImageUrl", (object?)post.ImageUrls ?? DBNull.Value);
-                command.Parameters.AddWithValue("@PetName", post.PetName);
-                command.Parameters.AddWithValue("@IsEdited", post.IsEdited);
-                command.Parameters.AddWithValue("@Id", post.Id);
-
-                int rows = await command.ExecuteNonQueryAsync();
-                return rows > 0;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Database Error (UpdatePost): {ex.Message}");
-                return false;
-            }
+            if (ApiService is null) return false;
+            return await ApiService.EditPostAsync(
+                post.Id,
+                post.Content,
+                post.ImageUrls ?? string.Empty,
+                post.PetId,
+                post.PetName);
         }
 
         public async Task<bool> DeleteCommunityPostAsync(CommunityPost post)
         {
-            try
-            {
-                using var connection = new MySqlConnection(_mysqlConnectionString);
-                await connection.OpenAsync();
-
-                // Delete child rows first
-                using (var delLikes = new MySqlCommand(
-                    "DELETE FROM communitylikes WHERE PostId = @Id;", connection))
-                {
-                    delLikes.Parameters.AddWithValue("@Id", post.Id);
-                    await delLikes.ExecuteNonQueryAsync();
-                }
-
-                using (var delComments = new MySqlCommand(
-                    "DELETE FROM communitycomments WHERE PostId = @Id;", connection))
-                {
-                    delComments.Parameters.AddWithValue("@Id", post.Id);
-                    await delComments.ExecuteNonQueryAsync();
-                }
-
-                using (var delPost = new MySqlCommand(
-                    "DELETE FROM communityposts WHERE Id = @Id;", connection))
-                {
-                    delPost.Parameters.AddWithValue("@Id", post.Id);
-                    var rows = await delPost.ExecuteNonQueryAsync();
-                    return rows > 0;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Database Error (DeletePost): {ex.Message}");
-                return false;
-            }
+            if (ApiService is null) return false;
+            return await ApiService.DeletePostAsync(post.Id);
         }
-        /// <summary>
-        /// Toggles a like on a post for a user. Returns the new total like count.
-        /// </summary>
+
         public async Task<int> ToggleLikeAsync(int postId, int userId)
         {
+            if (ApiService is null) return 0;
+            await ApiService.ToggleLikeAsync(postId, userId);
             try
             {
-                using var connection = new MySqlConnection(_mysqlConnectionString);
-                await connection.OpenAsync();
-
-                using (var check = new MySqlCommand(
-                    "SELECT COUNT(*) FROM communitylikes WHERE PostId = @PostId AND UserId = @UserId;",
-                    connection))
-                {
-                    check.Parameters.AddWithValue("@PostId", postId);
-                    check.Parameters.AddWithValue("@UserId", userId);
-
-                    var existing = Convert.ToInt32(await check.ExecuteScalarAsync());
-
-                    if (existing > 0)
-                    {
-                        using var del = new MySqlCommand(
-                            "DELETE FROM communitylikes WHERE PostId = @PostId AND UserId = @UserId;",
-                            connection);
-                        del.Parameters.AddWithValue("@PostId", postId);
-                        del.Parameters.AddWithValue("@UserId", userId);
-                        await del.ExecuteNonQueryAsync();
-                    }
-                    else
-                    {
-                        using var ins = new MySqlCommand(
-                            "INSERT INTO communitylikes (PostId, UserId, CreatedAt) VALUES (@PostId, @UserId, @CreatedAt);",
-                            connection);
-                        ins.Parameters.AddWithValue("@PostId", postId);
-                        ins.Parameters.AddWithValue("@UserId", userId);
-                        ins.Parameters.AddWithValue("@CreatedAt", DateTime.Now);
-                        await ins.ExecuteNonQueryAsync();
-                    }
-
-                    using var countCmd = new MySqlCommand(
-                        "SELECT COUNT(*) FROM communitylikes WHERE PostId = @PostId;",
-                        connection);
-                    countCmd.Parameters.AddWithValue("@PostId", postId);
-                    return Convert.ToInt32(await countCmd.ExecuteScalarAsync());
-                }
+                var post = (await ApiService.GetCommunityPostsAsync(userId))
+                    .FirstOrDefault(p => p.Id == postId);
+                return post?.LikesCount ?? 0;
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Database Error (ToggleLike): {ex.Message}");
-                return 0;
-            }
+            catch { return 0; }
         }
 
-        /// <summary>
-        /// Loads all comments for a post, joined with the user's name and role.
-        /// </summary>
         public async Task<List<CommunityComment>> GetCommentsAsync(int postId)
         {
-            var comments = new List<CommunityComment>();
-            try
-            {
-                using var connection = new MySqlConnection(_mysqlConnectionString);
-                await connection.OpenAsync();
-
-                string query = @"
-                    SELECT 
-                        c.Id, c.PostId, c.UserId, c.ParentCommentId, c.Content, c.CreatedAt,
-                        u.FullName AS AuthorName, u.Role AS AuthorRole
-                    FROM communitycomments c
-                    LEFT JOIN users u ON u.Id = c.UserId
-                    WHERE c.PostId = @PostId
-                    ORDER BY c.CreatedAt ASC;";
-
-                using var command = new MySqlCommand(query, connection);
-                command.Parameters.AddWithValue("@PostId", postId);
-
-                using var reader = await command.ExecuteReaderAsync();
-
-                while (await reader.ReadAsync())
-                {
-                    comments.Add(new CommunityComment
-                    {
-                        Id = reader.GetInt32("Id"),
-                        PostId = reader.GetInt32("PostId"),
-                        UserId = reader.GetInt32("UserId"),
-                        ParentCommentId = reader.IsDBNull(reader.GetOrdinal("ParentCommentId"))
-                            ? null : reader.GetInt32("ParentCommentId"),
-                        Content = reader.GetString("Content"),
-                        CreatedAt = reader.GetDateTime("CreatedAt"),
-                        AuthorName = reader.IsDBNull(reader.GetOrdinal("AuthorName"))
-                            ? "Unknown" : reader.GetString("AuthorName"),
-                        AuthorRole = reader.IsDBNull(reader.GetOrdinal("AuthorRole"))
-                            ? "PetOwner" : reader.GetString("AuthorRole")
-                    });
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Database Error (GetComments): {ex.Message}");
-            }
-            return comments;
+            if (ApiService is null) return new List<CommunityComment>();
+            return await ApiService.GetCommentsAsync(postId);
         }
 
-        /// <summary>
-        /// Adds a new comment and returns the new comment ID (0 on failure).
-        /// </summary>
         public async Task<int> AddCommentAsync(CommunityComment comment)
         {
-            try
-            {
-                using var connection = new MySqlConnection(_mysqlConnectionString);
-                await connection.OpenAsync();
-
-                string query = @"
-                    INSERT INTO communitycomments (PostId, UserId, ParentCommentId, Content, CreatedAt)
-                    VALUES (@PostId, @UserId, @ParentCommentId, @Content, @CreatedAt);
-                    SELECT LAST_INSERT_ID();";
-
-                using var command = new MySqlCommand(query, connection);
-                command.Parameters.AddWithValue("@PostId", comment.PostId);
-                command.Parameters.AddWithValue("@UserId", comment.UserId);
-                command.Parameters.AddWithValue("@ParentCommentId", (object?)comment.ParentCommentId ?? DBNull.Value);
-                command.Parameters.AddWithValue("@Content", comment.Content);
-                command.Parameters.AddWithValue("@CreatedAt", comment.CreatedAt);
-
-                var result = await command.ExecuteScalarAsync();
-                return Convert.ToInt32(result);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Database Error (AddComment): {ex.Message}");
-                return 0;
-            }
+            if (ApiService is null) return 0;
+            var ok = await ApiService.AddCommentAsync(
+                comment.PostId,
+                comment.UserId,
+                comment.Content,
+                comment.ParentCommentId);
+            return ok ? 1 : 0;
         }
 
         // =====================================================
@@ -385,75 +158,67 @@ namespace ShoppetApp.Services
         // =====================================================
         public async Task<List<Pet>> GetPetsAsync()
         {
+            if (ApiService is null)
+                return new List<Pet>();
+
             try
             {
-                if (ApiService != null)
-                {
-                    try {
-                        var apiPets = await ApiService.GetPetsAsync();
-                        if (apiPets != null) {
-                            await Database.CreateTableAsync<Pet>();
-                            await Database.ExecuteAsync("DELETE FROM Pet WHERE Id > 0"); // Clear synced records to prevent lingering duplicates
-                            foreach(var p in apiPets) {
-                                await Database.InsertAsync(p);
-                            }
-                        }
-                    } catch { }
-                }
-
+                var apiPets = await ApiService.GetPetsAsync();
                 await Database.CreateTableAsync<Pet>();
-                int currentUserId = Preferences.Get("LoggedInUserId", 0);
-                var pets = await Database.Table<Pet>().Where(p => p.UserId == currentUserId).ToListAsync();
-                return pets ?? new List<Pet>();
+                if (apiPets != null && apiPets.Count > 0)
+                {
+                    await Database.DeleteAllAsync<Pet>();
+                    foreach (var pet in apiPets)
+                        await Database.InsertOrReplaceAsync(pet);
+                }
+                return apiPets ?? new List<Pet>();
             }
-            catch { return new List<Pet>(); }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error fetching API pets, falling back to local SQLite: {ex.Message}");
+                await Database.CreateTableAsync<Pet>();
+                return await Database.Table<Pet>().ToListAsync();
+            }
         }
 
         public async Task<Pet?> GetPetAsync(int id)
         {
-            await Database.CreateTableAsync<Pet>();
-            return await Database.Table<Pet>().Where(p => p.Id == id).FirstOrDefaultAsync();
+            var pets = await GetPetsAsync();
+            return pets.FirstOrDefault(p => p.Id == id);
         }
 
         public async Task<int> SavePetAsync(Pet pet)
         {
-            await Database.CreateTableAsync<Pet>();
-            bool isNew = pet.Id <= 0;
-            if (isNew && pet.Id == 0) {
-                try {
-                    int minId = await Database.ExecuteScalarAsync<int>("SELECT MIN(Id) FROM Pet");
-                    pet.Id = minId >= 0 ? -1 : minId - 1;
-                } catch { pet.Id = -1; }
-            }
-            
-            if (ApiService != null)
-            {
-                try {
-                    var apiSaved = await ApiService.SavePetAsync(pet);
-                    if (apiSaved != null) {
-                        var oldId = pet.Id;
-                        pet.Id = apiSaved.Id;
-                        if (oldId < 0) {
-                            await Database.ExecuteAsync("DELETE FROM Pet WHERE Id = ?", oldId);
-                        }
-                        var existing = await Database.Table<Pet>().Where(x => x.Id == pet.Id).FirstOrDefaultAsync();
-                        return existing == null ? await Database.InsertAsync(pet) : await Database.UpdateAsync(pet);
-                    }
-                } catch { }
-            }
+            if (ApiService is null)
+                return 0;
 
-            return isNew ? await Database.InsertAsync(pet) : await Database.UpdateAsync(pet);
+            var saved = await ApiService.SavePetAsync(pet);
+            if (saved is null)
+                return 0;
+
+            pet.Id = saved.Id;
+            pet.CardId = saved.CardId;
+            pet.CardIssuedAt = saved.CardIssuedAt;
+            pet.CardTheme = saved.CardTheme;
+            pet.CreatedAt = saved.CreatedAt == default ? pet.CreatedAt : saved.CreatedAt;
+
+            await Database.CreateTableAsync<Pet>();
+            await Database.InsertOrReplaceAsync(pet);
+            return pet.Id;
         }
 
         public async Task<int> DeletePetAsync(Pet pet)
         {
+            if (ApiService is null)
+                return 0;
+
+            var deleted = await ApiService.DeletePetAsync(pet.Id);
+            if (!deleted)
+                return 0;
+
             await Database.CreateTableAsync<Pet>();
-            int result = await Database.DeleteAsync(pet);
-            if (ApiService != null)
-            {
-                try { await ApiService.DeletePetAsync(pet.Id); } catch { }
-            }
-            return result;
+            await Database.DeleteAsync(pet);
+            return 1;
         }
 
         // --- Health & Food Logs ---
@@ -470,26 +235,17 @@ namespace ShoppetApp.Services
 
         public async Task<List<HealthLog>> GetHealthLogsAsync(int petId)
         {
-            try
-            {
-                if (ApiService != null)
-                {
-                    try {
-                        var apiLogs = await ApiService.GetHealthLogsAsync(petId);
-                        if (apiLogs != null) {
-                            await Database.CreateTableAsync<HealthLog>();
-                            await Database.ExecuteAsync("DELETE FROM HealthLog WHERE Id > 0 AND PetId = ?", petId);
-                            foreach(var log in apiLogs) {
-                                await Database.InsertAsync(log);
-                            }
-                        }
-                    } catch { }
-                }
+            if (ApiService is null)
+                return new List<HealthLog>();
 
-                await Database.CreateTableAsync<HealthLog>();
-                return await Database.Table<HealthLog>().Where(h => h.PetId == petId).ToListAsync();
-            }
-            catch { return new List<HealthLog>(); }
+            var apiLogs = await ApiService.GetHealthLogsAsync(petId);
+
+            await Database.CreateTableAsync<HealthLog>();
+            await Database.ExecuteAsync("DELETE FROM HealthLog WHERE PetId = ?", petId);
+            foreach (var log in apiLogs)
+                await Database.InsertOrReplaceAsync(log);
+
+            return apiLogs;
         }
 
         public async Task<HealthLog?> GetHealthLogAsync(int id)
@@ -545,17 +301,26 @@ namespace ShoppetApp.Services
             {
                 await Database.CreateTableAsync<HealthLog>();
                 await Database.CreateTableAsync<Pet>();
-                int currentUserId = Preferences.Get("LoggedInUserId", 0);
-                
-                var userPets = await Database.Table<Pet>().Where(p => p.UserId == currentUserId).ToListAsync();
-                var userPetIds = userPets.Select(p => p.Id).ToList();
 
-                var allLogs = await Database.Table<HealthLog>().ToListAsync();
-                var logs = allLogs
-                    .Where(h => (h.Status == "Action Required" || h.Status == "Pending") && userPetIds.Contains(h.PetId))
+                var pets = await GetPetsAsync();
+                var result = new List<HealthLog>();
+
+                foreach (var pet in pets)
+                {
+                    var petLogs = await GetHealthLogsAsync(pet.Id);
+                    foreach (var log in petLogs.Where(h =>
+                                 !h.Completed &&
+                                 (h.Status == "Action Required" || h.Status == "Pending")))
+                    {
+                        log.PetName = pet.Name;
+                        log.PetPhotoUrl = pet.PhotoUrl;
+                        result.Add(log);
+                    }
+                }
+
+                return result
+                    .OrderBy(h => DateTime.TryParse(h.DueDate, out var due) ? due : DateTime.MaxValue)
                     .ToList();
-                    
-                return logs ?? new List<HealthLog>();
             }
             catch (Exception ex)
             {
@@ -577,26 +342,17 @@ namespace ShoppetApp.Services
 
         public async Task<List<FoodLog>> GetFoodLogsAsync(int petId)
         {
-            try
-            {
-                if (ApiService != null)
-                {
-                    try {
-                        var apiLogs = await ApiService.GetFoodLogsAsync(petId);
-                        if (apiLogs != null) {
-                            await Database.CreateTableAsync<FoodLog>();
-                            await Database.ExecuteAsync("DELETE FROM FoodLog WHERE Id > 0 AND PetId = ?", petId);
-                            foreach(var log in apiLogs) {
-                                await Database.InsertAsync(log);
-                            }
-                        }
-                    } catch { }
-                }
+            if (ApiService is null)
+                return new List<FoodLog>();
 
-                await Database.CreateTableAsync<FoodLog>();
-                return await Database.Table<FoodLog>().Where(f => f.PetId == petId).ToListAsync();
-            }
-            catch { return new List<FoodLog>(); }
+            var apiLogs = await ApiService.GetFoodLogsAsync(petId);
+
+            await Database.CreateTableAsync<FoodLog>();
+            await Database.ExecuteAsync("DELETE FROM FoodLog WHERE PetId = ?", petId);
+            foreach (var log in apiLogs)
+                await Database.InsertOrReplaceAsync(log);
+
+            return apiLogs;
         }
 
         public async Task<FoodLog?> GetFoodLogAsync(int id)
@@ -659,13 +415,20 @@ namespace ShoppetApp.Services
         }
 
         // --- Products & E-Commerce Cart ---
-        public Task<List<Product>> GetProductsAsync() => Task.FromResult(new List<Product>
+        public async Task<List<Product>> GetProductsAsync()
         {
-            new Product { Id = 1, Name = "Royal Canin Mini Adult", Category = "Food", Price = 950.00m, StockQuantity = 15, Description = "Balanced nutrition for small adult dogs." },
-            new Product { Id = 2, Name = "NexGard Spectra (10-25kg)", Category = "Pharmacy", Price = 650.00m, StockQuantity = 20, Description = "Flea, tick, and heartworm protection." }
-        });
+            if (ApiService is null) return new List<Product>();
+            return await ApiService.GetProductsAsync();
+        }
 
-        public Task<List<string>> GetCategoriesAsync() => Task.FromResult(new List<string> { "All", "Food", "Pharmacy", "Accessories", "Healthcare" });
+        public async Task<List<string>> GetCategoriesAsync()
+        {
+            if (ApiService is null) return new List<string> { "All" };
+            var categories = await ApiService.GetCategoriesAsync();
+            var names = categories.Select(c => c.Name).Where(n => !string.IsNullOrWhiteSpace(n)).Distinct().ToList();
+            names.Insert(0, "All");
+            return names;
+        }
 
         public async Task<List<CartItem>> GetCartAsync()
         {

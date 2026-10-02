@@ -34,6 +34,7 @@ public partial class ChatViewModel : ObservableObject, IDisposable, Microsoft.Ma
     [ObservableProperty]
     private string _contactIdStr = string.Empty;
 
+    public int? ListingId{get;private set;}
     public int ContactId => int.TryParse(ContactIdStr, out var id) ? id : 0;
 
     [ObservableProperty]
@@ -58,6 +59,7 @@ public partial class ChatViewModel : ObservableObject, IDisposable, Microsoft.Ma
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
+        ListingId=query.TryGetValue("ListingId",out var listing)&&int.TryParse(listing?.ToString(),out var key)?key:null;
         StopPolling();
         Messages.Clear();
         _isLoadingMessages = false;
@@ -172,9 +174,9 @@ public partial class ChatViewModel : ObservableObject, IDisposable, Microsoft.Ma
             IsMine = true,
             SenderName = Preferences.Get("LoggedInUserName", "Me")
         };
-        
+
         // Insert at index 0 because the list is visually inverted
-        Messages.Insert(0, tempMsg); 
+        Messages.Insert(0, tempMsg);
 
         var textToSend = NewMessageText;
         NewMessageText = string.Empty;
@@ -182,7 +184,7 @@ public partial class ChatViewModel : ObservableObject, IDisposable, Microsoft.Ma
         IsBusy = true;
         try
         {
-            var success = await _api.SendMessageAsync(ContactId, null, textToSend);
+            var success = await _api.SendMessageAsync(ContactId, ListingId, textToSend);
             if (!success)
             {
                 Messages.Remove(tempMsg);

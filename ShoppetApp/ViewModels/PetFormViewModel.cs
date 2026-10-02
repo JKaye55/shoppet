@@ -11,11 +11,14 @@ namespace ShoppetApp.ViewModels;
 public partial class PetFormViewModel : ObservableObject, IQueryAttributable
 {
     private readonly DatabaseService _db;
+    private readonly ApiService _api;
+    private Pet? _loadedPet;
 
     [ObservableProperty] private int _petId;
     [ObservableProperty] private string _name = string.Empty;
     [ObservableProperty] private string _breed = string.Empty;
     [ObservableProperty] private string _photoUrl = string.Empty;
+    [ObservableProperty] private string _diet = string.Empty;
     [ObservableProperty] private bool _isEditMode;
 
     [ObservableProperty]
@@ -55,7 +58,7 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
         get => _weight;
         set
         {
-            var numericValue = string.IsNullOrWhiteSpace(value) ? string.Empty : new string(value.Where(char.IsDigit).ToArray());
+            var numericValue = string.IsNullOrWhiteSpace(value) ? string.Empty : new string(value.Where(c => char.IsDigit(c) || c == '.').ToArray());
             if (!SetProperty(ref _weight, numericValue) && value != numericValue)
             {
                 OnPropertyChanged(nameof(Weight));
@@ -83,9 +86,10 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
     public IList<string> SpeciesOptions { get; } = ["Dog", "Cat", "Bird", "Small Pet", "Other"];
     public ObservableCollection<string> AvailableBreeds { get; } = new();
 
-    public PetFormViewModel(DatabaseService db)
+    public PetFormViewModel(DatabaseService db, ApiService api)
     {
         _db = db;
+        _api = api;
         UpdateAvailableBreeds();
     }
 
@@ -109,6 +113,7 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
         if (pet is null)
             return;
 
+        _loadedPet = pet;
         IsEditMode = true;
         Name = pet.Name;
         Species = string.IsNullOrEmpty(pet.Species) ? "Dog" : pet.Species;
@@ -116,6 +121,7 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
         Breed = pet.Breed;
         Weight = pet.Weight;
         PhotoUrl = pet.PhotoUrl;
+        Diet = pet.Diet;
         AgeYearsText = pet.AgeYears.ToString();
         OnPropertyChanged(nameof(Title));
         OnPropertyChanged(nameof(CanDelete));
@@ -129,7 +135,8 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
     {
         try
         {
-            var result = await MediaPicker.Default.PickPhotoAsync(new MediaPickerOptions { Title = "Please pick a photo" });
+            var results = await MediaPicker.Default.PickPhotosAsync(new MediaPickerOptions { Title = "Please pick a photo" });
+            var result = results?.FirstOrDefault();
             if (result != null)
             {
                 var newFile = Path.Combine(FileSystem.AppDataDirectory, result.FileName);
@@ -143,7 +150,7 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
         }
         catch (Exception ex)
         {
-            await Shell.Current.DisplayAlert("Error", $"Photo picker failed: {ex.Message}", "OK");
+            await Shell.Current.DisplayAlertAsync("Error", $"Photo picker failed: {ex.Message}", "OK");
         }
     }
 
@@ -152,22 +159,43 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
     {
         if (string.IsNullOrWhiteSpace(Name))
         {
-            await Shell.Current.DisplayAlert("Validation", "Pet name is required.", "OK");
+            await Shell.Current.DisplayAlertAsync("Validation", "Pet name is required.", "OK");
             return;
         }
 
+        if (!string.IsNullOrWhiteSpace(Weight) && (!decimal.TryParse(Weight, System.Globalization.NumberStyles.AllowDecimalPoint, System.Globalization.CultureInfo.InvariantCulture, out var weightKg) || weightKg < 0))
+        {
+            await Shell.Current.DisplayAlertAsync("Validation", "Enter a valid weight in kilograms, such as 8.5.", "OK");
+            return;
+        }
         _ = int.TryParse(AgeYearsText, out var age);
         if (age > 25)
         {
-            await Shell.Current.DisplayAlert("Validation", "Age cannot exceed 25 years.", "OK");
+            await Shell.Current.DisplayAlertAsync("Validation", "Age cannot exceed 25 years.", "OK");
             return;
         }
 
         int currentUserId = Preferences.Get("LoggedInUserId", 0);
         if (currentUserId == 0)
         {
-            await Shell.Current.DisplayAlert("Error", "User session not found. Please log in again.", "OK");
+            await Shell.Current.DisplayAlertAsync("Error", "User session not found. Please log in again.", "OK");
             return;
+        }
+
+        var sharedPhotoUrl = PhotoUrl ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(sharedPhotoUrl) && File.Exists(sharedPhotoUrl))
+        {
+            try
+            {
+                var uploaded = await _api.UploadCommunityMediaAsync(new[] { sharedPhotoUrl });
+                if (uploaded.Count != 1) throw new InvalidOperationException("Photo upload did not complete.");
+                sharedPhotoUrl = uploaded[0];
+            }
+            catch
+            {
+                await Shell.Current.DisplayAlertAsync("Photo upload", "The pet profile could not upload the selected photo.", "OK");
+                return;
+            }
         }
 
         var pet = new Pet
@@ -178,8 +206,13 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
             Species = Species,
             Breed = string.IsNullOrEmpty(Breed) ? "Mixed" : Breed.Trim(),
             Weight = Weight.Trim(),
-            PhotoUrl = PhotoUrl ?? string.Empty,
-            AgeYears = age
+            PhotoUrl = sharedPhotoUrl,
+            Diet = Diet.Trim(),
+            AgeYears = age,
+            CardId = _loadedPet?.CardId ?? string.Empty,
+            CardTheme = _loadedPet?.CardTheme ?? string.Empty,
+            CardIssuedAt = _loadedPet?.CardIssuedAt,
+            CreatedAt = _loadedPet?.CreatedAt ?? default
         };
 
         int result = await _db.SavePetAsync(pet);
@@ -190,7 +223,7 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
         }
         else
         {
-            await Shell.Current.DisplayAlert("Error", "Failed to save pet to the server.", "OK");
+            await Shell.Current.DisplayAlertAsync("Error", "Failed to save pet to the server.", "OK");
         }
     }
 
@@ -201,10 +234,14 @@ public partial class PetFormViewModel : ObservableObject, IQueryAttributable
         var pet = await _db.GetPetAsync(PetId);
         if (pet is null) return;
 
-        bool confirm = await Shell.Current.DisplayAlert("Delete Pet", $"Remove {pet.Name}?", "Delete", "Cancel");
+        bool confirm = await Shell.Current.DisplayAlertAsync("Delete Pet", $"Remove {pet.Name}?", "Delete", "Cancel");
         if (!confirm) return;
 
-        await _db.DeletePetAsync(pet);
+        if (await _db.DeletePetAsync(pet) == 0)
+        {
+            await Shell.Current.DisplayAlertAsync("Delete failed", "The server could not delete this pet. Please retry.", "OK");
+            return;
+        }
         WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
         await Shell.Current.GoToAsync("..");
     }

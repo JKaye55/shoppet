@@ -81,26 +81,18 @@
                                     </Label>
                                 </VerticalStackLayout>
                                 <HorizontalStackLayout Grid.Column="2" Spacing="4" VerticalOptions="Center">
-                                    <Button Text="✎"
-                                            FontSize="14"
-                                            WidthRequest="36"
-                                            HeightRequest="36"
-                                            CornerRadius="18"
-                                            Padding="0"
-                                            BackgroundColor="{StaticResource Primary10}"
-                                            TextColor="{StaticResource Primary}"
-                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PetsListViewModel}}, Path=EditPetCommand}"
-                                            CommandParameter="{Binding .}" />
-                                    <Button Text="🗑"
-                                            FontSize="14"
-                                            WidthRequest="36"
-                                            HeightRequest="36"
-                                            CornerRadius="18"
-                                            Padding="0"
-                                            BackgroundColor="{StaticResource StatusOverdueBg}"
-                                            TextColor="{StaticResource StatusOverdue}"
-                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PetsListViewModel}}, Path=DeletePetCommand}"
-                                            CommandParameter="{Binding .}" />
+                                    <Border WidthRequest="36" HeightRequest="36" BackgroundColor="{StaticResource Primary10}" StrokeThickness="0" StrokeShape="RoundRectangle 18">
+                                        <Path Data="{StaticResource IconEdit}" Fill="{StaticResource Primary}" WidthRequest="17" HeightRequest="17" Aspect="Uniform" HorizontalOptions="Center" VerticalOptions="Center" />
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PetsListViewModel}}, Path=EditPetCommand}" CommandParameter="{Binding .}" />
+                                        </Border.GestureRecognizers>
+                                    </Border>
+                                    <Border WidthRequest="36" HeightRequest="36" BackgroundColor="{StaticResource StatusOverdueBg}" StrokeThickness="0" StrokeShape="RoundRectangle 18">
+                                        <Path Data="{StaticResource IconDelete}" Fill="{StaticResource StatusOverdue}" WidthRequest="17" HeightRequest="17" Aspect="Uniform" HorizontalOptions="Center" VerticalOptions="Center" />
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:PetsListViewModel}}, Path=DeletePetCommand}" CommandParameter="{Binding .}" />
+                                        </Border.GestureRecognizers>
+                                    </Border>
                                     <Label Text="›"
                                            FontSize="22"
                                            TextColor="{StaticResource Secondary}"
@@ -111,6 +103,41 @@
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                               IsVisible="{Binding IsBusy}"
+                               Color="{StaticResource Primary}"
+                               WidthRequest="32"
+                               HeightRequest="32"
+                               VerticalOptions="Center"
+                               HorizontalOptions="Center" />
+
+            <Border IsVisible="{Binding HasLoadError}"
+                    Margin="24"
+                    Padding="20"
+                    BackgroundColor="{StaticResource CardBg}"
+                    Stroke="{StaticResource StatusOverdue}"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 20"
+                    VerticalOptions="Center">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Pets could not be loaded"
+                           FontFamily="NunitoBold"
+                           FontSize="18"
+                           TextColor="{StaticResource BodyText}"
+                           HorizontalTextAlignment="Center"/>
+                    <Label Text="{Binding LoadErrorMessage}"
+                           FontSize="13"
+                           TextColor="{StaticResource NavMuted}"
+                           HorizontalTextAlignment="Center"/>
+                    <Button Text="Try again"
+                            Command="{Binding RetryCommand}"
+                            BackgroundColor="{StaticResource Primary}"
+                            TextColor="White"
+                            FontFamily="NunitoBold"
+                            CornerRadius="18"/>
+                </VerticalStackLayout>
+            </Border>
 
             <VerticalStackLayout IsVisible="{Binding Pets.Count, Converter={StaticResource CountToBoolConverter}, ConverterParameter=invert}"
                                  VerticalOptions="Center"

@@ -47,7 +47,7 @@ public partial class HeaderView : ContentView
         }
     }
 
-    private async void OnMessagesClicked(object sender, TappedEventArgs e)
+    private async void OnMessagesClicked(object? sender, TappedEventArgs e)
     {
         await Shell.Current.GoToAsync("messages");
     }

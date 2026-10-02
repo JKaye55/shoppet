@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 
 namespace ShoppetApp.Converters;
 
@@ -119,9 +119,31 @@ public class UrlToImageSourceConverter : IValueConverter
         var url = value?.ToString();
         if (string.IsNullOrWhiteSpace(url))
             return null;
-        if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-            return ImageSource.FromUri(new Uri(url));
-        return ImageSource.FromFile(url);
+
+        var trimmed = url.Trim();
+        bool isAndroid = DeviceInfo.Platform == DevicePlatform.Android;
+        string hostPrefix = isAndroid ? "http://10.0.2.2:5253" : "http://localhost:5253";
+
+        if (trimmed.StartsWith("/"))
+        {
+            trimmed = hostPrefix + trimmed;
+        }
+        else if (isAndroid)
+        {
+            trimmed = trimmed.Replace("http://localhost:", "http://10.0.2.2:")
+                             .Replace("https://localhost:", "https://10.0.2.2:")
+                             .Replace("http://127.0.0.1:", "http://10.0.2.2:")
+                             .Replace("https://127.0.0.1:", "https://10.0.2.2:");
+        }
+
+        if (trimmed.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || 
+            trimmed.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            if (Uri.TryCreate(trimmed, UriKind.Absolute, out var uri))
+                return ImageSource.FromUri(uri);
+        }
+
+        return ImageSource.FromFile(trimmed);
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
@@ -443,7 +465,7 @@ public class BoolToHeartIconConverter : IValueConverter
 
 public class DepthToMarginConverter : IValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
     {
         if (value is int depth)
         {
@@ -452,54 +474,54 @@ public class DepthToMarginConverter : IValueConverter
         return new Microsoft.Maui.Thickness(0, 0, 0, 10);
     }
 
-    public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
+    public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
 }
 
 
 public class BoolToLayoutOptionsConverter : IValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
     {
-        return (bool)value ? LayoutOptions.End : LayoutOptions.Start;
+        return value is bool b && b ? LayoutOptions.End : LayoutOptions.Start;
     }
-    public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
+    public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
 }
 
 public class IsMineColorConverter : IValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
     {
-        return (bool)value ? Application.Current.Resources["Primary"] : Color.FromArgb("#F0F0F0");
+        return value is bool b && b ? Application.Current?.Resources["Primary"] ?? Colors.Teal : Color.FromArgb("#F0F0F0");
     }
-    public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
+    public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
 }
 
 public class IsMineTextColorConverter : IValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
     {
-        return (bool)value ? Colors.White : Application.Current.Resources["BodyText"];
+        return value is bool b && b ? Colors.White : Application.Current?.Resources["BodyText"] ?? Colors.Black;
     }
-    public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
+    public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
 }
 
 public class IsMineTimeColorConverter : IValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
     {
-        return (bool)value ? Color.FromArgb("#DDDDDD") : Application.Current.Resources["NavMuted"];
+        return value is bool b && b ? Color.FromArgb("#DDDDDD") : Application.Current?.Resources["NavMuted"] ?? Colors.Gray;
     }
-    public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
+    public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
 }
 
 public class InvertedBoolConverter : IValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
     {
         if (value is bool b) return !b;
         return false;
     }
-    public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
+    public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotImplementedException();
 }
 
 
@@ -539,6 +561,28 @@ public class BoolToBoldConverter : IValueConverter
     {
         if (value is bool b && b) return FontAttributes.Bold;
         return FontAttributes.None;
+    }
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
+}
+
+public class BoolToObjectConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (parameter is string paramStr && paramStr.Contains('|'))
+        {
+            var parts = paramStr.Split('|');
+            bool isTrue = value is bool b && b;
+            var choice = isTrue ? parts[0] : parts[1];
+
+            if (targetType == typeof(Color))
+            {
+                if (choice.Equals("Transparent", StringComparison.OrdinalIgnoreCase)) return Colors.Transparent;
+                return Color.FromArgb(choice);
+            }
+            return choice;
+        }
+        return value;
     }
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
 }

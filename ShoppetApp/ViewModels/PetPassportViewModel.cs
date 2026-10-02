@@ -13,9 +13,26 @@ public partial class PetPassportViewModel : ObservableObject, IQueryAttributable
     private readonly ApiService _api;
 
     [ObservableProperty] private Pet? _pet;
+
+    partial void OnPetChanged(Pet? value)
+    {
+        OnPropertyChanged(nameof(PublicPetIdUrl));
+        OnPropertyChanged(nameof(QrImageUrl));
+        OnPropertyChanged(nameof(HasPetId));
+    }
+
+    public bool HasPetId => Pet is not null && !string.IsNullOrWhiteSpace(Pet.CardId);
+    public string PublicPetIdUrl => HasPetId
+        ? _api.ResolveDeviceUrl($"{Preferences.Get("PublicWebBaseUrl","http://localhost:5253").TrimEnd('/')}/pet/card/{Pet!.CardId}")
+        : string.Empty;
+    public string QrImageUrl => string.IsNullOrWhiteSpace(PublicPetIdUrl)
+        ? string.Empty
+        : _api.PetQrUrl(Pet!.CardId);
     [ObservableProperty] private ObservableCollection<HealthLog> _healthLogs = [];
     [ObservableProperty] private ObservableCollection<FoodLog> _foodLogs = [];
     [ObservableProperty] private bool _isBusy;
+    [ObservableProperty] private bool _hasLoadError;
+    [ObservableProperty] private string _loadErrorMessage = string.Empty;
 
     public int PetId { get; private set; }
 
@@ -27,8 +44,11 @@ public partial class PetPassportViewModel : ObservableObject, IQueryAttributable
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
-        if (query.TryGetValue("petId", out var value))
-            PetId = Convert.ToInt32(value);
+        if (query.TryGetValue("petId", out var value) && int.TryParse(value?.ToString(), out var id))
+        {
+            PetId = id;
+            MainThread.BeginInvokeOnMainThread(async () => await LoadAsync());
+        }
     }
 
     public void Receive(DataChangedMessage message) =>
@@ -40,10 +60,14 @@ public partial class PetPassportViewModel : ObservableObject, IQueryAttributable
             return;
 
         IsBusy = true;
+        HasLoadError = false;
+        LoadErrorMessage = string.Empty;
         try
         {
-                        Pet = (await _api.GetPetsAsync()).FirstOrDefault(p => p.Id == PetId);
-            
+            Pet = (await _api.GetPetsAsync()).FirstOrDefault(p => p.Id == PetId);
+            if (Pet is null)
+                throw new InvalidOperationException("The selected pet was not returned by the shared database.");
+
             var logs = await _api.GetHealthLogsAsync(PetId);
             var sortedHLogs = logs
                 .OrderBy(x => x.Completed)
@@ -51,7 +75,7 @@ public partial class PetPassportViewModel : ObservableObject, IQueryAttributable
                 .ThenByDescending(x => x.CompletedAt ?? DateTime.MinValue)
                 .ToList();
             HealthLogs = new ObservableCollection<HealthLog>(sortedHLogs);
-            
+
             var foodLogs = await _api.GetFoodLogsAsync(PetId);
             var sortedFLogs = foodLogs
                 .OrderBy(x => x.IsCompleted)
@@ -60,6 +84,12 @@ public partial class PetPassportViewModel : ObservableObject, IQueryAttributable
                 .ToList();
             FoodLogs = new ObservableCollection<FoodLog>(sortedFLogs);
         }
+        catch (Exception ex)
+        {
+            HasLoadError = true;
+            LoadErrorMessage = "Could not load this pet's shared health and feeding data. Check ShoppetAPI and retry.";
+            System.Diagnostics.Debug.WriteLine($"Pet passport load failed: {ex}");
+        }
         finally
         {
             IsBusy = false;
@@ -67,8 +97,33 @@ public partial class PetPassportViewModel : ObservableObject, IQueryAttributable
     }
 
     [RelayCommand]
+    private async Task OpenDocumentAsync(string path)
+    {try{await _api.OpenCareDocumentAsync(path);}catch(Exception){await Shell.Current.DisplayAlertAsync("Document unavailable","Check the connection, or reattach an old local-only document.","OK");}}
+    [RelayCommand]
+    private async Task RetryAsync() => await LoadAsync();
+
+    [RelayCommand]
     private async Task GoBackAsync() =>
         await Shell.Current.GoToAsync("..");
+
+    [RelayCommand]
+    private async Task CopyPetIdAsync()
+    {
+        if (!HasPetId) return;
+        await Clipboard.Default.SetTextAsync(PublicPetIdUrl);
+        await Shell.Current.DisplayAlertAsync("Digital Pet ID", "Public Pet ID link copied.", "OK");
+    }
+
+    [RelayCommand]
+    private async Task SharePetIdAsync()
+    {
+        if (!HasPetId) return;
+        await Share.Default.RequestAsync(new ShareTextRequest
+        {
+            Title = $"{Pet!.Name}'s Digital Pet ID",
+            Text = $"ShoppetCare Digital Pet ID\n{Pet.CardId}\n{PublicPetIdUrl}"
+        });
+    }
 
     [RelayCommand]
     private async Task EditPetAsync()
@@ -116,12 +171,12 @@ public partial class PetPassportViewModel : ObservableObject, IQueryAttributable
             {
                 nextDueDate = currentDue.AddHours(log.MedicationIntervalHours).ToString("yyyy/MM/dd, HH:mm:ss");
             }
-            
+
             if (log.DosageRemaining > 0)
                 log.DosageRemaining--;
-                
+
             if (log.DosageRemaining <= 0)
-                shouldComplete = true;
+            { await _api.SaveHealthLogAsync(PetId,log);shouldComplete = true; }
         }
         else // Checkup
         {
@@ -137,10 +192,10 @@ public partial class PetPassportViewModel : ObservableObject, IQueryAttributable
             log.DueDate = nextDueDate;
             await _api.SaveHealthLogAsync(PetId, log);
         }
-        
+
         WeakReferenceMessenger.Default.Send(DataChangedMessage.Instance);
     }
-    
+
     [RelayCommand]
     private async Task MarkCompletedAsync(HealthLog log)
     {

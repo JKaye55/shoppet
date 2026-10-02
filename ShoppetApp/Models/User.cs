@@ -1,4 +1,4 @@
-﻿using SQLite;
+using SQLite;
 
 namespace ShoppetApp.Models
 {
@@ -14,8 +14,10 @@ namespace ShoppetApp.Models
 
         public string Password { get; set; } = string.Empty;
 
-        // RBAC Role: "Admin", "BusinessOwner", or "PetOwner"
-        public string Role { get; set; } = "PetOwner";
+        // Final Scope v4.0 RBAC: active roles are "Pet Owner" and "Admin".
+        // Seller/buyer are Pet Owner marketplace capabilities, not roles.
+        public string Role { get; set; } = "Pet Owner";
         public string ProfilePicture { get; set; } = string.Empty;
+        public bool IsPremium { get; set; }
     }
 }
